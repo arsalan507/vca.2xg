@@ -95,7 +95,11 @@ export default function VideographerDashboard() {
 
   const openViewModal = (analysis: ViralAnalysis) => {
     setSelectedAnalysis(analysis);
-    setSelectedStage(analysis.production_stage || ProductionStage.PRE_PRODUCTION);
+    // Initialize to SHOOTING stage (videographer's default starting stage)
+    // If project is already in a videographer stage, use that
+    const currentStage = analysis.production_stage;
+    const isVideographerStage = currentStage && videographerStages.includes(currentStage as any);
+    setSelectedStage(isVideographerStage ? currentStage! : ProductionStage.SHOOTING);
     setProductionNotes(analysis.production_notes || '');
     setIsViewModalOpen(true);
   };
