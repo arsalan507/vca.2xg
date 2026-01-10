@@ -10,6 +10,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { UserRole } from '@/types';
 import { supabase } from '@/lib/supabase';
+import { adminUserService } from '@/services/adminUserService';
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<'team' | 'drive'>('team');
@@ -88,7 +89,7 @@ function TeamManagement() {
     },
   });
 
-  // Create user mutation
+  // Create user mutation - uses backend API with service role
   const createUserMutation = useMutation({
     mutationFn: async (userData: {
       email: string;
@@ -96,27 +97,7 @@ function TeamManagement() {
       fullName: string;
       role: UserRole;
     }) => {
-      // Create auth user
-      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-        email: userData.email,
-        password: userData.password,
-        email_confirm: true,
-      });
-
-      if (authError) throw authError;
-
-      // Update profile with full name and role
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .update({
-          full_name: userData.fullName,
-          role: userData.role,
-        })
-        .eq('id', authData.user.id);
-
-      if (profileError) throw profileError;
-
-      return authData.user;
+      return await adminUserService.createUser(userData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['team-members'] });
@@ -150,11 +131,10 @@ function TeamManagement() {
     },
   });
 
-  // Delete user mutation
+  // Delete user mutation - uses backend API with service role
   const deleteUserMutation = useMutation({
     mutationFn: async (userId: string) => {
-      const { error } = await supabase.auth.admin.deleteUser(userId);
-      if (error) throw error;
+      return await adminUserService.deleteUser(userId);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['team-members'] });

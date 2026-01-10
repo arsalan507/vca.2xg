@@ -1,0 +1,14 @@
+{
+  "buildCommand": "cd frontend && npm install && npm run build",
+  "outputDirectory": "frontend/dist",
+  "framework": "vite",
+  "installCommand": "cd frontend && npm install",
+  "devCommand": "cd frontend && npm run dev",
+  "env": {
+    "VITE_SUPABASE_URL": "@vite_supabase_url",
+    "VITE_SUPABASE_ANON_KEY": "@vite_supabase_anon_key",
+    "VITE_BACKEND_URL": "@vite_backend_url",
+    "VITE_GOOGLE_API_KEY": "@vite_google_api_key",
+    "VITE_GOOGLE_CLIENT_ID": "@vite_google_client_id"
+  }
+}

@@ -104,7 +104,7 @@ export const productionFilesService = {
 
   // Get files by type
   async getFilesByType(analysisId: string, fileType: string): Promise<ProductionFile[]> {
-    const { data, error } = await supabase
+    const { data, error} = await supabase
       .from('production_files')
       .select(`
         *,
@@ -116,5 +116,55 @@ export const productionFilesService = {
 
     if (error) throw error;
     return data || [];
+  },
+
+  // Approve a file
+  async approveFile(fileId: string, reviewNotes?: string): Promise<ProductionFile> {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Not authenticated');
+
+    const { data, error } = await supabase
+      .from('production_files')
+      .update({
+        approval_status: 'approved',
+        reviewed_by: user.id,
+        review_notes: reviewNotes,
+        reviewed_at: new Date().toISOString(),
+      })
+      .eq('id', fileId)
+      .select(`
+        *,
+        uploader:profiles!production_files_uploaded_by_fkey (id, email, full_name, avatar_url, role),
+        reviewer:profiles!production_files_reviewed_by_fkey (id, email, full_name, avatar_url, role)
+      `)
+      .single();
+
+    if (error) throw error;
+    return data;
+  },
+
+  // Reject a file
+  async rejectFile(fileId: string, reviewNotes: string): Promise<ProductionFile> {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Not authenticated');
+
+    const { data, error } = await supabase
+      .from('production_files')
+      .update({
+        approval_status: 'rejected',
+        reviewed_by: user.id,
+        review_notes: reviewNotes,
+        reviewed_at: new Date().toISOString(),
+      })
+      .eq('id', fileId)
+      .select(`
+        *,
+        uploader:profiles!production_files_uploaded_by_fkey (id, email, full_name, avatar_url, role),
+        reviewer:profiles!production_files_reviewed_by_fkey (id, email, full_name, avatar_url, role)
+      `)
+      .single();
+
+    if (error) throw error;
+    return data;
   },
 };

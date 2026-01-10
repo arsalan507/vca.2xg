@@ -50,6 +50,8 @@ class GoogleDriveService {
             client_id: config.clientId,
             scope: 'https://www.googleapis.com/auth/drive.file',
             callback: '', // Will be set per request
+            redirect_uri: window.location.origin,
+            ux_mode: 'popup', // Use popup mode instead of redirect
           });
 
           this.gapiInitialized = true;

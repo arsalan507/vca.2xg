@@ -258,10 +258,16 @@ export interface ProductionFile {
   description?: string;
   upload_stage?: ProductionStage;
   is_primary: boolean;
+  // Approval fields
+  approval_status?: 'pending' | 'approved' | 'rejected';
+  reviewed_by?: string;
+  review_notes?: string;
+  reviewed_at?: string;
   created_at: string;
   updated_at: string;
   // Populated uploader data
   uploader?: Profile;
+  reviewer?: Profile;
 }
 
 export interface UploadFileData {
