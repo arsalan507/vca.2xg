@@ -1,5 +1,5 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { authService } from '@/services/authService';
 import { profileService } from '@/services/profileService';
 import toast from 'react-hot-toast';
@@ -25,6 +25,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const queryClient = useQueryClient();
 
   // Fetch user profile to get role
   const { data: profile } = useQuery({
@@ -35,6 +36,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const handleLogout = async () => {
     try {
       await authService.signOut();
+      // Clear all React Query cache to prevent stale data
+      queryClient.clear();
       toast.success('Logged out successfully');
       navigate('/login');
     } catch (error) {

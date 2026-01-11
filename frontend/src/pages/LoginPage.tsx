@@ -2,11 +2,13 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
+import { useQueryClient } from '@tanstack/react-query';
 import { authService } from '@/services/authService';
 import { DocumentTextIcon, EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
@@ -80,6 +82,8 @@ export default function LoginPage() {
 
     try {
       await authService.signIn(formData.email, formData.password);
+      // Clear all cached data to ensure fresh profile data is loaded
+      queryClient.clear();
       toast.success('Welcome back!');
       navigate('/');
     } catch (error: any) {
