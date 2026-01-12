@@ -67,7 +67,7 @@ export default function SettingsPage() {
             }`}
           >
             <DocumentTextIcon className="w-5 h-5 mr-2" />
-            Script Idea Fields
+            Dropdown Options
           </button>
         </div>
       </div>
@@ -544,228 +544,312 @@ function GoogleDriveSettings() {
 }
 
 // Script Idea Fields Management Component
-interface ScriptField {
+interface DropdownOption {
+  id: string;
+  label: string;
+}
+
+interface DropdownFieldConfig {
   id: string;
   name: string;
-  required: boolean;
+  key: string; // localStorage key
+  options: DropdownOption[];
+  isActive: boolean;
 }
 
 function ScriptIdeaFieldsManagement() {
-  const [fields, setFields] = useState<ScriptField[]>(() => {
-    // Load from localStorage or use defaults
-    const saved = localStorage.getItem('script_idea_fields');
+  // Initialize dropdown configurations from localStorage
+  const [dropdownFields, setDropdownFields] = useState<DropdownFieldConfig[]>(() => {
+    const saved = localStorage.getItem('script_dropdown_configs');
     if (saved) {
       return JSON.parse(saved);
     }
-    // Default fields
+    // Default configurations matching current database data
     return [
-      { id: '1', name: 'Hook', required: true },
-      { id: '2', name: 'Main Content', required: true },
-      { id: '3', name: 'Call to Action', required: false },
-      { id: '4', name: 'Target Emotion', required: true },
-      { id: '5', name: 'Expected Outcome', required: true },
+      {
+        id: 'target-emotions',
+        name: 'Target Emotions',
+        key: 'target_emotions',
+        isActive: true,
+        options: [
+          { id: '1', label: 'Curiosity' },
+          { id: '2', label: 'Fear' },
+          { id: '3', label: 'Loss aversion' },
+          { id: '4', label: 'Surprise' },
+          { id: '5', label: 'Shock' },
+          { id: '6', label: 'Identity recognition' },
+          { id: '7', label: 'Relatability' },
+          { id: '8', label: 'Frustration validation' },
+          { id: '9', label: 'Doubt' },
+          { id: '10', label: 'Cognitive dissonance' },
+          { id: '11', label: 'Urgency' },
+          { id: '12', label: 'FOMO' },
+          { id: '13', label: 'Desire' },
+          { id: '14', label: 'Aspiration' },
+          { id: '15', label: 'Status threat' },
+          { id: '16', label: 'Ego challenge' },
+          { id: '17', label: 'Anxiety' },
+          { id: '18', label: 'Confusion (intentional)' },
+          { id: '19', label: 'Validation ("It\'s not just me")' },
+          { id: '20', label: 'Intrigue' },
+        ],
+      },
+      {
+        id: 'expected-outcomes',
+        name: 'Expected Outcomes',
+        key: 'expected_outcomes',
+        isActive: true,
+        options: [
+          { id: '1', label: 'Sales' },
+          { id: '2', label: 'Qualified leads' },
+          { id: '3', label: 'Inbound DMs / WhatsApp inquiries' },
+          { id: '4', label: 'Store walk-ins / bookings' },
+          { id: '5', label: 'Trust creation' },
+          { id: '6', label: 'Brand authority' },
+          { id: '7', label: 'Consideration building' },
+          { id: '8', label: 'Decision acceleration' },
+          { id: '9', label: 'Objection handling' },
+          { id: '10', label: 'Shares (DMs)' },
+          { id: '11', label: 'Saves' },
+          { id: '12', label: 'Rewatches' },
+          { id: '13', label: 'Profile visits' },
+          { id: '14', label: 'Follower growth' },
+          { id: '15', label: 'Brand recall' },
+        ],
+      },
     ];
   });
 
-  const [newFieldName, setNewFieldName] = useState('');
-  const [newFieldRequired, setNewFieldRequired] = useState(false);
+  const [selectedDropdownId, setSelectedDropdownId] = useState<string>(dropdownFields[0]?.id || '');
+  const [newOptionLabel, setNewOptionLabel] = useState('');
 
-  // Save fields to localStorage whenever they change
-  const saveFields = (updatedFields: ScriptField[]) => {
-    setFields(updatedFields);
-    localStorage.setItem('script_idea_fields', JSON.stringify(updatedFields));
-    toast.success('Script fields updated successfully!');
+  // Save dropdown configs to localStorage whenever they change
+  const saveDropdownConfigs = (updatedConfigs: DropdownFieldConfig[]) => {
+    setDropdownFields(updatedConfigs);
+    localStorage.setItem('script_dropdown_configs', JSON.stringify(updatedConfigs));
+    toast.success('Dropdown options updated successfully!');
   };
 
-  const handleAddField = (e?: React.FormEvent) => {
+  const handleAddOption = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
 
-    if (!newFieldName.trim()) {
-      toast.error('Please enter a field name');
+    if (!newOptionLabel.trim()) {
+      toast.error('Please enter an option label');
       return;
     }
 
-    const newField: ScriptField = {
-      id: Date.now().toString(),
-      name: newFieldName.trim(),
-      required: newFieldRequired,
-    };
+    const updatedConfigs = dropdownFields.map(config => {
+      if (config.id === selectedDropdownId) {
+        return {
+          ...config,
+          options: [
+            ...config.options,
+            {
+              id: Date.now().toString(),
+              label: newOptionLabel.trim(),
+            },
+          ],
+        };
+      }
+      return config;
+    });
 
-    saveFields([...fields, newField]);
-    setNewFieldName('');
-    setNewFieldRequired(false);
+    saveDropdownConfigs(updatedConfigs);
+    setNewOptionLabel('');
   };
 
-  const handleDeleteField = (id: string) => {
-    const field = fields.find(f => f.id === id);
-    if (confirm(`Are you sure you want to delete the "${field?.name}" field?`)) {
-      saveFields(fields.filter(f => f.id !== id));
+  const handleDeleteOption = (dropdownId: string, optionId: string) => {
+    const dropdown = dropdownFields.find(d => d.id === dropdownId);
+    const option = dropdown?.options.find(o => o.id === optionId);
+
+    if (confirm(`Are you sure you want to delete "${option?.label}"?`)) {
+      const updatedConfigs = dropdownFields.map(config => {
+        if (config.id === dropdownId) {
+          return {
+            ...config,
+            options: config.options.filter(o => o.id !== optionId),
+          };
+        }
+        return config;
+      });
+      saveDropdownConfigs(updatedConfigs);
     }
-  };
-
-  const handleToggleRequired = (id: string) => {
-    saveFields(
-      fields.map(f =>
-        f.id === id ? { ...f, required: !f.required } : f
-      )
-    );
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       e.preventDefault();
-      handleAddField();
+      handleAddOption();
     }
   };
+
+  const selectedDropdown = dropdownFields.find(d => d.id === selectedDropdownId);
 
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
       <div>
-        <h2 className="text-xl font-semibold text-gray-900">Script Idea Fields</h2>
+        <h2 className="text-xl font-semibold text-gray-900">Dropdown Options Management</h2>
         <p className="text-sm text-gray-600 mt-1">
-          Customize the information script writers need to provide when submitting script ideas
+          Manage dropdown options for script submission form (like Notion database properties)
         </p>
       </div>
 
       {/* Info Banner */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <h3 className="font-medium text-blue-900 mb-2">How it works:</h3>
+        <h3 className="font-medium text-blue-900 mb-2">📊 How it works:</h3>
         <ul className="list-disc list-inside space-y-1 text-sm text-blue-800">
-          <li>Add custom fields that script writers will fill out when submitting ideas</li>
-          <li>Mark fields as required or optional based on your workflow</li>
-          <li>Reorder fields by dragging (coming soon)</li>
-          <li>Delete fields you no longer need</li>
+          <li>Select a dropdown field to manage its options</li>
+          <li>Add new options that script writers can choose from</li>
+          <li>Delete options you no longer need</li>
+          <li>Changes are saved automatically and applied immediately to the script submission form</li>
         </ul>
       </div>
 
-      {/* Add New Field Form */}
-      <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
-        <h3 className="text-sm font-semibold text-gray-900 mb-3">Add New Field</h3>
-        <form onSubmit={handleAddField} className="flex items-end gap-3">
-          <div className="flex-1">
-            <label className="block text-xs font-medium text-gray-700 mb-1">
-              Field Name
-            </label>
-            <input
-              type="text"
-              value={newFieldName}
-              onChange={(e) => setNewFieldName(e.target.value)}
-              onKeyPress={handleKeyPress}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
-              placeholder="e.g., Background Music, Location"
-            />
-          </div>
-          <div className="flex items-center">
-            <label className="flex items-center space-x-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={newFieldRequired}
-                onChange={(e) => setNewFieldRequired(e.target.checked)}
-                className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
-              />
-              <span className="text-sm text-gray-700">Required</span>
-            </label>
-          </div>
-          <button
-            type="submit"
-            className="inline-flex items-center px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition text-sm font-medium"
-          >
-            <PlusIcon className="w-4 h-4 mr-1" />
-            Add Field
-          </button>
-        </form>
+      {/* Dropdown Selector */}
+      <div className="border border-gray-200 rounded-lg p-4 bg-gradient-to-r from-primary-50 to-purple-50">
+        <label className="block text-sm font-semibold text-gray-900 mb-2">
+          Select Dropdown Field to Manage:
+        </label>
+        <select
+          value={selectedDropdownId}
+          onChange={(e) => setSelectedDropdownId(e.target.value)}
+          className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm font-medium"
+        >
+          {dropdownFields.map(dropdown => (
+            <option key={dropdown.id} value={dropdown.id}>
+              {dropdown.name} ({dropdown.options.length} options)
+            </option>
+          ))}
+        </select>
       </div>
 
-      {/* Current Fields List */}
-      <div className="border border-gray-200 rounded-lg overflow-hidden">
-        <div className="bg-gray-50 px-6 py-3 border-b border-gray-200">
-          <h3 className="text-sm font-semibold text-gray-900">
-            Current Fields ({fields.length})
+      {/* Add New Option Form */}
+      {selectedDropdown && (
+        <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+          <h3 className="text-sm font-semibold text-gray-900 mb-3">
+            Add New Option to "{selectedDropdown.name}"
           </h3>
+          <form onSubmit={handleAddOption} className="flex items-end gap-3">
+            <div className="flex-1">
+              <label className="block text-xs font-medium text-gray-700 mb-1">
+                Option Label
+              </label>
+              <input
+                type="text"
+                value={newOptionLabel}
+                onChange={(e) => setNewOptionLabel(e.target.value)}
+                onKeyPress={handleKeyPress}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
+                placeholder={selectedDropdown.name === 'Target Emotions' ? 'e.g., Excitement, Joy' : 'e.g., Newsletter signups'}
+              />
+            </div>
+            <button
+              type="submit"
+              className="inline-flex items-center px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition text-sm font-medium"
+            >
+              <PlusIcon className="w-4 h-4 mr-1" />
+              Add Option
+            </button>
+          </form>
         </div>
+      )}
 
-        {fields.length === 0 ? (
-          <div className="text-center py-12">
-            <DocumentTextIcon className="mx-auto h-12 w-12 text-gray-400" />
-            <p className="mt-2 text-sm text-gray-500">No fields configured yet</p>
-            <p className="text-xs text-gray-400">Add your first field above to get started</p>
+      {/* Current Options List */}
+      {selectedDropdown && (
+        <div className="border border-gray-200 rounded-lg overflow-hidden">
+          <div className="bg-gradient-to-r from-primary-600 to-purple-600 px-6 py-3 border-b border-gray-200">
+            <h3 className="text-sm font-semibold text-white">
+              {selectedDropdown.name} Options ({selectedDropdown.options.length})
+            </h3>
           </div>
-        ) : (
-          <div className="divide-y divide-gray-200">
-            {fields.map((field, index) => (
-              <div
-                key={field.id}
-                className="px-6 py-4 hover:bg-gray-50 transition-colors"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-4 flex-1">
-                    {/* Drag Handle (for future drag-and-drop) */}
-                    <div className="text-gray-400 cursor-grab hover:text-gray-600">
-                      <Bars3Icon className="w-5 h-5" />
-                    </div>
 
-                    {/* Field Info */}
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-2">
-                        <span className="text-sm font-medium text-gray-900">
-                          {field.name}
-                        </span>
-                        <span
-                          className={`px-2 py-0.5 text-xs font-medium rounded-full ${
-                            field.required
-                              ? 'bg-red-100 text-red-800'
-                              : 'bg-gray-100 text-gray-600'
-                          }`}
-                        >
-                          {field.required ? 'Required' : 'Optional'}
-                        </span>
+          {selectedDropdown.options.length === 0 ? (
+            <div className="text-center py-12">
+              <DocumentTextIcon className="mx-auto h-12 w-12 text-gray-400" />
+              <p className="mt-2 text-sm text-gray-500">No options configured yet</p>
+              <p className="text-xs text-gray-400">Add your first option above to get started</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-gray-200 max-h-96 overflow-y-auto">
+              {selectedDropdown.options.map((option, index) => (
+                <div
+                  key={option.id}
+                  className="px-6 py-3 hover:bg-gray-50 transition-colors"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3 flex-1">
+                      {/* Drag Handle (for future drag-and-drop) */}
+                      <div className="text-gray-400">
+                        <Bars3Icon className="w-4 h-4" />
                       </div>
-                      <p className="text-xs text-gray-500 mt-0.5">
-                        Field #{index + 1}
-                      </p>
-                    </div>
-                  </div>
 
-                  {/* Actions */}
-                  <div className="flex items-center space-x-2">
+                      {/* Option Info */}
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-2">
+                          <span className="text-sm font-medium text-gray-900">
+                            {option.label}
+                          </span>
+                          <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-primary-100 text-primary-700">
+                            #{index + 1}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Actions */}
                     <button
-                      onClick={() => handleToggleRequired(field.id)}
-                      className="px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition"
-                    >
-                      {field.required ? 'Make Optional' : 'Make Required'}
-                    </button>
-                    <button
-                      onClick={() => handleDeleteField(field.id)}
+                      onClick={() => handleDeleteOption(selectedDropdown.id, option.id)}
                       className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition"
-                      title="Delete field"
+                      title="Delete option"
                     >
                       <TrashIcon className="w-4 h-4" />
                     </button>
                   </div>
                 </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Quick Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {dropdownFields.map(dropdown => (
+          <div
+            key={dropdown.id}
+            className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer"
+            onClick={() => setSelectedDropdownId(dropdown.id)}
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <h4 className="text-sm font-semibold text-gray-900">{dropdown.name}</h4>
+                <p className="text-xs text-gray-500 mt-1">{dropdown.options.length} options available</p>
               </div>
-            ))}
+              <div className="text-2xl font-bold text-primary-600">
+                {dropdown.options.length}
+              </div>
+            </div>
           </div>
-        )}
+        ))}
       </div>
 
       {/* Best Practices */}
       <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-        <h3 className="font-medium text-gray-900 mb-2">Best Practices:</h3>
+        <h3 className="font-medium text-gray-900 mb-2">💡 Best Practices:</h3>
         <ul className="list-disc list-inside space-y-1 text-sm text-gray-600">
-          <li>Keep field names clear and concise</li>
-          <li>Only mark essential information as "Required"</li>
-          <li>Use consistent naming conventions across fields</li>
-          <li>Consider the script writer's workflow when adding fields</li>
-          <li>Regularly review and remove unused fields</li>
+          <li>Keep option labels clear and concise</li>
+          <li>Avoid duplicate or very similar options</li>
+          <li>Order options logically (most common first, alphabetically, etc.)</li>
+          <li>Review and clean up unused options regularly</li>
+          <li>Test the script submission form after making changes</li>
         </ul>
       </div>
 
       {/* Save Note */}
       <div className="bg-green-50 border border-green-200 rounded-lg p-3">
         <p className="text-sm text-green-800">
-          <strong>Note:</strong> Changes are saved automatically when you add, delete, or modify fields.
+          <strong>✅ Auto-save enabled:</strong> Changes are saved automatically and will be immediately available in the script submission form.
         </p>
       </div>
     </div>

@@ -13,46 +13,66 @@ import ReviewScoreInput from '@/components/ReviewScoreInput';
 import type { ViralAnalysis, AnalysisFormData, ReviewAnalysisData } from '@/types';
 import { UserRole } from '@/types';
 
-const TARGET_EMOTIONS = [
-  'Curiosity',
-  'Fear',
-  'Loss aversion',
-  'Surprise',
-  'Shock',
-  'Identity recognition',
-  'Relatability',
-  'Frustration validation',
-  'Doubt',
-  'Cognitive dissonance',
-  'Urgency',
-  'FOMO',
-  'Desire',
-  'Aspiration',
-  'Status threat',
-  'Ego challenge',
-  'Anxiety',
-  'Confusion (intentional)',
-  'Validation ("It\'s not just me")',
-  'Intrigue',
-];
+// Helper function to get dropdown options from localStorage
+const getDropdownOptions = (dropdownKey: string): string[] => {
+  const saved = localStorage.getItem('script_dropdown_configs');
+  if (saved) {
+    try {
+      const configs = JSON.parse(saved);
+      const dropdown = configs.find((c: any) => c.key === dropdownKey);
+      if (dropdown && dropdown.options) {
+        return dropdown.options.map((opt: any) => opt.label);
+      }
+    } catch (error) {
+      console.error('Failed to parse dropdown configs from localStorage:', error);
+    }
+  }
 
-const EXPECTED_OUTCOMES = [
-  'Sales',
-  'Qualified leads',
-  'Inbound DMs / WhatsApp inquiries',
-  'Store walk-ins / bookings',
-  'Trust creation',
-  'Brand authority',
-  'Consideration building',
-  'Decision acceleration',
-  'Objection handling',
-  'Shares (DMs)',
-  'Saves',
-  'Rewatches',
-  'Profile visits',
-  'Follower growth',
-  'Brand recall',
-];
+  // Fallback to default values if nothing in localStorage
+  if (dropdownKey === 'target_emotions') {
+    return [
+      'Curiosity',
+      'Fear',
+      'Loss aversion',
+      'Surprise',
+      'Shock',
+      'Identity recognition',
+      'Relatability',
+      'Frustration validation',
+      'Doubt',
+      'Cognitive dissonance',
+      'Urgency',
+      'FOMO',
+      'Desire',
+      'Aspiration',
+      'Status threat',
+      'Ego challenge',
+      'Anxiety',
+      'Confusion (intentional)',
+      'Validation ("It\'s not just me")',
+      'Intrigue',
+    ];
+  } else if (dropdownKey === 'expected_outcomes') {
+    return [
+      'Sales',
+      'Qualified leads',
+      'Inbound DMs / WhatsApp inquiries',
+      'Store walk-ins / bookings',
+      'Trust creation',
+      'Brand authority',
+      'Consideration building',
+      'Decision acceleration',
+      'Objection handling',
+      'Shares (DMs)',
+      'Saves',
+      'Rewatches',
+      'Profile visits',
+      'Follower growth',
+      'Brand recall',
+    ];
+  }
+  return [];
+};
 
 export default function AnalysesPage() {
   const queryClient = useQueryClient();
@@ -61,6 +81,10 @@ export default function AnalysesPage() {
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const [viewingAnalysis, setViewingAnalysis] = useState<ViralAnalysis | null>(null);
   const [editingAnalysis, setEditingAnalysis] = useState<ViralAnalysis | null>(null);
+
+  // Get dropdown options from localStorage (managed by admin in Settings)
+  const TARGET_EMOTIONS = getDropdownOptions('target_emotions');
+  const EXPECTED_OUTCOMES = getDropdownOptions('expected_outcomes');
   const [formData, setFormData] = useState<AnalysisFormData>({
     // Existing fields
     referenceUrl: '',
