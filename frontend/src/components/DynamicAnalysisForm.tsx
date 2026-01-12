@@ -1,0 +1,198 @@
+/**
+ * Dynamic Analysis Form
+ *
+ * Renders the Script Writer form dynamically based on formBuilderService configuration.
+ * Replaces the hardcoded 400+ line form in AnalysesPage.
+ */
+
+import { useState, useEffect } from 'react';
+import { formBuilderService } from '@/services/formBuilderService';
+import { resolveAllFieldOptions, isFieldVisible } from '@/utils/formFieldResolver';
+import DynamicFormField from '@/components/DynamicFormField';
+import type { ResolvedField } from '@/types/formBuilder';
+import type { AnalysisFormData } from '@/types';
+
+interface DynamicAnalysisFormProps {
+  formData: AnalysisFormData;
+  onChange: (updates: Partial<AnalysisFormData>) => void;
+  onSubmit: (e: React.FormEvent) => void;
+  isEditing: boolean;
+}
+
+export default function DynamicAnalysisForm({
+  formData,
+  onChange,
+  onSubmit,
+  isEditing,
+}: DynamicAnalysisFormProps) {
+  const [resolvedFields, setResolvedFields] = useState<ResolvedField[]>([]);
+  const [isLoadingFields, setIsLoadingFields] = useState(true);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Load and resolve form fields
+  useEffect(() => {
+    async function loadFields() {
+      try {
+        setIsLoadingFields(true);
+        const enabledFields = formBuilderService.getEnabledFields();
+        const resolved = await resolveAllFieldOptions(enabledFields);
+        setResolvedFields(resolved);
+      } catch (error) {
+        console.error('Failed to load form fields:', error);
+      } finally {
+        setIsLoadingFields(false);
+      }
+    }
+
+    loadFields();
+  }, []);
+
+  // Handle field value change
+  const handleFieldChange = (fieldKey: string, value: any) => {
+    // For textarea-voice and voice fields, value might be an object with multiple keys
+    if (value && typeof value === 'object' && !Array.isArray(value) && !(value instanceof Blob)) {
+      onChange(value);
+    } else {
+      onChange({ [fieldKey]: value });
+    }
+
+    // Clear error for this field
+    if (errors[fieldKey]) {
+      setErrors((prev) => {
+        const next = { ...prev };
+        delete next[fieldKey];
+        return next;
+      });
+    }
+  };
+
+  // Client-side validation
+  const validate = (): boolean => {
+    const newErrors: Record<string, string> = {};
+
+    resolvedFields.forEach((field) => {
+      // Skip validation for disabled fields or dividers
+      if (field.type === 'divider') return;
+
+      // Skip if conditionally hidden
+      if (!isFieldVisible(field, formData)) return;
+
+      // Required field validation
+      if (field.required) {
+        const value = (formData as any)[field.fieldKey];
+
+        // Special handling for textarea-voice fields
+        if (field.type === 'textarea-voice') {
+          const textValue = value?.[field.fieldKey];
+          const voiceValue = value?.[`${field.fieldKey}Audio`];
+          if (!textValue && !voiceValue) {
+            newErrors[field.fieldKey] = `${field.label} is required (text or voice)`;
+          }
+        }
+        // Array fields (multi-select)
+        else if (Array.isArray(value)) {
+          if (value.length === 0) {
+            newErrors[field.fieldKey] = `${field.label} is required`;
+          }
+        }
+        // All other fields
+        else if (!value || (typeof value === 'string' && !value.trim())) {
+          newErrors[field.fieldKey] = `${field.label} is required`;
+        }
+      }
+
+      // URL validation
+      if (field.type === 'url' && (formData as any)[field.fieldKey]) {
+        const urlValue = (formData as any)[field.fieldKey];
+        try {
+          new URL(urlValue);
+        } catch {
+          newErrors[field.fieldKey] = 'Please enter a valid URL';
+        }
+      }
+
+      // Number range validation
+      if (field.type === 'number' && (formData as any)[field.fieldKey]) {
+        const numValue = (formData as any)[field.fieldKey];
+        if (field.min !== undefined && numValue < field.min) {
+          newErrors[field.fieldKey] = `Minimum value is ${field.min}`;
+        }
+        if (field.max !== undefined && numValue > field.max) {
+          newErrors[field.fieldKey] = `Maximum value is ${field.max}`;
+        }
+      }
+    });
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!validate()) {
+      // Scroll to first error
+      const firstErrorField = Object.keys(errors)[0];
+      if (firstErrorField) {
+        const element = document.getElementById(`field-${firstErrorField}`);
+        element?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+      return;
+    }
+
+    onSubmit(e);
+  };
+
+  if (isLoadingFields) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <span className="ml-3 text-gray-600">Loading form...</span>
+      </div>
+    );
+  }
+
+  if (resolvedFields.length === 0) {
+    return (
+      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+        <p className="text-sm text-yellow-800">
+          <strong>No form fields configured.</strong> Please contact your administrator to configure
+          the form in Settings → Form Builder.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-6">
+      {resolvedFields.map((field) => {
+        // Check conditional visibility
+        if (!isFieldVisible(field, formData)) {
+          return null;
+        }
+
+        return (
+          <div key={field.id} id={`field-${field.fieldKey}`}>
+            <DynamicFormField
+              field={field}
+              value={(formData as any)[field.fieldKey]}
+              onChange={handleFieldChange}
+              error={errors[field.fieldKey]}
+              formData={formData}
+            />
+          </div>
+        );
+      })}
+
+      {/* Form Actions */}
+      <div className="flex justify-end space-x-3 pt-4 border-t">
+        <button
+          type="submit"
+          className="px-6 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+        >
+          {isEditing ? 'Update Analysis' : 'Submit Analysis'}
+        </button>
+      </div>
+    </form>
+  );
+}

@@ -8,71 +8,10 @@ import { contentConfigService } from '@/services/contentConfigService';
 import { PlusIcon, PencilIcon, LinkIcon, EyeIcon, StarIcon } from '@heroicons/react/24/outline';
 import { StarIcon as StarIconSolid } from '@heroicons/react/24/solid';
 import VoiceRecorder from '@/components/VoiceRecorder';
-import MultiSelectTags from '@/components/MultiSelectTags';
 import ReviewScoreInput from '@/components/ReviewScoreInput';
+import DynamicAnalysisForm from '@/components/DynamicAnalysisForm';
 import type { ViralAnalysis, AnalysisFormData, ReviewAnalysisData } from '@/types';
 import { UserRole } from '@/types';
-
-// Helper function to get dropdown options from localStorage
-const getDropdownOptions = (dropdownKey: string): string[] => {
-  const saved = localStorage.getItem('script_dropdown_configs');
-  if (saved) {
-    try {
-      const configs = JSON.parse(saved);
-      const dropdown = configs.find((c: any) => c.key === dropdownKey);
-      if (dropdown && dropdown.options) {
-        return dropdown.options.map((opt: any) => opt.label);
-      }
-    } catch (error) {
-      console.error('Failed to parse dropdown configs from localStorage:', error);
-    }
-  }
-
-  // Fallback to default values if nothing in localStorage
-  if (dropdownKey === 'target_emotions') {
-    return [
-      'Curiosity',
-      'Fear',
-      'Loss aversion',
-      'Surprise',
-      'Shock',
-      'Identity recognition',
-      'Relatability',
-      'Frustration validation',
-      'Doubt',
-      'Cognitive dissonance',
-      'Urgency',
-      'FOMO',
-      'Desire',
-      'Aspiration',
-      'Status threat',
-      'Ego challenge',
-      'Anxiety',
-      'Confusion (intentional)',
-      'Validation ("It\'s not just me")',
-      'Intrigue',
-    ];
-  } else if (dropdownKey === 'expected_outcomes') {
-    return [
-      'Sales',
-      'Qualified leads',
-      'Inbound DMs / WhatsApp inquiries',
-      'Store walk-ins / bookings',
-      'Trust creation',
-      'Brand authority',
-      'Consideration building',
-      'Decision acceleration',
-      'Objection handling',
-      'Shares (DMs)',
-      'Saves',
-      'Rewatches',
-      'Profile visits',
-      'Follower growth',
-      'Brand recall',
-    ];
-  }
-  return [];
-};
 
 export default function AnalysesPage() {
   const queryClient = useQueryClient();
@@ -81,10 +20,6 @@ export default function AnalysesPage() {
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const [viewingAnalysis, setViewingAnalysis] = useState<ViralAnalysis | null>(null);
   const [editingAnalysis, setEditingAnalysis] = useState<ViralAnalysis | null>(null);
-
-  // Get dropdown options from localStorage (managed by admin in Settings)
-  const TARGET_EMOTIONS = getDropdownOptions('target_emotions');
-  const EXPECTED_OUTCOMES = getDropdownOptions('expected_outcomes');
   const [formData, setFormData] = useState<AnalysisFormData>({
     // Existing fields
     referenceUrl: '',
@@ -131,27 +66,6 @@ export default function AnalysesPage() {
   const { data: analyses, isLoading } = useQuery({
     queryKey: ['analyses'],
     queryFn: analysesService.getMyAnalyses,
-  });
-
-  // Fetch configuration data for form dropdowns
-  const { data: industries = [] } = useQuery({
-    queryKey: ['industries'],
-    queryFn: contentConfigService.getAllIndustries,
-  });
-
-  const { data: hookTags = [] } = useQuery({
-    queryKey: ['hook-tags'],
-    queryFn: contentConfigService.getAllHookTags,
-  });
-
-  const { data: profiles = [] } = useQuery({
-    queryKey: ['profile-list'],
-    queryFn: contentConfigService.getAllProfiles,
-  });
-
-  const { data: characterTags = [] } = useQuery({
-    queryKey: ['character-tags'],
-    queryFn: contentConfigService.getAllCharacterTags,
   });
 
   const createMutation = useMutation({
@@ -473,321 +387,23 @@ export default function AnalysesPage() {
                 <p className="text-sm text-gray-600 mb-6">
                   Break down what made this content viral and how to replicate it
                 </p>
-                <form onSubmit={handleSubmit} className="space-y-6">
-                  {/* Industry Selection */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Industry *
-                    </label>
-                    <select
-                      required
-                      value={formData.industryId}
-                      onChange={(e) => setFormData({ ...formData, industryId: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                    >
-                      <option value="">Select industry...</option>
-                      {industries.map((industry) => (
-                        <option key={industry.id} value={industry.id}>
-                          {industry.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                <DynamicAnalysisForm
+                  formData={formData}
+                  onChange={(updates) => setFormData({ ...formData, ...updates })}
+                  onSubmit={handleSubmit}
+                  isEditing={!!editingAnalysis}
+                />
 
-                  {/* Profile Assignment */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Profile / Admin *
-                    </label>
-                    <select
-                      required
-                      value={formData.profileId}
-                      onChange={(e) => setFormData({ ...formData, profileId: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                    >
-                      <option value="">Select profile...</option>
-                      {profiles.map((profile) => (
-                        <option key={profile.id} value={profile.id}>
-                          {profile.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Reference Link *
-                    </label>
-                    <input
-                      type="url"
-                      required
-                      value={formData.referenceUrl}
-                      onChange={(e) => setFormData({ ...formData, referenceUrl: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                      placeholder="https://www.instagram.com/reel/example or https://youtube.com/watch?v=..."
-                    />
-                    <p className="mt-1 text-xs text-gray-500">
-                      Paste the link to the viral content you want to analyze
-                    </p>
-                  </div>
-
-                  {/* Hook Tags Multi-Select */}
-                  <MultiSelectTags
-                    label="Hook Tags"
-                    options={hookTags.map(tag => ({ id: tag.id, name: tag.name }))}
-                    selectedIds={formData.hookTagIds}
-                    onChange={(ids) => setFormData({ ...formData, hookTagIds: ids })}
-                    placeholder="Select hook types..."
-                    required
-                  />
-
-                  <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                    <label className="block text-sm font-medium text-gray-700 mb-3">
-                      Hook (First 6 Seconds) *
-                    </label>
-                    <textarea
-                      rows={3}
-                      value={formData.hook}
-                      onChange={(e) => setFormData({ ...formData, hook: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent mb-3"
-                      placeholder="Describe the opening hook that grabs attention in the first 6 seconds..."
-                    />
-                    <VoiceRecorder
-                      label=""
-                      placeholder="Or record your explanation of the hook"
-                      onRecordingComplete={(blob, url) =>
-                        setFormData({ ...formData, hookVoiceNote: blob, hookVoiceNoteUrl: url })
-                      }
-                      existingAudioUrl={formData.hookVoiceNoteUrl}
-                      onClear={() =>
-                        setFormData({ ...formData, hookVoiceNote: null, hookVoiceNoteUrl: '' })
-                      }
-                    />
-                  </div>
-
-                  <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                    <label className="block text-sm font-medium text-gray-700 mb-3">
-                      Why Did It Go Viral?
-                    </label>
-                    <textarea
-                      rows={3}
-                      value={formData.whyViral}
-                      onChange={(e) => setFormData({ ...formData, whyViral: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent mb-3"
-                      placeholder="Analyze the key factors that made this content go viral..."
-                    />
-                    <VoiceRecorder
-                      label=""
-                      placeholder="Or record your viral analysis"
-                      onRecordingComplete={(blob, url) =>
-                        setFormData({ ...formData, whyViralVoiceNote: blob, whyViralVoiceNoteUrl: url })
-                      }
-                      existingAudioUrl={formData.whyViralVoiceNoteUrl}
-                      onClear={() =>
-                        setFormData({ ...formData, whyViralVoiceNote: null, whyViralVoiceNoteUrl: '' })
-                      }
-                    />
-                  </div>
-
-                  <div className="bg-green-50 p-4 rounded-lg border border-green-200">
-                    <label className="block text-sm font-medium text-gray-700 mb-3">
-                      How to Replicate for Our Brand
-                    </label>
-                    <textarea
-                      rows={4}
-                      value={formData.howToReplicate}
-                      onChange={(e) => setFormData({ ...formData, howToReplicate: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent mb-3"
-                      placeholder="Explain step-by-step how we can adapt this viral format for our brand..."
-                    />
-                    <VoiceRecorder
-                      label=""
-                      placeholder="Or record your replication strategy"
-                      onRecordingComplete={(blob, url) =>
-                        setFormData({
-                          ...formData,
-                          howToReplicateVoiceNote: blob,
-                          howToReplicateVoiceNoteUrl: url,
-                        })
-                      }
-                      existingAudioUrl={formData.howToReplicateVoiceNoteUrl}
-                      onClear={() =>
-                        setFormData({
-                          ...formData,
-                          howToReplicateVoiceNote: null,
-                          howToReplicateVoiceNoteUrl: '',
-                        })
-                      }
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      What Emotions Are We Targeting? *
-                    </label>
-                    <select
-                      required
-                      value={formData.targetEmotion}
-                      onChange={(e) => setFormData({ ...formData, targetEmotion: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                    >
-                      <option value="">Select target emotion</option>
-                      {TARGET_EMOTIONS.map((emotion) => (
-                        <option key={emotion} value={emotion}>
-                          {emotion}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      What Outcome Do We Expect? *
-                    </label>
-                    <select
-                      required
-                      value={formData.expectedOutcome}
-                      onChange={(e) => setFormData({ ...formData, expectedOutcome: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                    >
-                      <option value="">Select expected outcome</option>
-                      {EXPECTED_OUTCOMES.map((outcome) => (
-                        <option key={outcome} value={outcome}>
-                          {outcome}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Divider - Script Writer Specific Fields */}
-                  <div className="border-t pt-6">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Production Details</h3>
-                    <p className="text-sm text-gray-600 mb-4">
-                      Additional information needed for video production
-                    </p>
-                  </div>
-
-                  {/* ON SCREEN TEXT HOOK - Column L from Excel */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      On-Screen Text Hook
-                    </label>
-                    <textarea
-                      rows={2}
-                      value={formData.onScreenTextHook}
-                      onChange={(e) => setFormData({ ...formData, onScreenTextHook: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                      placeholder="Text that will appear on screen during the hook (e.g., 'live robbery ( plus shooking emoji)')"
-                    />
-                    <p className="mt-1 text-xs text-gray-500">
-                      The text overlay that will grab attention in the first few seconds
-                    </p>
-                  </div>
-
-                  {/* OUR IDEA - Column M from Excel (Audio recording) */}
-                  <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
-                    <label className="block text-sm font-medium text-gray-700 mb-3">
-                      Our Idea (Voice Note)
-                    </label>
-                    <p className="text-xs text-gray-600 mb-3">
-                      Record your detailed idea and vision for this content
-                    </p>
-                    <VoiceRecorder
-                      label=""
-                      placeholder="Record your detailed idea for this content"
-                      onRecordingComplete={(blob, url) =>
-                        setFormData({ ...formData, ourIdeaAudio: blob, ourIdeaAudioUrl: url })
-                      }
-                      existingAudioUrl={formData.ourIdeaAudioUrl}
-                      onClear={() =>
-                        setFormData({ ...formData, ourIdeaAudio: null, ourIdeaAudioUrl: '' })
-                      }
-                    />
-                  </div>
-
-                  {/* LOCATION OF SHOOT - Column N from Excel */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Location of the Shoot
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.shootLocation}
-                      onChange={(e) => setFormData({ ...formData, shootLocation: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                      placeholder="e.g., in store, outside store, client location"
-                    />
-                    <p className="mt-1 text-xs text-gray-500">
-                      Where will this video be shot?
-                    </p>
-                  </div>
-
-                  {/* POSSIBILITY OF SHOOT - Column O from Excel */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Possibility of Shoot *
-                    </label>
-                    <select
-                      required
-                      value={formData.shootPossibility}
-                      onChange={(e) => setFormData({ ...formData, shootPossibility: parseInt(e.target.value) as 25 | 50 | 75 | 100 })}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                    >
-                      <option value="100">100% - Definitely can shoot</option>
-                      <option value="75">75% - Very likely</option>
-                      <option value="50">50% - Moderate chance</option>
-                      <option value="25">25% - Challenging but possible</option>
-                    </select>
-                    <p className="mt-1 text-xs text-gray-500">
-                      How confident are you that this can be shot successfully?
-                    </p>
-                  </div>
-
-                  {/* Character Tags - Total People Involved */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Total People Involved
-                    </label>
-                    <input
-                      type="number"
-                      min="1"
-                      value={formData.totalPeopleInvolved}
-                      onChange={(e) => setFormData({ ...formData, totalPeopleInvolved: parseInt(e.target.value) || 1 })}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                      placeholder="Number of people needed for the shoot"
-                    />
-                  </div>
-
-                  {/* Character Tags Multi-Select */}
-                  <MultiSelectTags
-                    label="Character Tags"
-                    options={characterTags.map(tag => ({ id: tag.id, name: tag.name }))}
-                    selectedIds={formData.characterTagIds}
-                    onChange={(ids) => setFormData({ ...formData, characterTagIds: ids })}
-                    placeholder="Select characters involved..."
-                  />
-
-                  <div className="flex justify-end space-x-3 pt-4 border-t">
-                    <button
-                      type="button"
-                      onClick={closeModal}
-                      className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={createMutation.isPending || updateMutation.isPending}
-                      className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 font-medium"
-                    >
-                      {createMutation.isPending || updateMutation.isPending
-                        ? 'Saving...'
-                        : editingAnalysis
-                        ? 'Update Analysis'
-                        : 'Submit Analysis'}
-                    </button>
-                  </div>
-                </form>
+                {/* Cancel Button */}
+                <div className="flex justify-end pt-4 border-t -mt-6">
+                  <button
+                    type="button"
+                    onClick={closeModal}
+                    className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium"
+                  >
+                    Cancel
+                  </button>
+                </div>
               </div>
             </div>
           </div>
