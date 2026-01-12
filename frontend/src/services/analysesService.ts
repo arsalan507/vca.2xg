@@ -105,7 +105,7 @@ export const analysesService = {
       'targetEmotion', 'expectedOutcome', 'industryId', 'profileId',
       'hookTagIds', 'totalPeopleInvolved', 'characterTagIds',
       'onScreenTextHook', 'ourIdeaAudio', 'ourIdeaAudioUrl',
-      'shootLocation', 'shootPossibility'
+      'shootLocation', 'shootPossibility', 'posting_profile'
     ]);
 
     // Extract custom fields
@@ -115,6 +115,9 @@ export const analysesService = {
         customFields[key] = formData[key];
       }
     });
+
+    // Map posting_profile to profileId if present
+    const profileIdValue = formData.posting_profile || formData.profileId;
 
     const { data, error } = await supabase
       .from('viral_analyses')
@@ -131,7 +134,7 @@ export const analysesService = {
         expected_outcome: formData.expectedOutcome,
         // New enhanced fields
         industry_id: formData.industryId,
-        profile_id: formData.profileId,
+        profile_id: profileIdValue,
         total_people_involved: formData.totalPeopleInvolved,
         on_screen_text_hook: formData.onScreenTextHook,
         our_idea_audio_url: ourIdeaAudioUrl,
@@ -191,7 +194,7 @@ export const analysesService = {
       'targetEmotion', 'expectedOutcome', 'industryId', 'profileId',
       'hookTagIds', 'totalPeopleInvolved', 'characterTagIds',
       'onScreenTextHook', 'ourIdeaAudio', 'ourIdeaAudioUrl',
-      'shootLocation', 'shootPossibility'
+      'shootLocation', 'shootPossibility', 'posting_profile'
     ]);
 
     // Extract custom fields
@@ -201,6 +204,9 @@ export const analysesService = {
         customFields[key] = formData[key];
       }
     });
+
+    // Map posting_profile to profileId if present
+    const profileIdValue = formData.posting_profile || formData.profileId;
 
     const { data, error } = await supabase
       .from('viral_analyses')
@@ -216,7 +222,7 @@ export const analysesService = {
         expected_outcome: formData.expectedOutcome,
         // New enhanced fields
         industry_id: formData.industryId,
-        profile_id: formData.profileId,
+        profile_id: profileIdValue,
         total_people_involved: formData.totalPeopleInvolved,
         on_screen_text_hook: formData.onScreenTextHook,
         our_idea_audio_url: ourIdeaAudioUrl,
