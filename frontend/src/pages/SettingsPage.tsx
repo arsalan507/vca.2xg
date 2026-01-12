@@ -881,12 +881,14 @@ function ScriptIdeaFieldsManagement() {
 import { formBuilderService } from '@/services/formBuilderService';
 import type { ScriptFormFieldConfig, FieldType } from '@/types/formBuilder';
 import FieldEditModal from '@/components/FieldEditModal';
+import AddFieldModal from '@/components/AddFieldModal';
 
 function FormBuilderManagement() {
   const [fields, setFields] = useState<ScriptFormFieldConfig[]>(() =>
     formBuilderService.getAllFields()
   );
   const [editingFieldId, setEditingFieldId] = useState<string | null>(null);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
   // Get editing field
   const editingField = editingFieldId ? fields.find(f => f.id === editingFieldId) : null;
@@ -951,6 +953,20 @@ function FormBuilderManagement() {
     setEditingFieldId(null);
   };
 
+  // Handle add field
+  const handleAddField = (field: ScriptFormFieldConfig) => {
+    try {
+      // Set order to be last
+      field.order = fields.length;
+      formBuilderService.addField(field);
+      reloadFields();
+      setIsAddModalOpen(false);
+      toast.success(`Field "${field.label}" added successfully`);
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to add field');
+    }
+  };
+
   // Handle field delete
   const handleDeleteField = (id: string) => {
     const field = fields.find(f => f.id === id);
@@ -999,18 +1015,28 @@ function FormBuilderManagement() {
             Configure what fields Script Writers see when submitting new ideas (Notion-style)
           </p>
         </div>
-        <button
-          onClick={handleResetToDefault}
-          className="px-4 py-2 text-sm border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
-        >
-          Reset to Default
-        </button>
+        <div className="flex items-center space-x-3">
+          <button
+            onClick={() => setIsAddModalOpen(true)}
+            className="px-4 py-2 text-sm bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition inline-flex items-center"
+          >
+            <PlusIcon className="w-4 h-4 mr-1" />
+            Add Field
+          </button>
+          <button
+            onClick={handleResetToDefault}
+            className="px-4 py-2 text-sm border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
+          >
+            Reset to Default
+          </button>
+        </div>
       </div>
 
       {/* Info Banner */}
       <div className="bg-gradient-to-r from-primary-50 to-purple-50 border border-primary-200 rounded-lg p-4">
         <h3 className="font-medium text-primary-900 mb-2">🎨 How it works:</h3>
         <ul className="list-disc list-inside space-y-1 text-sm text-primary-800">
+          <li><strong>Add custom fields</strong> to collect additional information from Script Writers</li>
           <li>Reorder fields using up/down arrows to change the form layout</li>
           <li>Enable/disable fields to show/hide them from Script Writers</li>
           <li>Edit fields to change labels, placeholders, and validation rules</li>
@@ -1173,6 +1199,14 @@ function FormBuilderManagement() {
           field={editingField}
           onSave={handleSaveEdit}
           onClose={handleCloseEdit}
+        />
+      )}
+
+      {/* Add Field Modal */}
+      {isAddModalOpen && (
+        <AddFieldModal
+          onAdd={handleAddField}
+          onClose={() => setIsAddModalOpen(false)}
         />
       )}
     </div>
