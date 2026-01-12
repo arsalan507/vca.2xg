@@ -62,22 +62,35 @@ export default function TeamMemberProjectsModal({
         }
       }
 
-      // Fetch related profile data separately if needed
+      // Fetch related profile data and production files separately if needed
       if (data && data.length > 0) {
         // Collect all user IDs from assignments
         const analysisIds = data.map(d => d.id);
+
+        // Fetch project assignments
         const { data: allAssignments } = await supabase
           .from('project_assignments')
           .select('analysis_id, user_id, role')
           .in('analysis_id', analysisIds);
 
-        // Collect unique user IDs
+        // Fetch production files
+        const { data: allFiles } = await supabase
+          .from('production_files')
+          .select('*')
+          .in('analysis_id', analysisIds)
+          .eq('is_deleted', false)
+          .order('created_at', { ascending: false });
+
+        // Collect unique user IDs (including file uploaders)
         const userIds = new Set<string>();
         data.forEach(project => {
           if (project.user_id) userIds.add(project.user_id);
         });
         allAssignments?.forEach(assignment => {
           if (assignment.user_id) userIds.add(assignment.user_id);
+        });
+        allFiles?.forEach(file => {
+          if (file.uploaded_by) userIds.add(file.uploaded_by);
         });
 
         // Fetch all profiles in one query
@@ -114,6 +127,15 @@ export default function TeamMemberProjectsModal({
                 }
               }
             });
+
+            // Attach production files
+            const projectFiles = allFiles?.filter(f => f.analysis_id === project.id) || [];
+            projectFiles.forEach(file => {
+              if (file.uploaded_by) {
+                file.uploader = profileMap.get(file.uploaded_by);
+              }
+            });
+            project.production_files = projectFiles;
           });
         }
       }
@@ -385,6 +407,63 @@ export default function TeamMemberProjectsModal({
                                 <span className="text-gray-600">Overall:</span>
                                 <span className="ml-2 font-bold text-primary-600">{project.overall_score}/10</span>
                               </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Production Files */}
+                        {project.production_files && project.production_files.length > 0 && (
+                          <div className="bg-green-50 p-3 rounded border border-green-200">
+                            <h4 className="text-sm font-semibold text-gray-700 mb-2">
+                              Uploaded Files ({project.production_files.length})
+                            </h4>
+                            <div className="space-y-2">
+                              {project.production_files.map((file: any) => (
+                                <div key={file.id} className="bg-white p-2 rounded border border-gray-200">
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-center space-x-2">
+                                        <span className={`px-2 py-0.5 text-xs font-medium rounded ${
+                                          file.file_type === 'raw-footage' ? 'bg-blue-100 text-blue-800' :
+                                          file.file_type === 'edited-video' ? 'bg-purple-100 text-purple-800' :
+                                          'bg-green-100 text-green-800'
+                                        }`}>
+                                          {file.file_type === 'raw-footage' ? '🎬 Raw Footage' :
+                                           file.file_type === 'edited-video' ? '✂️ Edited' :
+                                           '✅ Final'}
+                                        </span>
+                                        <span className="text-xs text-gray-500 truncate">
+                                          {file.file_name}
+                                        </span>
+                                      </div>
+                                      {file.description && (
+                                        <p className="text-xs text-gray-500 mt-1 truncate">{file.description}</p>
+                                      )}
+                                      <div className="flex items-center space-x-2 text-xs text-gray-400 mt-1">
+                                        {file.uploader && (
+                                          <span>By: {file.uploader.full_name || file.uploader.email}</span>
+                                        )}
+                                        <span>•</span>
+                                        <span>{new Date(file.uploaded_at).toLocaleDateString()}</span>
+                                        {file.file_size && (
+                                          <>
+                                            <span>•</span>
+                                            <span>{(file.file_size / 1024 / 1024).toFixed(1)} MB</span>
+                                          </>
+                                        )}
+                                      </div>
+                                    </div>
+                                    <a
+                                      href={file.file_url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="ml-2 px-2 py-1 text-xs bg-primary-600 text-white rounded hover:bg-primary-700"
+                                    >
+                                      View
+                                    </a>
+                                  </div>
+                                </div>
+                              ))}
                             </div>
                           </div>
                         )}
