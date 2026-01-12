@@ -1,10 +1,11 @@
 /**
  * File Upload Routes
- * Handles video uploads to Google Drive using service account
+ * Handles video uploads to Supabase Storage (no OAuth needed!)
  */
 
 const express = require('express');
 const multer = require('multer');
+const supabaseStorageService = require('../services/supabaseStorageService');
 const googleDriveUploadService = require('../services/googleDriveUploadService');
 
 const router = express.Router();
@@ -64,47 +65,24 @@ router.post('/raw-footage', verifyAuth, upload.single('file'), async (req, res) 
       return res.status(400).json({ error: 'No file uploaded' });
     }
 
-    const { projectId, analysisId } = req.body;
+    const { projectId } = req.body;
 
-    // Get folder ID from environment
-    const baseFolderId = process.env.GOOGLE_DRIVE_RAW_FOOTAGE_FOLDER_ID;
-
-    if (!baseFolderId) {
-      return res.status(500).json({ error: 'Raw footage folder not configured' });
-    }
-
-    // Organize by project if projectId provided
-    let targetFolderId = baseFolderId;
-    if (projectId) {
-      targetFolderId = await googleDriveUploadService.getOrCreateProjectFolder(
-        projectId,
-        baseFolderId
-      );
-    }
-
-    // Upload file
-    const result = await googleDriveUploadService.uploadFile(
+    // Upload to Supabase Storage - no OAuth needed!
+    const result = await supabaseStorageService.uploadFile(
       req.file.buffer,
       req.file.originalname,
       req.file.mimetype,
-      targetFolderId,
-      {
-        description: `Raw footage for ${projectId || 'project'}`,
-        properties: {
-          uploadedBy: req.user.email,
-          analysisId: analysisId || '',
-          fileType: 'raw_footage',
-        },
-      }
+      'raw-footage',
+      projectId
     );
 
     res.json({
       success: true,
-      fileId: result.fileId,
+      fileId: result.filePath,
       fileName: result.fileName,
-      webViewLink: result.webViewLink,
-      webContentLink: result.webContentLink,
-      size: result.size,
+      webViewLink: result.fileUrl,
+      webContentLink: result.fileUrl,
+      size: req.file.size,
     });
   } catch (error) {
     console.error('Raw footage upload error:', error);
@@ -122,45 +100,24 @@ router.post('/edited-video', verifyAuth, upload.single('file'), async (req, res)
       return res.status(400).json({ error: 'No file uploaded' });
     }
 
-    const { projectId, analysisId } = req.body;
+    const { projectId } = req.body;
 
-    const baseFolderId = process.env.GOOGLE_DRIVE_EDITED_VIDEO_FOLDER_ID;
-
-    if (!baseFolderId) {
-      return res.status(500).json({ error: 'Edited video folder not configured' });
-    }
-
-    // Organize by project if projectId provided
-    let targetFolderId = baseFolderId;
-    if (projectId) {
-      targetFolderId = await googleDriveUploadService.getOrCreateProjectFolder(
-        projectId,
-        baseFolderId
-      );
-    }
-
-    const result = await googleDriveUploadService.uploadFile(
+    // Upload to Supabase Storage
+    const result = await supabaseStorageService.uploadFile(
       req.file.buffer,
       req.file.originalname,
       req.file.mimetype,
-      targetFolderId,
-      {
-        description: `Edited video for ${projectId || 'project'}`,
-        properties: {
-          uploadedBy: req.user.email,
-          analysisId: analysisId || '',
-          fileType: 'edited_video',
-        },
-      }
+      'edited-videos',
+      projectId
     );
 
     res.json({
       success: true,
-      fileId: result.fileId,
+      fileId: result.filePath,
       fileName: result.fileName,
-      webViewLink: result.webViewLink,
-      webContentLink: result.webContentLink,
-      size: result.size,
+      webViewLink: result.fileUrl,
+      webContentLink: result.fileUrl,
+      size: req.file.size,
     });
   } catch (error) {
     console.error('Edited video upload error:', error);
@@ -178,7 +135,7 @@ router.post('/final-video', verifyAuth, upload.single('file'), async (req, res) 
       return res.status(400).json({ error: 'No file uploaded' });
     }
 
-    const { projectId, analysisId } = req.body;
+    const { projectId } = req.body;
 
     const baseFolderId = process.env.GOOGLE_DRIVE_FINAL_VIDEO_FOLDER_ID;
 
@@ -186,24 +143,22 @@ router.post('/final-video', verifyAuth, upload.single('file'), async (req, res) 
       return res.status(500).json({ error: 'Final video folder not configured' });
     }
 
-    let targetFolderId = baseFolderId;
-    if (projectId) {
-      targetFolderId = await googleDriveUploadService.getOrCreateProjectFolder(
-        projectId,
-        baseFolderId
-      );
-    }
+    // Upload directly to base folder (service accounts can't create subfolders)
+    // Add project ID to filename for organization
+    const fileName = projectId
+      ? `[${projectId}] ${req.file.originalname}`
+      : req.file.originalname;
 
     const result = await googleDriveUploadService.uploadFile(
       req.file.buffer,
-      req.file.originalname,
+      fileName,
       req.file.mimetype,
-      targetFolderId,
+      baseFolderId,
       {
         description: `Final video for ${projectId || 'project'}`,
         properties: {
           uploadedBy: req.user.email,
-          analysisId: analysisId || '',
+          projectId: projectId || '',
           fileType: 'final_video',
         },
       }

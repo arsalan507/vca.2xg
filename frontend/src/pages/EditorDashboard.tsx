@@ -119,13 +119,13 @@ export default function EditorDashboard() {
     setFileDescription('');
   };
 
-  const handleUpdateStage = () => {
+  const handleUpdateStage = (stageOverride?: string) => {
     if (!selectedAnalysis) return;
 
     updateStageMutation.mutate({
       id: selectedAnalysis.id,
       data: {
-        production_stage: selectedStage as any,
+        production_stage: (stageOverride || selectedStage) as any,
         production_notes: productionNotes,
       },
     });
@@ -687,17 +687,26 @@ export default function EditorDashboard() {
                     <div className="space-y-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">Editing Status</label>
-                        <select
-                          value={selectedStage}
-                          onChange={(e) => setSelectedStage(e.target.value)}
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
-                        >
-                          {editorStages.map((stage) => (
-                            <option key={stage} value={stage}>
-                              {stage.replace(/_/g, ' ')}
-                            </option>
-                          ))}
-                        </select>
+                        <div className="flex items-center space-x-2">
+                          <span className={`inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium ${
+                            selectedStage === ProductionStage.EDITING
+                              ? 'bg-purple-100 text-purple-800 border border-purple-200'
+                              : selectedStage === ProductionStage.EDIT_REVIEW
+                              ? 'bg-yellow-100 text-yellow-800 border border-yellow-200'
+                              : 'bg-gray-100 text-gray-800 border border-gray-200'
+                          }`}>
+                            {selectedStage === ProductionStage.EDITING && '✂️ Editing'}
+                            {selectedStage === ProductionStage.EDIT_REVIEW && '⏳ Pending Review'}
+                            {selectedStage !== ProductionStage.EDITING && selectedStage !== ProductionStage.EDIT_REVIEW && `${selectedStage.replace(/_/g, ' ')}`}
+                          </span>
+                        </div>
+                        <p className="mt-1 text-xs text-gray-500">
+                          {selectedStage === ProductionStage.EDITING
+                            ? 'Click "Submit for Review" when editing is complete'
+                            : selectedStage === ProductionStage.EDIT_REVIEW
+                            ? 'Waiting for admin approval to proceed'
+                            : 'Stage controlled by admin'}
+                        </p>
                       </div>
 
                       <div>
@@ -721,26 +730,55 @@ export default function EditorDashboard() {
                   >
                     Cancel
                   </button>
+
+                  {/* Save Notes Button - Always available */}
                   <button
                     onClick={handleUpdateStage}
-                    disabled={updateStageMutation.isPending}
-                    className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 flex items-center"
+                    disabled={updateStageMutation.isPending || selectedStage !== ProductionStage.EDITING}
+                    className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 flex items-center"
                   >
                     {updateStageMutation.isPending ? (
                       <>
-                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-gray-600" fill="none" viewBox="0 0 24 24">
                           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                         </svg>
-                        Updating...
+                        Saving...
                       </>
                     ) : (
                       <>
                         <CheckCircleIcon className="w-5 h-5 mr-2" />
-                        Update Stage
+                        Save Notes
                       </>
                     )}
                   </button>
+
+                  {/* Submit for Review Button - Only shown when in EDITING stage */}
+                  {selectedStage === ProductionStage.EDITING && (
+                    <button
+                      onClick={() => {
+                        handleUpdateStage(ProductionStage.EDIT_REVIEW);
+                        setSelectedStage(ProductionStage.EDIT_REVIEW);
+                      }}
+                      disabled={updateStageMutation.isPending}
+                      className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 flex items-center"
+                    >
+                      {updateStageMutation.isPending ? (
+                        <>
+                          <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          Submitting...
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircleIcon className="w-5 h-5 mr-2" />
+                          Submit for Review
+                        </>
+                      )}
+                    </button>
+                  )}
                 </div>
               </div>
             </div>

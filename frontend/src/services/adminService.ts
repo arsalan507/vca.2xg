@@ -90,6 +90,18 @@ export const adminService = {
       feedback_voice_note_url = publicUrl;
     }
 
+    // If rejecting, increment the rejection counter using the database function
+    if (reviewData.status === 'REJECTED') {
+      const { error: rpcError } = await supabase.rpc('increment_rejection_counter', {
+        analysis_uuid: id,
+      });
+
+      if (rpcError) {
+        console.error('Failed to increment rejection counter:', rpcError);
+        // Don't throw - allow rejection to proceed even if counter fails
+      }
+    }
+
     const { data, error } = await supabase
       .from('viral_analyses')
       .update({

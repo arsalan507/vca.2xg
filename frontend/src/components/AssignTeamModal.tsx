@@ -29,6 +29,8 @@ export default function AssignTeamModal({
     editorId: analysis.editor?.id,
     postingManagerId: analysis.posting_manager?.id,
     autoAssignVideographer: false,
+    autoAssignEditor: false,
+    autoAssignPostingManager: false,
   });
 
   // Update form data when modal opens or analysis changes
@@ -39,6 +41,8 @@ export default function AssignTeamModal({
         editorId: analysis.editor?.id,
         postingManagerId: analysis.posting_manager?.id,
         autoAssignVideographer: false,
+        autoAssignEditor: false,
+        autoAssignPostingManager: false,
       });
     }
   }, [isOpen, analysis]);
@@ -85,7 +89,9 @@ export default function AssignTeamModal({
       !formData.videographerId &&
       !formData.editorId &&
       !formData.postingManagerId &&
-      !formData.autoAssignVideographer
+      !formData.autoAssignVideographer &&
+      !formData.autoAssignEditor &&
+      !formData.autoAssignPostingManager
     ) {
       toast.error('Please assign at least one team member');
       return;
@@ -200,46 +206,94 @@ export default function AssignTeamModal({
 
             {/* Editor Assignment */}
             <div className="space-y-3">
-              <label className="flex items-center text-sm font-medium text-gray-900">
-                <FilmIcon className="w-5 h-5 text-purple-600 mr-2" />
-                Editor (Optional)
-              </label>
-              <select
-                value={formData.editorId || ''}
-                onChange={(e) =>
-                  setFormData({ ...formData, editorId: e.target.value || undefined })
-                }
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-              >
-                <option value="">-- Select Editor --</option>
-                {editors?.map((e) => (
-                  <option key={e.id} value={e.id}>
-                    {e.full_name || e.email}
-                  </option>
-                ))}
-              </select>
+              <div className="flex items-center justify-between">
+                <label className="flex items-center text-sm font-medium text-gray-900">
+                  <FilmIcon className="w-5 h-5 text-purple-600 mr-2" />
+                  Editor (Optional)
+                </label>
+                <label className="flex items-center text-sm text-gray-600">
+                  <input
+                    type="checkbox"
+                    checked={formData.autoAssignEditor}
+                    onChange={(e) =>
+                      setFormData({ ...formData, autoAssignEditor: e.target.checked })
+                    }
+                    className="mr-2 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                  />
+                  <SparklesIcon className="w-4 h-4 mr-1" />
+                  Auto-assign
+                </label>
+              </div>
+
+              {!formData.autoAssignEditor && (
+                <select
+                  value={formData.editorId || ''}
+                  onChange={(e) =>
+                    setFormData({ ...formData, editorId: e.target.value || undefined })
+                  }
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                >
+                  <option value="">-- Select Editor --</option>
+                  {editors?.map((e) => (
+                    <option key={e.id} value={e.id}>
+                      {e.full_name || e.email}
+                    </option>
+                  ))}
+                </select>
+              )}
+
+              {formData.autoAssignEditor && (
+                <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 text-sm text-purple-700">
+                  <SparklesIcon className="w-4 h-4 inline mr-1" />
+                  Will auto-assign editor with lowest workload
+                </div>
+              )}
             </div>
 
             {/* Posting Manager Assignment */}
             <div className="space-y-3">
-              <label className="flex items-center text-sm font-medium text-gray-900">
-                <MegaphoneIcon className="w-5 h-5 text-pink-600 mr-2" />
-                Posting Manager (Optional)
-              </label>
-              <select
-                value={formData.postingManagerId || ''}
-                onChange={(e) =>
-                  setFormData({ ...formData, postingManagerId: e.target.value || undefined })
-                }
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-              >
-                <option value="">-- Select Posting Manager --</option>
-                {postingManagers?.map((pm) => (
-                  <option key={pm.id} value={pm.id}>
-                    {pm.full_name || pm.email}
-                  </option>
-                ))}
-              </select>
+              <div className="flex items-center justify-between">
+                <label className="flex items-center text-sm font-medium text-gray-900">
+                  <MegaphoneIcon className="w-5 h-5 text-pink-600 mr-2" />
+                  Posting Manager (Optional)
+                </label>
+                <label className="flex items-center text-sm text-gray-600">
+                  <input
+                    type="checkbox"
+                    checked={formData.autoAssignPostingManager}
+                    onChange={(e) =>
+                      setFormData({ ...formData, autoAssignPostingManager: e.target.checked })
+                    }
+                    className="mr-2 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                  />
+                  <SparklesIcon className="w-4 h-4 mr-1" />
+                  Auto-assign
+                </label>
+              </div>
+
+              {!formData.autoAssignPostingManager && (
+                <select
+                  value={formData.postingManagerId || ''}
+                  onChange={(e) =>
+                    setFormData({ ...formData, postingManagerId: e.target.value || undefined })
+                  }
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                >
+                  <option value="">-- Select Posting Manager --</option>
+                  {postingManagers?.map((pm) => (
+                    <option key={pm.id} value={pm.id}>
+                      {pm.full_name || pm.email}
+                    </option>
+                  ))}
+                </select>
+              )}
+
+              {formData.autoAssignPostingManager && (
+                <div className="bg-pink-50 border border-pink-200 rounded-lg p-3 text-sm text-pink-700">
+                  <SparklesIcon className="w-4 h-4 inline mr-1" />
+                  Will auto-assign posting manager with lowest workload
+                </div>
+              )}
             </div>
 
             {/* Action Buttons */}

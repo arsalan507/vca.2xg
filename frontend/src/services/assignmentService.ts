@@ -23,6 +23,18 @@ export const assignmentService = {
       data.videographerId = assigned.videographer?.id;
     }
 
+    // If auto-assign editor is requested
+    if (data.autoAssignEditor) {
+      const assigned = await this.autoAssignEditor(analysisId);
+      data.editorId = assigned.editor?.id;
+    }
+
+    // If auto-assign posting manager is requested
+    if (data.autoAssignPostingManager) {
+      const assigned = await this.autoAssignPostingManager(analysisId);
+      data.postingManagerId = assigned.posting_manager?.id;
+    }
+
     // Create/update assignments
     const assignments: ProjectAssignment[] = [];
 
@@ -145,6 +157,118 @@ export const assignmentService = {
         analysis_id: analysisId,
         user_id: assigned.videographer.id,
         role: 'VIDEOGRAPHER',
+        assigned_by: user.id,
+      }, {
+        onConflict: 'analysis_id,user_id,role',
+      });
+
+    if (assignError) throw assignError;
+
+    return this.getAnalysisWithAssignments(analysisId);
+  },
+
+  // Auto-assign editor based on workload
+  async autoAssignEditor(analysisId: string): Promise<ViralAnalysis> {
+    // Get all editors
+    const { data: editors, error: eError } = await supabase
+      .from('profiles')
+      .select('id, email, full_name')
+      .eq('role', 'EDITOR');
+
+    if (eError) throw eError;
+    if (!editors || editors.length === 0) {
+      throw new Error('No editors available');
+    }
+
+    // Calculate workload for each editor (count active assignments)
+    const workloads = await Promise.all(
+      editors.map(async (e) => {
+        const { count, error } = await supabase
+          .from('project_assignments')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', e.id)
+          .eq('role', 'EDITOR');
+
+        if (error) {
+          console.error('Error getting editor workload:', error);
+          return { editor: e, workload: 0 };
+        }
+
+        return { editor: e, workload: count || 0 };
+      })
+    );
+
+    // Find editor with lowest workload
+    const assigned = workloads.reduce((min, current) =>
+      current.workload < min.workload ? current : min
+    );
+
+    // Assign the editor
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Not authenticated');
+
+    const { error: assignError } = await supabase
+      .from('project_assignments')
+      .upsert({
+        analysis_id: analysisId,
+        user_id: assigned.editor.id,
+        role: 'EDITOR',
+        assigned_by: user.id,
+      }, {
+        onConflict: 'analysis_id,user_id,role',
+      });
+
+    if (assignError) throw assignError;
+
+    return this.getAnalysisWithAssignments(analysisId);
+  },
+
+  // Auto-assign posting manager based on workload
+  async autoAssignPostingManager(analysisId: string): Promise<ViralAnalysis> {
+    // Get all posting managers
+    const { data: postingManagers, error: pmError } = await supabase
+      .from('profiles')
+      .select('id, email, full_name')
+      .eq('role', 'POSTING_MANAGER');
+
+    if (pmError) throw pmError;
+    if (!postingManagers || postingManagers.length === 0) {
+      throw new Error('No posting managers available');
+    }
+
+    // Calculate workload for each posting manager (count active assignments)
+    const workloads = await Promise.all(
+      postingManagers.map(async (pm) => {
+        const { count, error } = await supabase
+          .from('project_assignments')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', pm.id)
+          .eq('role', 'POSTING_MANAGER');
+
+        if (error) {
+          console.error('Error getting posting manager workload:', error);
+          return { postingManager: pm, workload: 0 };
+        }
+
+        return { postingManager: pm, workload: count || 0 };
+      })
+    );
+
+    // Find posting manager with lowest workload
+    const assigned = workloads.reduce((min, current) =>
+      current.workload < min.workload ? current : min
+    );
+
+    // Assign the posting manager
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Not authenticated');
+
+    const { error: assignError } = await supabase
+      .from('project_assignments')
+      .upsert({
+        analysis_id: analysisId,
+        user_id: assigned.postingManager.id,
+        role: 'POSTING_MANAGER',
         assigned_by: user.id,
       }, {
         onConflict: 'analysis_id,user_id,role',

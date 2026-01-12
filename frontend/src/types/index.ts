@@ -178,6 +178,11 @@ export interface ViralAnalysis {
   production_started_at?: string;
   production_completed_at?: string;
 
+  // Rejection and dissolution tracking
+  rejection_count?: number;
+  is_dissolved?: boolean;
+  dissolution_reason?: string;
+
   // Google Drive / File management
   raw_footage_drive_url?: string;
   edited_video_drive_url?: string;
@@ -243,6 +248,8 @@ export interface AssignTeamData {
   editorId?: string;
   postingManagerId?: string;
   autoAssignVideographer?: boolean;
+  autoAssignEditor?: boolean;
+  autoAssignPostingManager?: boolean;
 }
 
 export interface UpdateProductionStageData {
@@ -260,25 +267,21 @@ export interface UpdateProductionDetailsData {
 export interface ProductionFile {
   id: string;
   analysis_id: string;
-  uploaded_by?: string;
+  file_type: 'raw-footage' | 'edited-video' | 'final-video';
   file_name: string;
-  file_type: FileType;
   file_url: string;
+  file_id: string; // Google Drive or Supabase Storage file ID
   file_size?: number;
+  uploaded_by?: string;
+  uploaded_at: string;
+  is_deleted: boolean;
+  deleted_at?: string;
   mime_type?: string;
   description?: string;
-  upload_stage?: ProductionStage;
-  is_primary: boolean;
-  // Approval fields
-  approval_status?: 'pending' | 'approved' | 'rejected';
-  reviewed_by?: string;
-  review_notes?: string;
-  reviewed_at?: string;
   created_at: string;
   updated_at: string;
   // Populated uploader data
   uploader?: Profile;
-  reviewer?: Profile;
 }
 
 export interface UploadFileData {

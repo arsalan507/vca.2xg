@@ -18,30 +18,31 @@ export const productionFilesService = {
   },
 
   // Upload/Add a file record
-  async uploadFile(fileData: UploadFileData): Promise<ProductionFile> {
+  async uploadFile(fileData: {
+    analysisId: string;
+    fileType: 'raw-footage' | 'edited-video' | 'final-video';
+    fileName: string;
+    fileUrl: string;
+    fileId: string;
+    fileSize?: number;
+    mimeType?: string;
+    description?: string;
+  }): Promise<ProductionFile> {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('Not authenticated');
-
-    // Get current production stage
-    const { data: analysis } = await supabase
-      .from('viral_analyses')
-      .select('production_stage')
-      .eq('id', fileData.analysisId)
-      .single();
 
     const { data, error } = await supabase
       .from('production_files')
       .insert({
         analysis_id: fileData.analysisId,
-        uploaded_by: user.id,
-        file_name: fileData.fileName,
         file_type: fileData.fileType,
+        file_name: fileData.fileName,
         file_url: fileData.fileUrl,
+        file_id: fileData.fileId,
         file_size: fileData.fileSize,
+        uploaded_by: user.id,
         mime_type: fileData.mimeType,
         description: fileData.description,
-        upload_stage: analysis?.production_stage,
-        is_primary: fileData.isPrimary || false,
       })
       .select(`
         *,

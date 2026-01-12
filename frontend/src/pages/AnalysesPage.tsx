@@ -354,9 +354,25 @@ export default function AnalysesPage() {
                 <h3 className="text-lg font-semibold text-gray-900 line-clamp-2">
                   {analysis.hook || 'Untitled Analysis'}
                 </h3>
-                <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(analysis.status)}`}>
-                  {analysis.status}
-                </span>
+                <div className="flex flex-col items-end space-y-1">
+                  <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(analysis.status)}`}>
+                    {analysis.status}
+                  </span>
+                  {analysis.status === 'REJECTED' && analysis.rejection_count !== undefined && analysis.rejection_count > 0 && (
+                    <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${
+                      analysis.rejection_count >= 4
+                        ? 'bg-red-100 text-red-800 border border-red-300'
+                        : 'bg-orange-100 text-orange-800'
+                    }`}>
+                      🔄 Rejected {analysis.rejection_count}x
+                    </span>
+                  )}
+                  {analysis.is_dissolved && (
+                    <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-gray-600 text-white">
+                      ⚠️ Dissolved
+                    </span>
+                  )}
+                </div>
               </div>
               {analysis.reference_url && (
                 <a
@@ -394,13 +410,17 @@ export default function AnalysesPage() {
                   <EyeIcon className="h-4 w-4 mr-1" />
                   View
                 </button>
-                {analysis.status === 'PENDING' && (
+                {(analysis.status === 'PENDING' || analysis.status === 'REJECTED') && !analysis.is_dissolved && (
                   <button
                     onClick={() => openModal(analysis)}
-                    className="flex-1 inline-flex justify-center items-center px-3 py-2 border border-primary-300 shadow-sm text-sm font-medium rounded-md text-primary-700 bg-primary-50 hover:bg-primary-100"
+                    className={`flex-1 inline-flex justify-center items-center px-3 py-2 border shadow-sm text-sm font-medium rounded-md ${
+                      analysis.status === 'REJECTED'
+                        ? 'border-red-300 text-red-700 bg-red-50 hover:bg-red-100'
+                        : 'border-primary-300 text-primary-700 bg-primary-50 hover:bg-primary-100'
+                    }`}
                   >
                     <PencilIcon className="h-4 w-4 mr-1" />
-                    Edit
+                    {analysis.status === 'REJECTED' ? 'Revise & Resubmit' : 'Edit'}
                   </button>
                 )}
               </div>
@@ -855,6 +875,62 @@ export default function AnalysesPage() {
                     </div>
                   </div>
 
+                  {/* Rejection Feedback (For Script Writers) */}
+                  {!isAdmin && viewingAnalysis.status === 'REJECTED' && (viewingAnalysis.feedback || viewingAnalysis.feedback_voice_note_url) && (
+                    <div className="bg-red-50 border-2 border-red-300 p-6 rounded-lg">
+                      <h3 className="text-lg font-bold text-red-800 mb-3 flex items-center">
+                        <svg className="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                        Rejection Feedback - Please Review & Revise
+                      </h3>
+
+                      {viewingAnalysis.feedback && (
+                        <div className="mb-4">
+                          <h4 className="text-sm font-semibold text-red-700 mb-2">Admin Feedback:</h4>
+                          <p className="text-gray-800 whitespace-pre-wrap bg-white p-4 rounded border border-red-200">
+                            {viewingAnalysis.feedback}
+                          </p>
+                        </div>
+                      )}
+
+                      {viewingAnalysis.feedback_voice_note_url && (
+                        <div>
+                          <h4 className="text-sm font-semibold text-red-700 mb-2">Voice Feedback:</h4>
+                          <audio controls className="w-full">
+                            <source src={viewingAnalysis.feedback_voice_note_url} type="audio/webm" />
+                            <source src={viewingAnalysis.feedback_voice_note_url} type="audio/mpeg" />
+                            Your browser does not support the audio element.
+                          </audio>
+                        </div>
+                      )}
+
+                      {viewingAnalysis.rejection_count !== undefined && viewingAnalysis.rejection_count > 0 && (
+                        <div className="mt-4 p-3 bg-orange-100 border border-orange-300 rounded">
+                          <p className="text-sm text-orange-800">
+                            <strong>⚠️ Warning:</strong> This script has been rejected {viewingAnalysis.rejection_count} time{viewingAnalysis.rejection_count > 1 ? 's' : ''}.
+                            {viewingAnalysis.rejection_count >= 4 && (
+                              <span className="block mt-1 font-bold text-red-700">
+                                🚨 One more rejection will permanently dissolve this project!
+                              </span>
+                            )}
+                          </p>
+                        </div>
+                      )}
+
+                      {viewingAnalysis.is_dissolved && (
+                        <div className="mt-4 p-3 bg-gray-800 text-white rounded">
+                          <p className="text-sm font-bold">
+                            ⛔ This project has been dissolved due to multiple rejections. No further revisions are allowed.
+                          </p>
+                          {viewingAnalysis.dissolution_reason && (
+                            <p className="text-xs mt-1 text-gray-300">{viewingAnalysis.dissolution_reason}</p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   {/* Admin Review Scores (if reviewed) */}
                   {viewingAnalysis.overall_score && (
                     <div className="bg-gradient-to-r from-primary-50 to-purple-50 p-6 rounded-lg border-2 border-primary-200">
@@ -944,15 +1020,20 @@ export default function AnalysesPage() {
                       {viewingAnalysis.overall_score ? 'Update Review' : 'Review & Score'}
                     </button>
                   )}
-                  {!isAdmin && viewingAnalysis.status === 'PENDING' && (
+                  {!isAdmin && (viewingAnalysis.status === 'PENDING' || viewingAnalysis.status === 'REJECTED') && !viewingAnalysis.is_dissolved && (
                     <button
                       onClick={() => {
                         closeViewModal();
                         openModal(viewingAnalysis);
                       }}
-                      className="px-6 py-2 border border-primary-600 text-primary-600 rounded-lg hover:bg-primary-50 font-medium"
+                      className={`px-6 py-2 border rounded-lg font-medium flex items-center ${
+                        viewingAnalysis.status === 'REJECTED'
+                          ? 'border-red-600 text-red-600 hover:bg-red-50 bg-red-50'
+                          : 'border-primary-600 text-primary-600 hover:bg-primary-50'
+                      }`}
                     >
-                      Edit Analysis
+                      <PencilIcon className="w-5 h-5 mr-2" />
+                      {viewingAnalysis.status === 'REJECTED' ? 'Revise & Resubmit' : 'Edit Analysis'}
                     </button>
                   )}
                   <button

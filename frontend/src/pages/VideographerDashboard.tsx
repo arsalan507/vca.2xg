@@ -7,8 +7,7 @@ import { useState } from 'react';
 import toast from 'react-hot-toast';
 import type { ViralAnalysis, UpdateProductionStageData, ProductionFile } from '@/types';
 import { ProductionStage, FileType } from '@/types';
-import GoogleDriveUploader from '@/components/GoogleDriveUploader';
-import { googleDriveService } from '@/services/googleDriveService';
+import GoogleDriveOAuthUploader from '@/components/GoogleDriveOAuthUploader';
 
 export default function VideographerDashboard() {
   const queryClient = useQueryClient();
@@ -105,8 +104,19 @@ export default function VideographerDashboard() {
   // Create project mutation
   const createProjectMutation = useMutation({
     mutationFn: videographerProjectService.createProject,
-    onSuccess: (newAnalysis) => {
-      queryClient.invalidateQueries({ queryKey: ['videographer', 'assignments'] });
+    onSuccess: async (newAnalysis) => {
+      // Update the cache with the new project optimistically
+      queryClient.setQueryData(['videographer', 'assignments'], (old: any) => {
+        if (!old) return { data: [newAnalysis], total: 1 };
+        return {
+          data: [newAnalysis, ...old.data],
+          total: old.total + 1,
+        };
+      });
+
+      // Also invalidate to ensure fresh data from server
+      await queryClient.invalidateQueries({ queryKey: ['videographer', 'assignments'] });
+
       toast.success('Project created successfully! You can now start uploading footage.');
       setIsNewProjectModalOpen(false);
       // Reset form
@@ -144,13 +154,13 @@ export default function VideographerDashboard() {
         setFileDescription('');
   };
 
-  const handleUpdateStage = () => {
+  const handleUpdateStage = (stageOverride?: string) => {
     if (!selectedAnalysis) return;
 
     updateStageMutation.mutate({
       id: selectedAnalysis.id,
       data: {
-        production_stage: selectedStage as any,
+        production_stage: (stageOverride || selectedStage) as any,
         production_notes: productionNotes,
       },
     });
@@ -539,13 +549,15 @@ export default function VideographerDashboard() {
                             </div>
                           </div>
 
-                          {/* Google Drive Direct Upload */}
+                          {/* Google Drive OAuth Upload */}
                           <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">
                               Upload Video File
                             </label>
-                            <GoogleDriveUploader
-                              onUploadComplete={(uploadedFileUrl, uploadedFileName) => {
+                            <GoogleDriveOAuthUploader
+                              fileType="raw-footage"
+                              projectId={selectedAnalysis?.content_id || ''}
+                              onUploadComplete={(uploadedFileUrl: string, uploadedFileName: string, fileId: string) => {
                                 // Auto-submit after successful upload
                                 if (selectedAnalysis && uploadedFileUrl) {
                                   uploadFileMutation.mutate({
@@ -559,11 +571,6 @@ export default function VideographerDashboard() {
                               }}
                               acceptedFileTypes="video/*"
                               maxSizeMB={500}
-                              folderId={
-                                googleDriveService.extractFolderId(
-                                  localStorage.getItem('default_drive_folder') || ''
-                                ) || undefined
-                              }
                             />
                           </div>
 
@@ -659,11 +666,26 @@ export default function VideographerDashboard() {
                         </div>
 
                         <div>
-                          <label className="text-sm font-medium text-gray-700">Current Stage</label>
-                          <p className="mt-1">
-                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStageColor(selectedAnalysis.production_stage)}`}>
-                              {selectedAnalysis.production_stage?.replace(/_/g, ' ') || 'NOT STARTED'}
+                          <label className="text-sm font-medium text-gray-700 mb-2 block">Production Stage</label>
+                          <div className="flex items-center space-x-2">
+                            <span className={`inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium ${
+                              selectedStage === ProductionStage.SHOOTING
+                                ? 'bg-blue-100 text-blue-800 border border-blue-200'
+                                : selectedStage === ProductionStage.SHOOT_REVIEW
+                                ? 'bg-yellow-100 text-yellow-800 border border-yellow-200'
+                                : 'bg-gray-100 text-gray-800 border border-gray-200'
+                            }`}>
+                              {selectedStage === ProductionStage.SHOOTING && '🎬 Shooting'}
+                              {selectedStage === ProductionStage.SHOOT_REVIEW && '⏳ Pending Review'}
+                              {selectedStage !== ProductionStage.SHOOTING && selectedStage !== ProductionStage.SHOOT_REVIEW && `${selectedStage}`}
                             </span>
+                          </div>
+                          <p className="mt-1 text-xs text-gray-500">
+                            {selectedStage === ProductionStage.SHOOTING
+                              ? 'Click "Submit for Review" when done shooting'
+                              : selectedStage === ProductionStage.SHOOT_REVIEW
+                              ? 'Waiting for admin approval to proceed to editing'
+                              : 'Stage controlled by admin'}
                           </p>
                         </div>
 
@@ -736,14 +758,16 @@ export default function VideographerDashboard() {
                   >
                     Cancel
                   </button>
+
+                  {/* Save Notes Button - Always available */}
                   <button
                     onClick={handleUpdateStage}
-                    disabled={updateStageMutation.isPending}
-                    className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 flex items-center"
+                    disabled={updateStageMutation.isPending || selectedStage !== ProductionStage.SHOOTING}
+                    className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 flex items-center"
                   >
                     {updateStageMutation.isPending ? (
                       <>
-                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-gray-600" fill="none" viewBox="0 0 24 24">
                           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                         </svg>
@@ -756,6 +780,33 @@ export default function VideographerDashboard() {
                       </>
                     )}
                   </button>
+
+                  {/* Submit for Review Button - Only shown when in SHOOTING stage */}
+                  {selectedStage === ProductionStage.SHOOTING && (
+                    <button
+                      onClick={() => {
+                        handleUpdateStage(ProductionStage.SHOOT_REVIEW);
+                        setSelectedStage(ProductionStage.SHOOT_REVIEW);
+                      }}
+                      disabled={updateStageMutation.isPending}
+                      className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 flex items-center"
+                    >
+                      {updateStageMutation.isPending ? (
+                        <>
+                          <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          Submitting...
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircleIcon className="w-5 h-5 mr-2" />
+                          Submit for Review
+                        </>
+                      )}
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
