@@ -880,11 +880,16 @@ function ScriptIdeaFieldsManagement() {
 
 import { formBuilderService } from '@/services/formBuilderService';
 import type { ScriptFormFieldConfig, FieldType } from '@/types/formBuilder';
+import FieldEditModal from '@/components/FieldEditModal';
 
 function FormBuilderManagement() {
   const [fields, setFields] = useState<ScriptFormFieldConfig[]>(() =>
     formBuilderService.getAllFields()
   );
+  const [editingFieldId, setEditingFieldId] = useState<string | null>(null);
+
+  // Get editing field
+  const editingField = editingFieldId ? fields.find(f => f.id === editingFieldId) : null;
 
   // Reload fields
   const reloadFields = () => {
@@ -926,6 +931,24 @@ function FormBuilderManagement() {
     formBuilderService.reorderFields(newFields.map(f => f.id));
     reloadFields();
     toast.success('Field order updated');
+  };
+
+  // Handle field edit
+  const handleEditField = (id: string) => {
+    setEditingFieldId(id);
+  };
+
+  const handleSaveEdit = (updates: Partial<ScriptFormFieldConfig>) => {
+    if (!editingFieldId) return;
+
+    formBuilderService.updateField(editingFieldId, updates);
+    reloadFields();
+    setEditingFieldId(null);
+    toast.success('Field updated successfully');
+  };
+
+  const handleCloseEdit = () => {
+    setEditingFieldId(null);
   };
 
   // Handle field delete
@@ -1105,12 +1128,9 @@ function FormBuilderManagement() {
                     )}
                   </button>
                   <button
-                    onClick={() => {
-                      // TODO: Implement field edit modal in Phase 2
-                      toast('Field editing coming in next phase!', { icon: 'ℹ️' });
-                    }}
+                    onClick={() => handleEditField(field.id)}
                     className="p-2 text-primary-600 hover:bg-primary-50 rounded-lg transition"
-                    title="Edit field (coming soon)"
+                    title="Edit field"
                   >
                     <PencilIcon className="w-4 h-4" />
                   </button>
@@ -1146,6 +1166,15 @@ function FormBuilderManagement() {
           <strong>✅ Auto-save enabled:</strong> All changes are saved automatically and will be immediately reflected in the Script Writer form.
         </p>
       </div>
+
+      {/* Edit Modal */}
+      {editingField && (
+        <FieldEditModal
+          field={editingField}
+          onSave={handleSaveEdit}
+          onClose={handleCloseEdit}
+        />
+      )}
     </div>
   );
 }
