@@ -297,7 +297,15 @@ export default function AddFieldModal({ onAdd, onClose }: AddFieldModalProps) {
               </label>
               <select
                 value={formData.type}
-                onChange={(e) => setFormData({ ...formData, type: e.target.value as FieldType })}
+                onChange={(e) => {
+                  const newType = e.target.value as FieldType;
+                  // Auto-set data source type for simple dropdown
+                  if (newType === 'dropdown') {
+                    setFormData({ ...formData, type: newType, dataSourceType: 'hardcoded' });
+                  } else {
+                    setFormData({ ...formData, type: newType });
+                  }
+                }}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
               >
                 {fieldTypes.map((type) => (
@@ -308,8 +316,33 @@ export default function AddFieldModal({ onAdd, onClose }: AddFieldModalProps) {
               </select>
             </div>
 
-            {/* Data Source (for dropdown/multi-select fields) */}
-            {['dropdown', 'db-dropdown', 'multi-select'].includes(formData.type) && (
+            {/* Simple Dropdown Options (for 'dropdown' type only) */}
+            {formData.type === 'dropdown' && (
+              <div className="border border-gray-200 rounded-lg p-4 bg-blue-50">
+                <h3 className="text-sm font-semibold text-gray-900 mb-3">Dropdown Options</h3>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Options (one per line) *
+                  </label>
+                  <textarea
+                    rows={5}
+                    value={formData.hardcodedOptions}
+                    onChange={(e) => setFormData({ ...formData, hardcodedOptions: e.target.value })}
+                    className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 font-mono text-sm ${
+                      errors.hardcodedOptions ? 'border-red-500' : 'border-gray-300'
+                    }`}
+                    placeholder="Option 1&#10;Option 2&#10;Option 3&#10;&#10;Or use format:&#10;value1 | Display Label 1&#10;value2 | Display Label 2"
+                  />
+                  {errors.hardcodedOptions && <p className="mt-1 text-sm text-red-600">{errors.hardcodedOptions}</p>}
+                  <p className="mt-1 text-xs text-gray-500">
+                    Format: "value | label" or just the value (one per line)
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Data Source (for db-dropdown/multi-select fields) */}
+            {['db-dropdown', 'multi-select'].includes(formData.type) && (
               <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
                 <h3 className="text-sm font-semibold text-gray-900 mb-3">Data Source Configuration</h3>
 
