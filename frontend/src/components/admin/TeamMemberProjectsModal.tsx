@@ -34,7 +34,7 @@ export default function TeamMemberProjectsModal({
 
       // Filter based on role
       if (memberRole === 'SCRIPT_WRITER') {
-        query = query.eq('created_by', memberId);
+        query = query.eq('user_id', memberId);
       } else if (memberRole === 'VIDEOGRAPHER') {
         query = query.eq('videographer_id', memberId);
       } else if (memberRole === 'EDITOR') {
