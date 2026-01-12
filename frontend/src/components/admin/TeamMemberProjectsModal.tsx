@@ -1,8 +1,8 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
-import { XMarkIcon, EyeIcon } from '@heroicons/react/24/outline';
+import { XMarkIcon, ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline';
 import type { ViralAnalysis } from '@/types';
-import { useNavigate } from 'react-router-dom';
 
 interface TeamMemberProjectsModalProps {
   isOpen: boolean;
@@ -19,7 +19,7 @@ export default function TeamMemberProjectsModal({
   memberName,
   memberRole,
 }: TeamMemberProjectsModalProps) {
-  const navigate = useNavigate();
+  const [expandedProjectId, setExpandedProjectId] = useState<string | null>(null);
 
   // Fetch projects based on role
   const { data: projects = [], isLoading } = useQuery({
@@ -254,26 +254,25 @@ export default function TeamMemberProjectsModal({
                       </div>
 
                       <button
-                        onClick={() => {
-                          onClose();
-                          if (memberRole === 'SCRIPT_WRITER') {
-                            navigate('/analyses');
-                          } else if (memberRole === 'VIDEOGRAPHER') {
-                            navigate('/videographer');
-                          } else if (memberRole === 'EDITOR') {
-                            navigate('/editor');
-                          } else if (memberRole === 'POSTING_MANAGER') {
-                            navigate('/posting-manager');
-                          }
-                        }}
+                        onClick={() => setExpandedProjectId(expandedProjectId === project.id ? null : project.id)}
                         className="px-3 py-1.5 text-sm bg-primary-50 text-primary-700 rounded-lg hover:bg-primary-100 transition flex items-center"
                       >
-                        <EyeIcon className="w-4 h-4 mr-1" />
-                        View
+                        {expandedProjectId === project.id ? (
+                          <>
+                            <ChevronUpIcon className="w-4 h-4 mr-1" />
+                            Hide Details
+                          </>
+                        ) : (
+                          <>
+                            <ChevronDownIcon className="w-4 h-4 mr-1" />
+                            View Details
+                          </>
+                        )}
                       </button>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4 text-sm">
+                    {/* Basic Info - Always Visible */}
+                    <div className="grid grid-cols-2 gap-4 text-sm mt-3">
                       {project.target_emotion && (
                         <div>
                           <span className="text-gray-500">Emotion:</span>
@@ -301,6 +300,96 @@ export default function TeamMemberProjectsModal({
                         </div>
                       )}
                     </div>
+
+                    {/* Expanded Details */}
+                    {expandedProjectId === project.id && (
+                      <div className="mt-4 pt-4 border-t border-gray-200 space-y-4">
+                        {/* Script Content */}
+                        {project.why_viral && (
+                          <div>
+                            <h4 className="text-sm font-semibold text-gray-700 mb-1">Why It's Viral:</h4>
+                            <p className="text-sm text-gray-600 whitespace-pre-wrap">{project.why_viral}</p>
+                          </div>
+                        )}
+                        {project.how_to_replicate && (
+                          <div>
+                            <h4 className="text-sm font-semibold text-gray-700 mb-1">How to Replicate:</h4>
+                            <p className="text-sm text-gray-600 whitespace-pre-wrap">{project.how_to_replicate}</p>
+                          </div>
+                        )}
+
+                        {/* Production Details */}
+                        {(project.priority || project.deadline || project.production_notes) && (
+                          <div className="bg-blue-50 p-3 rounded">
+                            <h4 className="text-sm font-semibold text-gray-700 mb-2">Production Info:</h4>
+                            <div className="grid grid-cols-2 gap-2 text-sm">
+                              {project.priority && (
+                                <div>
+                                  <span className="text-gray-600">Priority:</span>
+                                  <span className="ml-2 font-medium">{project.priority}</span>
+                                </div>
+                              )}
+                              {project.deadline && (
+                                <div>
+                                  <span className="text-gray-600">Deadline:</span>
+                                  <span className="ml-2 font-medium">
+                                    {new Date(project.deadline).toLocaleDateString()}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                            {project.production_notes && (
+                              <p className="text-sm text-gray-600 mt-2">{project.production_notes}</p>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Feedback (if rejected) */}
+                        {project.status === 'REJECTED' && project.feedback && (
+                          <div className="bg-red-50 p-3 rounded border border-red-200">
+                            <h4 className="text-sm font-semibold text-red-700 mb-1">Rejection Feedback:</h4>
+                            <p className="text-sm text-gray-700 whitespace-pre-wrap">{project.feedback}</p>
+                          </div>
+                        )}
+
+                        {/* Review Scores */}
+                        {project.overall_score && (
+                          <div className="bg-purple-50 p-3 rounded">
+                            <h4 className="text-sm font-semibold text-gray-700 mb-2">Review Scores:</h4>
+                            <div className="grid grid-cols-2 gap-2 text-sm">
+                              {project.hook_strength && (
+                                <div>
+                                  <span className="text-gray-600">Hook:</span>
+                                  <span className="ml-2 font-medium">{project.hook_strength}/10</span>
+                                </div>
+                              )}
+                              {project.content_quality && (
+                                <div>
+                                  <span className="text-gray-600">Quality:</span>
+                                  <span className="ml-2 font-medium">{project.content_quality}/10</span>
+                                </div>
+                              )}
+                              {project.viral_potential && (
+                                <div>
+                                  <span className="text-gray-600">Viral Potential:</span>
+                                  <span className="ml-2 font-medium">{project.viral_potential}/10</span>
+                                </div>
+                              )}
+                              {project.replication_clarity && (
+                                <div>
+                                  <span className="text-gray-600">Clarity:</span>
+                                  <span className="ml-2 font-medium">{project.replication_clarity}/10</span>
+                                </div>
+                              )}
+                              <div className="col-span-2">
+                                <span className="text-gray-600">Overall:</span>
+                                <span className="ml-2 font-bold text-primary-600">{project.overall_score}/10</span>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
 
                     {/* Team Assignments */}
                     {project.status === 'APPROVED' && (
