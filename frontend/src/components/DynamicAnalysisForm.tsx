@@ -30,6 +30,11 @@ export default function DynamicAnalysisForm({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [reloadTrigger, setReloadTrigger] = useState(0);
 
+  // Log component mount
+  useEffect(() => {
+    console.log('🎬 [DynamicAnalysisForm] Component mounted/remounted');
+  }, []);
+
   // Load and resolve form fields
   useEffect(() => {
     async function loadFields() {
@@ -55,6 +60,32 @@ export default function DynamicAnalysisForm({
     (window as any).reloadFormFields = () => {
       console.log('🔄 Manual reload triggered');
       setReloadTrigger(prev => prev + 1);
+    };
+
+    // Expose localStorage inspector
+    (window as any).inspectFormConfig = () => {
+      const stored = localStorage.getItem('script_form_config');
+      if (stored) {
+        const config = JSON.parse(stored);
+        console.log('🔍 LocalStorage Config:');
+        console.log('  - Version:', config.version);
+        console.log('  - Last Updated:', config.lastUpdated);
+        console.log('  - Total Fields:', config.fields.length);
+        console.log('  - Field IDs:', config.fields.map((f: any) => f.id).join(', '));
+        console.log('  - Enabled Fields:', config.fields.filter((f: any) => f.enabled).length);
+        console.log('  - Disabled Fields:', config.fields.filter((f: any) => !f.enabled).length);
+        console.table(config.fields.map((f: any) => ({
+          id: f.id,
+          label: f.label,
+          type: f.type,
+          enabled: f.enabled,
+          order: f.order,
+        })));
+        return config;
+      } else {
+        console.log('⚠️ No config found in localStorage');
+        return null;
+      }
     };
   }, []);
 
