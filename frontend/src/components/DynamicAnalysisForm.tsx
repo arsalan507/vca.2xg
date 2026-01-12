@@ -40,7 +40,7 @@ export default function DynamicAnalysisForm({
     async function loadFields() {
       try {
         setIsLoadingFields(true);
-        const enabledFields = formBuilderService.getEnabledFields();
+        const enabledFields = await formBuilderService.getEnabledFields();
         console.log('📋 Loading form fields:', enabledFields.length, 'enabled fields');
         enabledFields.forEach(f => console.log(`  - ${f.label} (${f.type}, key: ${f.fieldKey})`));
         const resolved = await resolveAllFieldOptions(enabledFields);

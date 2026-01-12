@@ -2,15 +2,16 @@
  * Form Builder Service
  *
  * Manages the dynamic Script Writer form configuration.
- * - Stores configuration in localStorage
+ * - Stores configuration in Supabase database
  * - Provides CRUD operations for fields
  * - Handles default configuration generation
- * - Future: Can be migrated to database storage
+ * - Syncs across all devices and users
  */
 
+import { supabase } from '@/lib/supabase';
 import type { ScriptFormConfig, ScriptFormFieldConfig } from '@/types/formBuilder';
 
-const STORAGE_KEY = 'script_form_config';
+const CONFIG_KEY = 'script_form_config';
 const CONFIG_VERSION = '1.0.0';
 
 /**
@@ -258,56 +259,99 @@ function getDefaultConfig(): ScriptFormConfig {
   };
 }
 
+// Cache for the config to avoid repeated database calls
+let configCache: ScriptFormConfig | null = null;
+let cacheTimestamp: number = 0;
+const CACHE_DURATION = 5000; // 5 seconds
+
 /**
  * Form Builder Service
  */
 export const formBuilderService = {
   /**
-   * Get current form configuration
+   * Get current form configuration from Supabase
    */
-  getConfig(): ScriptFormConfig {
+  async getConfig(): Promise<ScriptFormConfig> {
     try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      console.log('🔍 [formBuilderService] Reading from localStorage:', STORAGE_KEY);
-
-      if (saved) {
-        const config = JSON.parse(saved) as ScriptFormConfig;
-        console.log('✅ [formBuilderService] Found saved config with', config.fields.length, 'fields');
-        console.log('📋 [formBuilderService] Field IDs:', config.fields.map(f => f.id).join(', '));
-
-        // Version migration logic (future-proofing)
-        if (config.version !== CONFIG_VERSION) {
-          console.warn(`Form config version mismatch. Expected ${CONFIG_VERSION}, got ${config.version}`);
-          // Could implement migration logic here
-        }
-
-        return config;
+      // Check cache first
+      const now = Date.now();
+      if (configCache && (now - cacheTimestamp) < CACHE_DURATION) {
+        console.log('🔍 [formBuilderService] Using cached config');
+        return configCache;
       }
 
-      console.log('⚠️ [formBuilderService] No saved config found, using default');
-    } catch (error) {
-      console.error('❌ [formBuilderService] Failed to load form config from localStorage:', error);
-    }
+      console.log('🔍 [formBuilderService] Fetching config from Supabase');
 
-    // Return default config if nothing found or error
-    const defaultConfig = getDefaultConfig();
-    console.log('🔧 [formBuilderService] Returning default config with', defaultConfig.fields.length, 'fields');
-    return defaultConfig;
+      const { data, error } = await supabase
+        .from('form_configurations')
+        .select('*')
+        .eq('config_key', CONFIG_KEY)
+        .single();
+
+      if (error) {
+        if (error.code === 'PGRST116') {
+          // No config found, create default
+          console.log('⚠️ [formBuilderService] No config found, creating default');
+          const defaultConfig = getDefaultConfig();
+          await this.saveConfig(defaultConfig);
+          return defaultConfig;
+        }
+        throw error;
+      }
+
+      const config: ScriptFormConfig = {
+        version: data.version,
+        lastUpdated: data.last_updated,
+        fields: data.fields,
+      };
+
+      console.log('✅ [formBuilderService] Found saved config with', config.fields.length, 'fields');
+      console.log('📋 [formBuilderService] Field IDs:', config.fields.map((f: any) => f.id).join(', '));
+
+      // Update cache
+      configCache = config;
+      cacheTimestamp = now;
+
+      return config;
+    } catch (error) {
+      console.error('❌ [formBuilderService] Failed to load config from Supabase:', error);
+      // Fallback to default config
+      const defaultConfig = getDefaultConfig();
+      console.log('🔧 [formBuilderService] Returning default config with', defaultConfig.fields.length, 'fields');
+      return defaultConfig;
+    }
   },
 
   /**
-   * Save form configuration
+   * Save form configuration to Supabase
    */
-  saveConfig(config: ScriptFormConfig): void {
+  async saveConfig(config: ScriptFormConfig): Promise<void> {
     try {
       config.lastUpdated = new Date().toISOString();
       config.version = CONFIG_VERSION;
-      console.log('💾 [formBuilderService] Saving config with', config.fields.length, 'fields to localStorage');
-      console.log('📋 [formBuilderService] Field IDs being saved:', config.fields.map(f => f.id).join(', '));
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
-      console.log('✅ [formBuilderService] Config saved successfully');
+
+      console.log('💾 [formBuilderService] Saving config with', config.fields.length, 'fields to Supabase');
+      console.log('📋 [formBuilderService] Field IDs being saved:', config.fields.map((f: any) => f.id).join(', '));
+
+      const { error } = await supabase
+        .from('form_configurations')
+        .upsert({
+          config_key: CONFIG_KEY,
+          version: config.version,
+          fields: config.fields,
+          last_updated: config.lastUpdated,
+        }, {
+          onConflict: 'config_key'
+        });
+
+      if (error) throw error;
+
+      console.log('✅ [formBuilderService] Config saved successfully to Supabase');
+
+      // Clear cache to force reload
+      configCache = null;
     } catch (error) {
-      console.error('❌ [formBuilderService] Failed to save form config to localStorage:', error);
+      console.error('❌ [formBuilderService] Failed to save config to Supabase:', error);
       throw error;
     }
   },
@@ -315,16 +359,16 @@ export const formBuilderService = {
   /**
    * Get all fields sorted by order
    */
-  getAllFields(): ScriptFormFieldConfig[] {
-    const config = this.getConfig();
+  async getAllFields(): Promise<ScriptFormFieldConfig[]> {
+    const config = await this.getConfig();
     return [...config.fields].sort((a, b) => a.order - b.order);
   },
 
   /**
    * Get only enabled fields sorted by order
    */
-  getEnabledFields(): ScriptFormFieldConfig[] {
-    const allFields = this.getAllFields();
+  async getEnabledFields(): Promise<ScriptFormFieldConfig[]> {
+    const allFields = await this.getAllFields();
     const enabledFields = allFields.filter(f => f.enabled);
     console.log('🟢 [formBuilderService] getEnabledFields:', enabledFields.length, 'enabled out of', allFields.length, 'total');
     console.log('📋 [formBuilderService] Enabled field IDs:', enabledFields.map(f => `${f.id} (${f.type})`).join(', '));
@@ -334,16 +378,16 @@ export const formBuilderService = {
   /**
    * Get field by ID
    */
-  getFieldById(id: string): ScriptFormFieldConfig | undefined {
-    const config = this.getConfig();
+  async getFieldById(id: string): Promise<ScriptFormFieldConfig | undefined> {
+    const config = await this.getConfig();
     return config.fields.find(f => f.id === id);
   },
 
   /**
    * Add new field
    */
-  addField(field: ScriptFormFieldConfig): void {
-    const config = this.getConfig();
+  async addField(field: ScriptFormFieldConfig): Promise<void> {
+    const config = await this.getConfig();
     console.log('➕ [formBuilderService] Adding new field:', field.id, field.label, field.type);
 
     // Validate unique ID
@@ -359,14 +403,14 @@ export const formBuilderService = {
     console.log('✅ [formBuilderService] Validation passed, adding field');
     config.fields.push(field);
     console.log('📦 [formBuilderService] Config now has', config.fields.length, 'fields');
-    this.saveConfig(config);
+    await this.saveConfig(config);
   },
 
   /**
    * Update existing field
    */
-  updateField(id: string, updates: Partial<ScriptFormFieldConfig>): void {
-    const config = this.getConfig();
+  async updateField(id: string, updates: Partial<ScriptFormFieldConfig>): Promise<void> {
+    const config = await this.getConfig();
     const index = config.fields.findIndex(f => f.id === id);
 
     if (index === -1) {
@@ -385,23 +429,23 @@ export const formBuilderService = {
       ...updates,
     };
 
-    this.saveConfig(config);
+    await this.saveConfig(config);
   },
 
   /**
    * Delete field
    */
-  deleteField(id: string): void {
-    const config = this.getConfig();
+  async deleteField(id: string): Promise<void> {
+    const config = await this.getConfig();
     config.fields = config.fields.filter(f => f.id !== id);
-    this.saveConfig(config);
+    await this.saveConfig(config);
   },
 
   /**
    * Reorder fields
    */
-  reorderFields(fieldIds: string[]): void {
-    const config = this.getConfig();
+  async reorderFields(fieldIds: string[]): Promise<void> {
+    const config = await this.getConfig();
 
     // Create a map of fieldId -> order
     const orderMap = new Map(fieldIds.map((id, index) => [id, index]));
@@ -414,29 +458,29 @@ export const formBuilderService = {
       }
     });
 
-    this.saveConfig(config);
+    await this.saveConfig(config);
   },
 
   /**
    * Reset to default configuration
    */
-  resetToDefault(): void {
+  async resetToDefault(): Promise<void> {
     const defaultConfig = getDefaultConfig();
-    this.saveConfig(defaultConfig);
+    await this.saveConfig(defaultConfig);
   },
 
   /**
    * Export configuration as JSON (for backup/sharing)
    */
-  exportConfig(): string {
-    const config = this.getConfig();
+  async exportConfig(): Promise<string> {
+    const config = await this.getConfig();
     return JSON.stringify(config, null, 2);
   },
 
   /**
    * Import configuration from JSON
    */
-  importConfig(jsonString: string): void {
+  async importConfig(jsonString: string): Promise<void> {
     try {
       const config = JSON.parse(jsonString) as ScriptFormConfig;
 
@@ -445,10 +489,19 @@ export const formBuilderService = {
         throw new Error('Invalid configuration format: missing fields array');
       }
 
-      this.saveConfig(config);
+      await this.saveConfig(config);
     } catch (error) {
       console.error('Failed to import configuration:', error);
       throw new Error('Invalid configuration JSON');
     }
+  },
+
+  /**
+   * Clear cache (useful after external updates)
+   */
+  clearCache(): void {
+    configCache = null;
+    cacheTimestamp = 0;
+    console.log('🗑️ [formBuilderService] Cache cleared');
   },
 };

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import {
@@ -884,55 +884,77 @@ import FieldEditModal from '@/components/FieldEditModal';
 import AddFieldModal from '@/components/AddFieldModal';
 
 function FormBuilderManagement() {
-  const [fields, setFields] = useState<ScriptFormFieldConfig[]>(() =>
-    formBuilderService.getAllFields()
-  );
+  const [fields, setFields] = useState<ScriptFormFieldConfig[]>([]);
   const [editingFieldId, setEditingFieldId] = useState<string | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
   // Get editing field
   const editingField = editingFieldId ? fields.find(f => f.id === editingFieldId) : null;
 
+  // Load fields on mount
+  useEffect(() => {
+    reloadFields();
+  }, []);
+
   // Reload fields
-  const reloadFields = () => {
-    setFields(formBuilderService.getAllFields());
+  const reloadFields = async () => {
+    try {
+      const allFields = await formBuilderService.getAllFields();
+      setFields(allFields);
+    } catch (error) {
+      console.error('Failed to load fields:', error);
+      toast.error('Failed to load form fields');
+    }
   };
 
   // Handle field enable/disable
-  const handleToggleEnabled = (id: string) => {
+  const handleToggleEnabled = async (id: string) => {
     const field = fields.find(f => f.id === id);
     if (!field) return;
 
-    formBuilderService.updateField(id, { enabled: !field.enabled });
-    reloadFields();
-    toast.success(`Field "${field.label}" ${!field.enabled ? 'enabled' : 'disabled'}`);
+    try {
+      await formBuilderService.updateField(id, { enabled: !field.enabled });
+      await reloadFields();
+      toast.success(`Field "${field.label}" ${!field.enabled ? 'enabled' : 'disabled'}`);
+    } catch (error) {
+      console.error('Failed to toggle field:', error);
+      toast.error('Failed to update field');
+    }
   };
 
   // Handle field reorder
-  const handleMoveUp = (id: string) => {
+  const handleMoveUp = async (id: string) => {
     const index = fields.findIndex(f => f.id === id);
     if (index <= 0) return;
 
     const newFields = [...fields];
     [newFields[index - 1], newFields[index]] = [newFields[index], newFields[index - 1]];
 
-    // Update order
-    formBuilderService.reorderFields(newFields.map(f => f.id));
-    reloadFields();
-    toast.success('Field order updated');
+    try {
+      await formBuilderService.reorderFields(newFields.map(f => f.id));
+      await reloadFields();
+      toast.success('Field order updated');
+    } catch (error) {
+      console.error('Failed to reorder fields:', error);
+      toast.error('Failed to update field order');
+    }
   };
 
-  const handleMoveDown = (id: string) => {
+  const handleMoveDown = async (id: string) => {
     const index = fields.findIndex(f => f.id === id);
     if (index === -1 || index >= fields.length - 1) return;
 
     const newFields = [...fields];
     [newFields[index + 1], newFields[index]] = [newFields[index], newFields[index + 1]];
 
-    // Update order
-    formBuilderService.reorderFields(newFields.map(f => f.id));
-    reloadFields();
-    toast.success('Field order updated');
+    try {
+      await formBuilderService.reorderFields(newFields.map(f => f.id));
+      await reloadFields();
+      toast.success('Field order updated');
+    } catch (error) {
+      console.error('Failed to reorder fields:', error);
+      toast.error('Failed to update field order');
+    }
   };
 
   // Handle field edit
@@ -940,13 +962,18 @@ function FormBuilderManagement() {
     setEditingFieldId(id);
   };
 
-  const handleSaveEdit = (updates: Partial<ScriptFormFieldConfig>) => {
+  const handleSaveEdit = async (updates: Partial<ScriptFormFieldConfig>) => {
     if (!editingFieldId) return;
 
-    formBuilderService.updateField(editingFieldId, updates);
-    reloadFields();
-    setEditingFieldId(null);
-    toast.success('Field updated successfully');
+    try {
+      await formBuilderService.updateField(editingFieldId, updates);
+      await reloadFields();
+      setEditingFieldId(null);
+      toast.success('Field updated successfully');
+    } catch (error) {
+      console.error('Failed to update field:', error);
+      toast.error('Failed to update field');
+    }
   };
 
   const handleCloseEdit = () => {
@@ -954,37 +981,48 @@ function FormBuilderManagement() {
   };
 
   // Handle add field
-  const handleAddField = (field: ScriptFormFieldConfig) => {
+  const handleAddField = async (field: ScriptFormFieldConfig) => {
     try {
       // Set order to be last
       field.order = fields.length;
-      formBuilderService.addField(field);
-      reloadFields();
+      await formBuilderService.addField(field);
+      await reloadFields();
       setIsAddModalOpen(false);
       toast.success(`Field "${field.label}" added successfully`);
     } catch (error: any) {
+      console.error('Failed to add field:', error);
       toast.error(error.message || 'Failed to add field');
     }
   };
 
   // Handle field delete
-  const handleDeleteField = (id: string) => {
+  const handleDeleteField = async (id: string) => {
     const field = fields.find(f => f.id === id);
     if (!field) return;
 
     if (confirm(`Are you sure you want to delete the "${field.label}" field?\n\nThis will permanently remove it from the form.`)) {
-      formBuilderService.deleteField(id);
-      reloadFields();
-      toast.success(`Field "${field.label}" deleted`);
+      try {
+        await formBuilderService.deleteField(id);
+        await reloadFields();
+        toast.success(`Field "${field.label}" deleted`);
+      } catch (error) {
+        console.error('Failed to delete field:', error);
+        toast.error('Failed to delete field');
+      }
     }
   };
 
   // Handle reset to default
-  const handleResetToDefault = () => {
+  const handleResetToDefault = async () => {
     if (confirm('Are you sure you want to reset the form to default configuration?\n\nThis will delete all your custom fields and restore the original form structure.')) {
-      formBuilderService.resetToDefault();
-      reloadFields();
-      toast.success('Form reset to default configuration');
+      try {
+        await formBuilderService.resetToDefault();
+        await reloadFields();
+        toast.success('Form reset to default configuration');
+      } catch (error) {
+        console.error('Failed to reset form:', error);
+        toast.error('Failed to reset form');
+      }
     }
   };
 
