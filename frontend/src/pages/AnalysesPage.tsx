@@ -392,19 +392,9 @@ export default function AnalysesPage() {
                   formData={formData}
                   onChange={(updates) => setFormData({ ...formData, ...updates })}
                   onSubmit={handleSubmit}
+                  onCancel={closeModal}
                   isEditing={!!editingAnalysis}
                 />
-
-                {/* Cancel Button */}
-                <div className="flex justify-end pt-4 border-t -mt-6">
-                  <button
-                    type="button"
-                    onClick={closeModal}
-                    className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium"
-                  >
-                    Cancel
-                  </button>
-                </div>
               </div>
             </div>
           </div>

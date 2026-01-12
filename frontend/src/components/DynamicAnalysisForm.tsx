@@ -16,6 +16,7 @@ interface DynamicAnalysisFormProps {
   formData: AnalysisFormData;
   onChange: (updates: Partial<AnalysisFormData>) => void;
   onSubmit: (e: React.FormEvent) => void;
+  onCancel?: () => void;
   isEditing: boolean;
 }
 
@@ -23,6 +24,7 @@ export default function DynamicAnalysisForm({
   formData,
   onChange,
   onSubmit,
+  onCancel,
   isEditing,
 }: DynamicAnalysisFormProps) {
   const [resolvedFields, setResolvedFields] = useState<ResolvedField[]>([]);
@@ -227,10 +229,19 @@ export default function DynamicAnalysisForm({
       })}
 
       {/* Form Actions */}
-      <div className="flex justify-end space-x-3 pt-4 border-t">
+      <div className="flex justify-between items-center pt-4 border-t">
+        {onCancel && (
+          <button
+            type="button"
+            onClick={onCancel}
+            className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium transition-colors"
+          >
+            Cancel
+          </button>
+        )}
         <button
           type="submit"
-          className="px-6 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+          className="px-6 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors ml-auto"
         >
           {isEditing ? 'Update Analysis' : 'Submit Analysis'}
         </button>
