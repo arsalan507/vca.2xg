@@ -227,6 +227,11 @@ export interface ViralAnalysis {
   is_dissolved?: boolean;
   dissolution_reason?: string;
 
+  // Disapproval tracking (for approved scripts sent back)
+  disapproval_count?: number;
+  last_disapproved_at?: string;
+  disapproval_reason?: string;
+
   // Google Drive / File management
   raw_footage_drive_url?: string;
   edited_video_drive_url?: string;

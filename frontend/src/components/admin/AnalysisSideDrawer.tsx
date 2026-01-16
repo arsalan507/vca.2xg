@@ -33,6 +33,7 @@ import {
   ChatBubbleLeftIcon,
   ShareIcon,
   FaceSmileIcon,
+  ExclamationTriangleIcon,
 } from '@heroicons/react/24/outline';
 import { StarIcon } from '@heroicons/react/24/solid';
 import type { ViralAnalysis, ReviewAnalysisData } from '@/types';
@@ -43,6 +44,7 @@ interface AnalysisSideDrawerProps {
   onClose: () => void;
   onApprove?: (data: ReviewAnalysisData) => void;
   onReject?: (data: ReviewAnalysisData) => void;
+  onDisapprove?: (reason: string) => void;
   isSubmitting?: boolean;
 }
 
@@ -205,10 +207,13 @@ export default function AnalysisSideDrawer({
   onClose,
   onApprove,
   onReject,
+  onDisapprove,
   isSubmitting = false,
 }: AnalysisSideDrawerProps) {
   const [showRejectFeedback, setShowRejectFeedback] = useState(false);
+  const [showDisapproveFeedback, setShowDisapproveFeedback] = useState(false);
   const [feedback, setFeedback] = useState('');
+  const [disapprovalReason, setDisapprovalReason] = useState('');
   const [scores] = useState({
     hookStrength: 7,
     contentQuality: 7,
@@ -262,9 +267,20 @@ export default function AnalysisSideDrawer({
     }
   };
 
+  const handleDisapprove = () => {
+    if (!disapprovalReason.trim()) {
+      return; // Reason required for disapproval
+    }
+    if (onDisapprove) {
+      onDisapprove(disapprovalReason.trim());
+    }
+  };
+
   const resetState = () => {
     setShowRejectFeedback(false);
+    setShowDisapproveFeedback(false);
     setFeedback('');
+    setDisapprovalReason('');
   };
 
   const handleClose = () => {
@@ -845,7 +861,7 @@ export default function AnalysisSideDrawer({
               </div>
             )}
 
-            {/* Footer with Actions */}
+            {/* Footer with Actions - PENDING Scripts */}
             {analysis && analysis.status === 'PENDING' && (onApprove || onReject) && (
               <div className="sticky bottom-0 bg-white border-t border-gray-200 px-6 py-4">
                 {!showRejectFeedback ? (
@@ -901,6 +917,69 @@ export default function AnalysisSideDrawer({
                           <XCircleIcon className="w-5 h-5 mr-2" />
                         )}
                         Confirm Reject
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Footer with Actions - APPROVED Scripts (Disapprove) */}
+            {analysis && analysis.status === 'APPROVED' && onDisapprove && (
+              <div className="sticky bottom-0 bg-white border-t border-gray-200 px-6 py-4">
+                {!showDisapproveFeedback ? (
+                  <div className="space-y-3">
+                    {/* Info message */}
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                      <p className="text-xs text-blue-800">
+                        ℹ️ This script is already approved. You can disapprove it to send it back for revision.
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => setShowDisapproveFeedback(true)}
+                      className="w-full inline-flex justify-center items-center px-4 py-2.5 border border-orange-300 text-orange-700 bg-orange-50 rounded-lg hover:bg-orange-100 font-medium transition"
+                    >
+                      <ExclamationTriangleIcon className="w-5 h-5 mr-2" />
+                      Disapprove Script
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
+                      <p className="text-xs text-orange-800 font-medium mb-1">
+                        ⚠️ Disapproving will:
+                      </p>
+                      <ul className="text-xs text-orange-700 list-disc list-inside space-y-0.5 ml-1">
+                        <li>Change status to PENDING</li>
+                        <li>Reset production stage to NOT_STARTED</li>
+                        <li>Allow script writer to revise</li>
+                      </ul>
+                    </div>
+                    <textarea
+                      value={disapprovalReason}
+                      onChange={(e) => setDisapprovalReason(e.target.value)}
+                      placeholder="Explain why you're disapproving this approved script (required)..."
+                      rows={3}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm"
+                    />
+                    <div className="flex space-x-3">
+                      <button
+                        onClick={() => setShowDisapproveFeedback(false)}
+                        className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={handleDisapprove}
+                        disabled={isSubmitting || !disapprovalReason.trim()}
+                        className="flex-1 inline-flex justify-center items-center px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 font-medium transition disabled:opacity-50"
+                      >
+                        {isSubmitting ? (
+                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2" />
+                        ) : (
+                          <ExclamationTriangleIcon className="w-5 h-5 mr-2" />
+                        )}
+                        Confirm Disapprove
                       </button>
                     </div>
                   </div>

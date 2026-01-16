@@ -10,15 +10,18 @@ import { DocumentTextIcon, VideoCameraIcon, FilmIcon, CheckCircleIcon, XCircleIc
 import AssignTeamModal from '@/components/AssignTeamModal';
 import ScriptViewModal from '@/components/admin/ScriptViewModal';
 import RejectScriptModal from '@/components/admin/RejectScriptModal';
+import AnalysisSideDrawer from '@/components/admin/AnalysisSideDrawer';
 
 export default function NeedApprovalPage() {
   const queryClient = useQueryClient();
   const [selectedScript, setSelectedScript] = useState<ViralAnalysis | null>(null);
   const [selectedShoot, setSelectedShoot] = useState<ViralAnalysis | null>(null);
   const [selectedEdit, setSelectedEdit] = useState<ViralAnalysis | null>(null);
+  const [selectedApprovedScript, setSelectedApprovedScript] = useState<ViralAnalysis | null>(null);
   const [showAssignTeamModal, setShowAssignTeamModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
   const [showRejectModal, setShowRejectModal] = useState(false);
+  const [showApprovedDrawer, setShowApprovedDrawer] = useState(false);
 
   // Fetch pending scripts
   const { data: pendingScripts = [], isLoading: scriptsLoading } = useQuery({
@@ -107,6 +110,37 @@ export default function NeedApprovalPage() {
     queryKey: ['production-files', selectedShoot?.id],
     queryFn: () => productionFilesService.getFiles(selectedShoot!.id),
     enabled: !!selectedShoot?.id,
+  });
+
+  // Fetch all approved scripts (for viewing/disapproving)
+  const { data: approvedScripts = [], isLoading: approvedLoading } = useQuery({
+    queryKey: ['admin', 'approved-scripts'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('viral_analyses')
+        .select(`
+          *,
+          profiles:user_id (email, full_name, avatar_url),
+          assignments:project_assignments (
+            *,
+            videographer:profiles!project_assignments_videographer_id_fkey (id, email, full_name, avatar_url),
+            editor:profiles!project_assignments_editor_id_fkey (id, email, full_name, avatar_url),
+            posting_manager:profiles!project_assignments_posting_manager_id_fkey (id, email, full_name, avatar_url)
+          )
+        `)
+        .eq('status', 'APPROVED')
+        .order('updated_at', { ascending: false })
+        .limit(50);
+
+      if (error) throw error;
+
+      return data.map((item: any) => ({
+        ...item,
+        email: item.profiles?.email,
+        full_name: item.profiles?.full_name,
+        avatar_url: item.profiles?.avatar_url,
+      }));
+    },
   });
 
   // Approve script mutation
@@ -518,6 +552,99 @@ export default function NeedApprovalPage() {
             </div>
           )}
         </section>
+
+        {/* Approved Scripts Section */}
+        <section>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-gray-900 flex items-center">
+              <CheckCircleIcon className="w-5 h-5 mr-2 text-blue-600" />
+              Approved Scripts
+            </h2>
+            <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
+              {approvedScripts.length} approved
+            </span>
+          </div>
+
+          {approvedLoading ? (
+            <div className="flex justify-center py-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+            </div>
+          ) : approvedScripts.length === 0 ? (
+            <div className="bg-white border border-gray-200 rounded-lg p-8 text-center">
+              <CheckCircleIcon className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+              <p className="text-gray-500">No approved scripts yet</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {approvedScripts.map((script: ViralAnalysis) => (
+                <div
+                  key={script.id}
+                  className="bg-white border border-gray-200 rounded-lg p-5 hover:shadow-md transition"
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-3 mb-2">
+                        {script.content_id && (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-mono font-semibold bg-gray-100 text-gray-800 border border-gray-300">
+                            {script.content_id}
+                          </span>
+                        )}
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                          ✅ APPROVED
+                        </span>
+                        {script.production_stage && (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            {script.production_stage.replace(/_/g, ' ')}
+                          </span>
+                        )}
+                        {script.disapproval_count !== undefined && script.disapproval_count > 0 && (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+                            ⚠️ Disapproved {script.disapproval_count}x
+                          </span>
+                        )}
+                        <span className="text-xs text-gray-500">
+                          Approved {new Date(script.updated_at).toLocaleString()}
+                        </span>
+                      </div>
+
+                      <h3 className="text-base font-semibold text-gray-900 mb-1">
+                        {script.hook || 'No hook provided'}
+                      </h3>
+
+                      <p className="text-sm text-gray-600 mb-3">
+                        By: <span className="font-medium">{script.full_name || script.email}</span>
+                      </p>
+
+                      <div className="grid grid-cols-2 gap-3 text-sm">
+                        <div>
+                          <span className="text-gray-500">Target:</span>{' '}
+                          <span className="font-medium text-gray-900">{script.target_emotion}</span>
+                        </div>
+                        <div>
+                          <span className="text-gray-500">Outcome:</span>{' '}
+                          <span className="font-medium text-gray-900">{script.expected_outcome}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center space-x-2 ml-4">
+                      <button
+                        onClick={() => {
+                          setSelectedApprovedScript(script);
+                          setShowApprovedDrawer(true);
+                        }}
+                        className="px-4 py-2 text-sm font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition flex items-center"
+                      >
+                        <EyeIcon className="w-4 h-4 mr-1.5" />
+                        View Details
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
       </div>
 
       {/* Script View Modal */}
@@ -707,6 +834,22 @@ export default function NeedApprovalPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Approved Script Drawer */}
+      {selectedApprovedScript && (
+        <AnalysisSideDrawer
+          analysis={selectedApprovedScript}
+          isOpen={showApprovedDrawer}
+          onClose={() => {
+            setShowApprovedDrawer(false);
+            setSelectedApprovedScript(null);
+            // Refresh the approved scripts list
+            queryClient.invalidateQueries({ queryKey: ['admin', 'approved-scripts'] });
+            queryClient.invalidateQueries({ queryKey: ['admin', 'pending-scripts'] });
+            queryClient.invalidateQueries({ queryKey: ['admin', 'pending-count'] });
+          }}
+        />
       )}
     </div>
   );

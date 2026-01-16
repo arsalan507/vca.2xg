@@ -116,6 +116,24 @@ export default function AnalysisTablePage() {
     },
   });
 
+  // Disapprove mutation (for approved scripts)
+  const disapproveMutation = useMutation({
+    mutationFn: (data: { id: string; reason: string }) =>
+      adminService.disapproveScript(data.id, data.reason),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'analyses-table'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'pending-scripts'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'approved-scripts'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'pending-count'] });
+      toast.success('Script disapproved and sent back to pending');
+      setIsDrawerOpen(false);
+      setSelectedAnalysis(null);
+    },
+    onError: (error: any) => {
+      toast.error(error.message || 'Failed to disapprove script');
+    },
+  });
+
   // Filter analyses
   const filteredAnalyses = useMemo(() => {
     let filtered = analyses;
@@ -164,6 +182,11 @@ export default function AnalysisTablePage() {
   const handleReject = (data: ReviewAnalysisData) => {
     if (!selectedAnalysis) return;
     rejectMutation.mutate({ id: selectedAnalysis.id, reviewData: data });
+  };
+
+  const handleDisapprove = (reason: string) => {
+    if (!selectedAnalysis) return;
+    disapproveMutation.mutate({ id: selectedAnalysis.id, reason });
   };
 
   const handleQuickApprove = (analysis: ViralAnalysis) => {
@@ -270,7 +293,8 @@ export default function AnalysisTablePage() {
         }}
         onApprove={handleApprove}
         onReject={handleReject}
-        isSubmitting={approveMutation.isPending || rejectMutation.isPending}
+        onDisapprove={handleDisapprove}
+        isSubmitting={approveMutation.isPending || rejectMutation.isPending || disapproveMutation.isPending}
       />
 
       {/* Assign Team Modal */}

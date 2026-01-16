@@ -179,6 +179,28 @@ export const adminService = {
     if (error) throw error;
   },
 
+  // Disapprove an already-approved script (admin only)
+  async disapproveScript(
+    id: string,
+    reason: string
+  ): Promise<void> {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Not authenticated');
+
+    // Validate that reason is provided
+    if (!reason || reason.trim().length === 0) {
+      throw new Error('Disapproval reason is required');
+    }
+
+    // Call the database function to disapprove the script
+    const { error } = await supabase.rpc('disapprove_script', {
+      analysis_uuid: id,
+      reason: reason.trim(),
+    });
+
+    if (error) throw error;
+  },
+
   // Get dashboard stats (admin only)
   async getDashboardStats() {
     const [analysesResult, usersResult] = await Promise.all([

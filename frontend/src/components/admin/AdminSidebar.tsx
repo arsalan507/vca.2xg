@@ -1,4 +1,17 @@
-import { UserGroupIcon, ExclamationTriangleIcon, ChartBarIcon, Cog6ToothIcon, ArrowRightOnRectangleIcon, FolderIcon } from '@heroicons/react/24/outline';
+/**
+ * Admin Sidebar - Notion-Inspired Mobile-Responsive Navigation
+ */
+
+import {
+  UserGroupIcon,
+  ExclamationTriangleIcon,
+  ChartBarIcon,
+  Cog6ToothIcon,
+  ArrowRightOnRectangleIcon,
+  FolderIcon,
+  Bars3Icon,
+  XMarkIcon
+} from '@heroicons/react/24/outline';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useNavigate } from 'react-router-dom';
@@ -7,9 +20,18 @@ import toast from 'react-hot-toast';
 interface AdminSidebarProps {
   selectedPage: 'team' | 'approval' | 'production';
   onPageChange: (page: 'team' | 'approval' | 'production') => void;
+  isOpen?: boolean;
+  onClose?: () => void;
+  onToggle?: () => void;
 }
 
-export default function AdminSidebar({ selectedPage, onPageChange }: AdminSidebarProps) {
+export default function AdminSidebar({
+  selectedPage,
+  onPageChange,
+  isOpen = false,
+  onClose = () => {},
+  onToggle = () => {}
+}: AdminSidebarProps) {
   const navigate = useNavigate();
 
   const handleLogout = async () => {
@@ -76,22 +98,58 @@ export default function AdminSidebar({ selectedPage, onPageChange }: AdminSideba
   });
 
   return (
-    <div className="w-64 bg-white border-r border-gray-200 h-screen flex flex-col">
-      {/* Header */}
-      <div className="p-6 border-b border-gray-200">
-        <h1 className="text-xl font-bold text-gray-900">📊 Admin</h1>
-        <p className="text-sm text-gray-500 mt-1">Dashboard</p>
+    <>
+      {/* Mobile Header with Hamburger Menu */}
+      <div className="md:hidden fixed top-0 left-0 right-0 bg-white border-b border-gray-200 px-4 py-3 z-30 flex items-center justify-between">
+        <button
+          onClick={onToggle}
+          className="p-2 -ml-2 rounded-lg hover:bg-gray-100 active:bg-gray-200 transition min-w-[48px] min-h-[48px] flex items-center justify-center"
+          aria-label="Toggle menu"
+        >
+          <Bars3Icon className="w-6 h-6 text-gray-700" />
+        </button>
+        <h1 className="text-lg font-bold text-gray-900">📊 Admin</h1>
+        <div className="w-[48px]">{/* Spacer for center alignment */}</div>
       </div>
 
-      {/* Navigation */}
-      <nav className="flex-1 p-4 space-y-2">
+      {/* Sidebar */}
+      <aside
+        className={`
+          fixed inset-y-0 left-0 z-50
+          w-64 bg-white shadow-xl
+          transform transition-transform duration-300 ease-in-out
+          md:relative md:translate-x-0 md:shadow-none md:border-r md:border-gray-200
+          flex flex-col
+          ${isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+        `}
+      >
+        {/* Mobile Close Button */}
+        <div className="md:hidden flex items-center justify-between p-4 border-b border-gray-200">
+          <h2 className="text-lg font-bold text-gray-900">📊 Admin Menu</h2>
+          <button
+            onClick={onClose}
+            className="p-2 rounded-lg hover:bg-gray-100 active:bg-gray-200 transition min-w-[48px] min-h-[48px] flex items-center justify-center"
+            aria-label="Close menu"
+          >
+            <XMarkIcon className="w-6 h-6 text-gray-700" />
+          </button>
+        </div>
+
+        {/* Desktop Header */}
+        <div className="hidden md:block p-6 border-b border-gray-200">
+          <h1 className="text-xl font-bold text-gray-900">📊 Admin</h1>
+          <p className="text-sm text-gray-500 mt-1">Dashboard</p>
+        </div>
+
+        {/* Navigation */}
+        <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
         {/* Team Members */}
         <button
           onClick={() => onPageChange('team')}
-          className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors ${
+          className={`w-full flex items-center justify-between px-4 py-3 min-h-[48px] rounded-lg transition-colors text-left ${
             selectedPage === 'team'
               ? 'bg-primary-50 text-primary-700 border border-primary-200'
-              : 'text-gray-700 hover:bg-gray-50'
+              : 'text-gray-700 hover:bg-gray-50 active:bg-gray-100'
           }`}
         >
           <div className="flex items-center space-x-3">
@@ -112,10 +170,10 @@ export default function AdminSidebar({ selectedPage, onPageChange }: AdminSideba
         {/* Review */}
         <button
           onClick={() => onPageChange('approval')}
-          className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors relative ${
+          className={`w-full flex items-center justify-between px-4 py-3 min-h-[48px] rounded-lg transition-colors relative text-left ${
             selectedPage === 'approval'
               ? 'bg-red-50 text-red-700 border border-red-200'
-              : 'text-gray-700 hover:bg-gray-50'
+              : 'text-gray-700 hover:bg-gray-50 active:bg-gray-100'
           }`}
         >
           <div className="flex items-center space-x-3">
@@ -144,10 +202,10 @@ export default function AdminSidebar({ selectedPage, onPageChange }: AdminSideba
         {/* Production Status */}
         <button
           onClick={() => onPageChange('production')}
-          className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors ${
+          className={`w-full flex items-center justify-between px-4 py-3 min-h-[48px] rounded-lg transition-colors text-left ${
             selectedPage === 'production'
               ? 'bg-blue-50 text-blue-700 border border-blue-200'
-              : 'text-gray-700 hover:bg-gray-50'
+              : 'text-gray-700 hover:bg-gray-50 active:bg-gray-100'
           }`}
         >
           <div className="flex items-center space-x-3">
@@ -179,7 +237,7 @@ export default function AdminSidebar({ selectedPage, onPageChange }: AdminSideba
         {/* Settings Button */}
         <button
           onClick={() => navigate('/settings')}
-          className="w-full flex items-center space-x-3 px-4 py-2.5 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+          className="w-full flex items-center space-x-3 px-4 py-3 min-h-[48px] rounded-lg text-gray-700 hover:bg-gray-50 active:bg-gray-100 transition-colors text-left"
         >
           <Cog6ToothIcon className="w-5 h-5" />
           <span className="text-sm font-medium">Settings</span>
@@ -202,7 +260,7 @@ export default function AdminSidebar({ selectedPage, onPageChange }: AdminSideba
               navigate('/settings');
             }
           }}
-          className="w-full flex items-center space-x-3 px-4 py-2.5 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+          className="w-full flex items-center space-x-3 px-4 py-3 min-h-[48px] rounded-lg text-gray-700 hover:bg-gray-50 active:bg-gray-100 transition-colors text-left"
         >
           <FolderIcon className="w-5 h-5" />
           <span className="text-sm font-medium">Google Drive</span>
@@ -211,7 +269,7 @@ export default function AdminSidebar({ selectedPage, onPageChange }: AdminSideba
         {/* Logout Button */}
         <button
           onClick={handleLogout}
-          className="w-full flex items-center space-x-3 px-4 py-2.5 rounded-lg text-red-700 hover:bg-red-50 transition-colors"
+          className="w-full flex items-center space-x-3 px-4 py-3 min-h-[48px] rounded-lg text-red-700 hover:bg-red-50 active:bg-red-100 transition-colors text-left"
         >
           <ArrowRightOnRectangleIcon className="w-5 h-5" />
           <span className="text-sm font-medium">Logout</span>
@@ -221,6 +279,7 @@ export default function AdminSidebar({ selectedPage, onPageChange }: AdminSideba
           <p>Admin Dashboard v1.0</p>
         </div>
       </div>
-    </div>
+      </aside>
+    </>
   );
 }
