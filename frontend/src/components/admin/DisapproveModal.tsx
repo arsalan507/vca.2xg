@@ -88,7 +88,7 @@ export default function DisapproveModal({
                 </span>
               </div>
               <h3 className="text-base font-semibold text-gray-900 mb-1">
-                {analysis.hook || analysis.title || 'Untitled'}
+                {analysis.hook || 'Untitled'}
               </h3>
               <p className="text-sm text-gray-600">
                 By: <span className="font-medium">{analysis.full_name || analysis.email}</span>
