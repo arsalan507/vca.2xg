@@ -269,15 +269,15 @@ export default function NeedApprovalPage() {
               <p className="text-gray-500">No scripts pending approval</p>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-3 md:space-y-4">
               {pendingScripts.map((script: ViralAnalysis) => (
                 <div
                   key={script.id}
-                  className="bg-white border border-gray-200 rounded-lg p-5 hover:shadow-md transition"
+                  className="bg-white border border-gray-200 rounded-lg p-4 md:p-5 hover:shadow-md transition"
                 >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-3 mb-2">
+                  <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex flex-wrap items-center gap-2 mb-2">
                         {script.content_id && (
                           <span className="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-mono font-semibold bg-gray-100 text-gray-800 border border-gray-300">
                             {script.content_id}
@@ -295,20 +295,21 @@ export default function NeedApprovalPage() {
                             🚨 Rejected {script.rejection_count}x {script.rejection_count >= 4 ? '(Warning: 1 more = dissolved)' : ''}
                           </span>
                         )}
-                        <span className="text-xs text-gray-500">
-                          Submitted {new Date(script.created_at).toLocaleString()}
-                        </span>
                       </div>
 
-                      <h3 className="text-base font-semibold text-gray-900 mb-1">
+                      <div className="text-xs text-gray-500 mb-2">
+                        Submitted {new Date(script.created_at).toLocaleString()}
+                      </div>
+
+                      <h3 className="text-sm md:text-base font-semibold text-gray-900 mb-1 break-words">
                         {script.hook || 'No hook provided'}
                       </h3>
 
-                      <p className="text-sm text-gray-600 mb-3">
+                      <p className="text-xs md:text-sm text-gray-600 mb-3">
                         By: <span className="font-medium">{script.full_name || script.email}</span>
                       </p>
 
-                      <div className="grid grid-cols-2 gap-3 text-sm">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-3 text-xs md:text-sm">
                         <div>
                           <span className="text-gray-500">Target:</span>{' '}
                           <span className="font-medium text-gray-900">{script.target_emotion}</span>
@@ -320,15 +321,15 @@ export default function NeedApprovalPage() {
                       </div>
                     </div>
 
-                    <div className="flex items-center space-x-2 ml-4">
+                    <div className="flex flex-col md:flex-row gap-2 md:gap-2 md:ml-4 w-full md:w-auto">
                       <button
                         onClick={() => {
                           setSelectedScript(script);
                           setShowPendingDrawer(true);
                         }}
-                        className="px-4 py-2 text-sm font-medium text-primary-700 bg-primary-50 border border-primary-200 rounded-lg hover:bg-primary-100 transition flex items-center"
+                        className="w-full md:w-auto px-4 py-2.5 min-h-[48px] text-sm font-medium text-primary-700 bg-primary-50 border border-primary-200 rounded-lg hover:bg-primary-100 active:bg-primary-200 transition flex items-center justify-center"
                       >
-                        <EyeIcon className="w-4 h-4 mr-1.5" />
+                        <EyeIcon className="w-5 h-5 mr-2" />
                         View
                       </button>
                       <button
@@ -343,9 +344,9 @@ export default function NeedApprovalPage() {
                           });
                         }}
                         disabled={approveScriptMutation.isPending}
-                        className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition disabled:opacity-50 flex items-center"
+                        className="w-full md:w-auto px-4 py-2.5 min-h-[48px] text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 active:bg-green-800 transition disabled:opacity-50 flex items-center justify-center"
                       >
-                        <CheckCircleIcon className="w-4 h-4 mr-1.5" />
+                        <CheckCircleIcon className="w-5 h-5 mr-2" />
                         Approve
                       </button>
                       <button
@@ -353,9 +354,9 @@ export default function NeedApprovalPage() {
                           setSelectedScript(script);
                           setShowRejectModal(true);
                         }}
-                        className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition flex items-center"
+                        className="w-full md:w-auto px-4 py-2.5 min-h-[48px] text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 active:bg-red-800 transition flex items-center justify-center"
                       >
-                        <XCircleIcon className="w-4 h-4 mr-1.5" />
+                        <XCircleIcon className="w-5 h-5 mr-2" />
                         Reject
                       </button>
                     </div>
