@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
-import { UserGroupIcon, DocumentTextIcon, VideoCameraIcon, FilmIcon, MegaphoneIcon, TableCellsIcon } from '@heroicons/react/24/outline';
+import { UserGroupIcon, DocumentTextIcon, VideoCameraIcon, FilmIcon, MegaphoneIcon, TableCellsIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import TeamMemberProjectsModal from '@/components/admin/TeamMemberProjectsModal';
 
 interface TeamMember {
@@ -34,6 +34,10 @@ export default function TeamMembersPage() {
   const navigate = useNavigate();
   const [selectedMember, setSelectedMember] = useState<{ id: string; name: string; role: string } | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [scriptWriterSearch, setScriptWriterSearch] = useState('');
+  const [videographerSearch, setVideographerSearch] = useState('');
+  const [editorSearch, setEditorSearch] = useState('');
+  const [postingSearch, setPostingSearch] = useState('');
 
   const handleMemberClick = (member: TeamMember) => {
     setSelectedMember({
@@ -230,6 +234,43 @@ export default function TeamMembersPage() {
     POSTING_MANAGER: teamMembers.filter(m => m.role === 'POSTING_MANAGER'),
   };
 
+  // Filtered lists based on search
+  const filteredScriptWriters = useMemo(() => {
+    if (!scriptWriterSearch.trim()) return groupedMembers.SCRIPT_WRITER;
+    const search = scriptWriterSearch.toLowerCase();
+    return groupedMembers.SCRIPT_WRITER.filter(member =>
+      (member.full_name?.toLowerCase().includes(search)) ||
+      member.email.toLowerCase().includes(search)
+    );
+  }, [groupedMembers.SCRIPT_WRITER, scriptWriterSearch]);
+
+  const filteredVideographers = useMemo(() => {
+    if (!videographerSearch.trim()) return groupedMembers.VIDEOGRAPHER;
+    const search = videographerSearch.toLowerCase();
+    return groupedMembers.VIDEOGRAPHER.filter(member =>
+      (member.full_name?.toLowerCase().includes(search)) ||
+      member.email.toLowerCase().includes(search)
+    );
+  }, [groupedMembers.VIDEOGRAPHER, videographerSearch]);
+
+  const filteredEditors = useMemo(() => {
+    if (!editorSearch.trim()) return groupedMembers.EDITOR;
+    const search = editorSearch.toLowerCase();
+    return groupedMembers.EDITOR.filter(member =>
+      (member.full_name?.toLowerCase().includes(search)) ||
+      member.email.toLowerCase().includes(search)
+    );
+  }, [groupedMembers.EDITOR, editorSearch]);
+
+  const filteredPostingManagers = useMemo(() => {
+    if (!postingSearch.trim()) return groupedMembers.POSTING_MANAGER;
+    const search = postingSearch.toLowerCase();
+    return groupedMembers.POSTING_MANAGER.filter(member =>
+      (member.full_name?.toLowerCase().includes(search)) ||
+      member.email.toLowerCase().includes(search)
+    );
+  }, [groupedMembers.POSTING_MANAGER, postingSearch]);
+
   // const getRoleIcon = (role: string) => {
   //   switch (role) {
   //     case 'SCRIPT_WRITER': return <DocumentTextIcon className="w-5 h-5" />;
@@ -277,289 +318,369 @@ export default function TeamMembersPage() {
           <>
             {/* Script Writers */}
             <section>
-              <div className="flex items-center justify-between mb-4">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
                 <h2 className="text-lg font-semibold text-gray-900 flex items-center">
                   <DocumentTextIcon className="w-5 h-5 mr-2 text-blue-600" />
                   Script Writers
+                  <span className="ml-3 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
+                    {filteredScriptWriters.length} {scriptWriterSearch ? 'found' : 'active'}
+                  </span>
                 </h2>
-                <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
-                  {groupedMembers.SCRIPT_WRITER.length} active
-                </span>
+                <div className="relative w-full md:w-64">
+                  <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <input
+                    type="text"
+                    value={scriptWriterSearch}
+                    onChange={(e) => setScriptWriterSearch(e.target.value)}
+                    placeholder="Search by name or email..."
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                  />
+                </div>
               </div>
 
               <div className="bg-white rounded-lg shadow overflow-hidden">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Name
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Total Scripts
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Approved
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Rejected
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Pending
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Approval Rate
-                      </th>
-                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {groupedMembers.SCRIPT_WRITER.map((member) => {
-                      const stats = scriptWriterStats[member.id] || {};
-                      return (
-                        <tr key={member.id} className="hover:bg-gray-50">
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <button
-                              onClick={() => handleMemberClick(member)}
-                              className="text-sm font-medium text-primary-600 hover:text-primary-800 hover:underline text-left"
-                            >
-                              {member.full_name || member.email}
-                            </button>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {stats.total_submitted || 0}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-green-600 font-medium">
-                            {stats.approved || 0}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-red-600 font-medium">
-                            {stats.rejected || 0}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-yellow-600 font-medium">
-                            {stats.pending || 0}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                              (stats.approval_rate || 0) >= 75 ? 'bg-green-100 text-green-800' :
-                              (stats.approval_rate || 0) >= 50 ? 'bg-yellow-100 text-yellow-800' :
-                              'bg-red-100 text-red-800'
-                            }`}>
-                              {stats.approval_rate || 0}%
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-center">
-                            <button
-                              onClick={(e) => handleViewAnalyses(member.id, e)}
-                              className="inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-md text-xs font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition"
-                            >
-                              <TableCellsIcon className="w-4 h-4 mr-1.5" />
-                              View Table
-                            </button>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                          Name
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                          Total Scripts
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                          Approved
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                          Rejected
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                          Pending
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                          Approval Rate
+                        </th>
+                        <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                          Actions
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {filteredScriptWriters.length === 0 ? (
+                        <tr>
+                          <td colSpan={7} className="px-6 py-8 text-center text-sm text-gray-500">
+                            No script writers found matching "{scriptWriterSearch}"
                           </td>
                         </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+                      ) : (
+                        filteredScriptWriters.map((member) => {
+                          const stats = scriptWriterStats[member.id] || {};
+                          return (
+                            <tr key={member.id} className="hover:bg-gray-50">
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <button
+                                  onClick={() => handleMemberClick(member)}
+                                  className="text-sm font-medium text-primary-600 hover:text-primary-800 hover:underline text-left"
+                                >
+                                  {member.full_name || member.email}
+                                </button>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                {stats.total_submitted || 0}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-green-600 font-medium">
+                                {stats.approved || 0}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-red-600 font-medium">
+                                {stats.rejected || 0}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-yellow-600 font-medium">
+                                {stats.pending || 0}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                  (stats.approval_rate || 0) >= 75 ? 'bg-green-100 text-green-800' :
+                                  (stats.approval_rate || 0) >= 50 ? 'bg-yellow-100 text-yellow-800' :
+                                  'bg-red-100 text-red-800'
+                                }`}>
+                                  {stats.approval_rate || 0}%
+                                </span>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-center">
+                                <button
+                                  onClick={(e) => handleViewAnalyses(member.id, e)}
+                                  className="inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-md text-xs font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition"
+                                >
+                                  <TableCellsIcon className="w-4 h-4 mr-1.5" />
+                                  View Table
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </section>
 
             {/* Videographers */}
             <section>
-              <div className="flex items-center justify-between mb-4">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
                 <h2 className="text-lg font-semibold text-gray-900 flex items-center">
                   <VideoCameraIcon className="w-5 h-5 mr-2 text-indigo-600" />
                   Videographers
+                  <span className="ml-3 px-3 py-1 bg-indigo-100 text-indigo-800 rounded-full text-sm font-medium">
+                    {filteredVideographers.length} {videographerSearch ? 'found' : 'active'}
+                  </span>
                 </h2>
-                <span className="px-3 py-1 bg-indigo-100 text-indigo-800 rounded-full text-sm font-medium">
-                  {groupedMembers.VIDEOGRAPHER.length} active
-                </span>
+                <div className="relative w-full md:w-64">
+                  <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <input
+                    type="text"
+                    value={videographerSearch}
+                    onChange={(e) => setVideographerSearch(e.target.value)}
+                    placeholder="Search by name or email..."
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                  />
+                </div>
               </div>
 
               <div className="bg-white rounded-lg shadow overflow-hidden">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Name
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Assigned
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Shooting
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        In Review
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Completed
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {groupedMembers.VIDEOGRAPHER.map((member) => {
-                      const stats = videographerStats[member.id] || {};
-                      return (
-                        <tr key={member.id} className="hover:bg-gray-50 cursor-pointer">
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <button
-                              onClick={() => handleMemberClick(member)}
-                              className="text-sm font-medium text-primary-600 hover:text-primary-800 hover:underline text-left"
-                            >
-                              {member.full_name || member.email}
-                            </button>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {stats.assigned || 0}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-blue-600 font-medium">
-                            {stats.shooting || 0}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-yellow-600 font-medium">
-                            {stats.in_review || 0}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-green-600 font-medium">
-                            {stats.completed || 0}
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                          Name
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                          Assigned
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                          Shooting
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                          In Review
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                          Completed
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {filteredVideographers.length === 0 ? (
+                        <tr>
+                          <td colSpan={5} className="px-6 py-8 text-center text-sm text-gray-500">
+                            {videographerSearch ? `No videographers found matching "${videographerSearch}"` : 'No videographers yet'}
                           </td>
                         </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+                      ) : (
+                        filteredVideographers.map((member) => {
+                          const stats = videographerStats[member.id] || {};
+                          return (
+                            <tr key={member.id} className="hover:bg-gray-50 cursor-pointer">
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <button
+                                  onClick={() => handleMemberClick(member)}
+                                  className="text-sm font-medium text-primary-600 hover:text-primary-800 hover:underline text-left"
+                                >
+                                  {member.full_name || member.email}
+                                </button>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                {stats.assigned || 0}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-blue-600 font-medium">
+                                {stats.shooting || 0}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-yellow-600 font-medium">
+                                {stats.in_review || 0}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-green-600 font-medium">
+                                {stats.completed || 0}
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </section>
 
             {/* Editors */}
             <section>
-              <div className="flex items-center justify-between mb-4">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
                 <h2 className="text-lg font-semibold text-gray-900 flex items-center">
                   <FilmIcon className="w-5 h-5 mr-2 text-purple-600" />
                   Editors
+                  <span className="ml-3 px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-sm font-medium">
+                    {filteredEditors.length} {editorSearch ? 'found' : 'active'}
+                  </span>
                 </h2>
-                <span className="px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-sm font-medium">
-                  {groupedMembers.EDITOR.length} active
-                </span>
+                <div className="relative w-full md:w-64">
+                  <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <input
+                    type="text"
+                    value={editorSearch}
+                    onChange={(e) => setEditorSearch(e.target.value)}
+                    placeholder="Search by name or email..."
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm"
+                  />
+                </div>
               </div>
 
               <div className="bg-white rounded-lg shadow overflow-hidden">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Name
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Assigned
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Editing
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        In Review
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Completed
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {groupedMembers.EDITOR.map((member) => {
-                      const stats = editorStats[member.id] || {};
-                      return (
-                        <tr key={member.id} className="hover:bg-gray-50 cursor-pointer">
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <button
-                              onClick={() => handleMemberClick(member)}
-                              className="text-sm font-medium text-primary-600 hover:text-primary-800 hover:underline text-left"
-                            >
-                              {member.full_name || member.email}
-                            </button>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {stats.assigned || 0}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-purple-600 font-medium">
-                            {stats.editing || 0}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-yellow-600 font-medium">
-                            {stats.in_review || 0}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-green-600 font-medium">
-                            {stats.completed || 0}
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                          Name
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                          Assigned
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                          Editing
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                          In Review
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                          Completed
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {filteredEditors.length === 0 ? (
+                        <tr>
+                          <td colSpan={5} className="px-6 py-8 text-center text-sm text-gray-500">
+                            {editorSearch ? `No editors found matching "${editorSearch}"` : 'No editors yet'}
                           </td>
                         </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+                      ) : (
+                        filteredEditors.map((member) => {
+                          const stats = editorStats[member.id] || {};
+                          return (
+                            <tr key={member.id} className="hover:bg-gray-50 cursor-pointer">
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <button
+                                  onClick={() => handleMemberClick(member)}
+                                  className="text-sm font-medium text-primary-600 hover:text-primary-800 hover:underline text-left"
+                                >
+                                  {member.full_name || member.email}
+                                </button>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                {stats.assigned || 0}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-purple-600 font-medium">
+                                {stats.editing || 0}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-yellow-600 font-medium">
+                                {stats.in_review || 0}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-green-600 font-medium">
+                                {stats.completed || 0}
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </section>
 
             {/* Posting Managers */}
             <section>
-              <div className="flex items-center justify-between mb-4">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
                 <h2 className="text-lg font-semibold text-gray-900 flex items-center">
                   <MegaphoneIcon className="w-5 h-5 mr-2 text-pink-600" />
                   Posting Managers
+                  <span className="ml-3 px-3 py-1 bg-pink-100 text-pink-800 rounded-full text-sm font-medium">
+                    {filteredPostingManagers.length} {postingSearch ? 'found' : 'active'}
+                  </span>
                 </h2>
-                <span className="px-3 py-1 bg-pink-100 text-pink-800 rounded-full text-sm font-medium">
-                  {groupedMembers.POSTING_MANAGER.length} active
-                </span>
+                <div className="relative w-full md:w-64">
+                  <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <input
+                    type="text"
+                    value={postingSearch}
+                    onChange={(e) => setPostingSearch(e.target.value)}
+                    placeholder="Search by name or email..."
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-pink-500 text-sm"
+                  />
+                </div>
               </div>
 
               <div className="bg-white rounded-lg shadow overflow-hidden">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Name
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Assigned
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Ready to Post
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Posted (Total)
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        This Week
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {groupedMembers.POSTING_MANAGER.map((member) => {
-                      const stats = postingStats[member.id] || {};
-                      return (
-                        <tr key={member.id} className="hover:bg-gray-50 cursor-pointer">
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <button
-                              onClick={() => handleMemberClick(member)}
-                              className="text-sm font-medium text-primary-600 hover:text-primary-800 hover:underline text-left"
-                            >
-                              {member.full_name || member.email}
-                            </button>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {stats.assigned || 0}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-yellow-600 font-medium">
-                            {stats.ready_to_post || 0}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-green-600 font-medium">
-                            {stats.posted || 0}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-blue-600 font-medium">
-                            {stats.posted_this_week || 0}
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                          Name
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                          Assigned
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                          Ready to Post
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                          Posted (Total)
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                          This Week
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {filteredPostingManagers.length === 0 ? (
+                        <tr>
+                          <td colSpan={5} className="px-6 py-8 text-center text-sm text-gray-500">
+                            {postingSearch ? `No posting managers found matching "${postingSearch}"` : 'No posting managers yet'}
                           </td>
                         </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+                      ) : (
+                        filteredPostingManagers.map((member) => {
+                          const stats = postingStats[member.id] || {};
+                          return (
+                            <tr key={member.id} className="hover:bg-gray-50 cursor-pointer">
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <button
+                                  onClick={() => handleMemberClick(member)}
+                                  className="text-sm font-medium text-primary-600 hover:text-primary-800 hover:underline text-left"
+                                >
+                                  {member.full_name || member.email}
+                                </button>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                {stats.assigned || 0}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-yellow-600 font-medium">
+                                {stats.ready_to_post || 0}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-green-600 font-medium">
+                                {stats.posted || 0}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-blue-600 font-medium">
+                                {stats.posted_this_week || 0}
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </section>
           </>
