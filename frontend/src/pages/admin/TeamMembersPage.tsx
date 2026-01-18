@@ -4,6 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { UserGroupIcon, DocumentTextIcon, VideoCameraIcon, FilmIcon, MegaphoneIcon, TableCellsIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import TeamMemberProjectsModal from '@/components/admin/TeamMemberProjectsModal';
+import TableColumnFilter from '@/components/admin/TableColumnFilter';
+import SortableTableHeader from '@/components/admin/SortableTableHeader';
 
 interface TeamMember {
   id: string;
@@ -30,6 +32,22 @@ interface TeamStats {
   posted_this_week?: number;
 }
 
+type SortField = 'name' | 'total' | 'approved' | 'rejected' | 'pending' | 'rate' | 'assigned' | 'shooting' | 'editing' | 'in_review' | 'completed' | 'ready_to_post' | 'posted' | 'posted_week';
+type SortDirection = 'asc' | 'desc' | null;
+
+interface ScriptWriterFilters {
+  totalMin?: number;
+  totalMax?: number;
+  approvedMin?: number;
+  approvedMax?: number;
+  rejectedMin?: number;
+  rejectedMax?: number;
+  pendingMin?: number;
+  pendingMax?: number;
+  rateMin?: number;
+  rateMax?: number;
+}
+
 export default function TeamMembersPage() {
   const navigate = useNavigate();
   const [selectedMember, setSelectedMember] = useState<{ id: string; name: string; role: string } | null>(null);
@@ -38,6 +56,10 @@ export default function TeamMembersPage() {
   const [videographerSearch, setVideographerSearch] = useState('');
   const [editorSearch, setEditorSearch] = useState('');
   const [postingSearch, setPostingSearch] = useState('');
+
+  // Script Writers filters and sort
+  const [scriptWriterFilters, setScriptWriterFilters] = useState<ScriptWriterFilters>({});
+  const [scriptWriterSort, setScriptWriterSort] = useState<{ field: SortField | null; direction: SortDirection }>({ field: null, direction: null });
 
   const handleMemberClick = (member: TeamMember) => {
     setSelectedMember({
@@ -51,6 +73,18 @@ export default function TeamMembersPage() {
   const handleViewAnalyses = (userId: string, e: React.MouseEvent) => {
     e.stopPropagation();
     navigate(`/admin/analyses/by-user/${userId}`);
+  };
+
+  // Sort handler for Script Writers
+  const handleScriptWriterSort = (field: string) => {
+    setScriptWriterSort(prev => {
+      if (prev.field === field) {
+        // Cycle through: asc -> desc -> null
+        if (prev.direction === 'asc') return { field, direction: 'desc' };
+        if (prev.direction === 'desc') return { field: null, direction: null };
+      }
+      return { field: field as SortField, direction: 'asc' };
+    });
   };
 
   // Fetch all team members
@@ -236,13 +270,90 @@ export default function TeamMembersPage() {
 
   // Filtered lists based on search
   const filteredScriptWriters = useMemo(() => {
-    if (!scriptWriterSearch.trim()) return groupedMembers.SCRIPT_WRITER;
-    const search = scriptWriterSearch.toLowerCase();
-    return groupedMembers.SCRIPT_WRITER.filter(member =>
-      (member.full_name?.toLowerCase().includes(search)) ||
-      member.email.toLowerCase().includes(search)
-    );
-  }, [groupedMembers.SCRIPT_WRITER, scriptWriterSearch]);
+    let result = [...groupedMembers.SCRIPT_WRITER];
+
+    // Apply search filter
+    if (scriptWriterSearch.trim()) {
+      const search = scriptWriterSearch.toLowerCase();
+      result = result.filter(member =>
+        (member.full_name?.toLowerCase().includes(search)) ||
+        member.email.toLowerCase().includes(search)
+      );
+    }
+
+    // Apply column filters
+    result = result.filter(member => {
+      const stats = scriptWriterStats[member.id] || {};
+      const total = stats.total_submitted || 0;
+      const approved = stats.approved || 0;
+      const rejected = stats.rejected || 0;
+      const pending = stats.pending || 0;
+      const rate = stats.approval_rate || 0;
+
+      if (scriptWriterFilters.totalMin !== undefined && total < scriptWriterFilters.totalMin) return false;
+      if (scriptWriterFilters.totalMax !== undefined && total > scriptWriterFilters.totalMax) return false;
+      if (scriptWriterFilters.approvedMin !== undefined && approved < scriptWriterFilters.approvedMin) return false;
+      if (scriptWriterFilters.approvedMax !== undefined && approved > scriptWriterFilters.approvedMax) return false;
+      if (scriptWriterFilters.rejectedMin !== undefined && rejected < scriptWriterFilters.rejectedMin) return false;
+      if (scriptWriterFilters.rejectedMax !== undefined && rejected > scriptWriterFilters.rejectedMax) return false;
+      if (scriptWriterFilters.pendingMin !== undefined && pending < scriptWriterFilters.pendingMin) return false;
+      if (scriptWriterFilters.pendingMax !== undefined && pending > scriptWriterFilters.pendingMax) return false;
+      if (scriptWriterFilters.rateMin !== undefined && rate < scriptWriterFilters.rateMin) return false;
+      if (scriptWriterFilters.rateMax !== undefined && rate > scriptWriterFilters.rateMax) return false;
+
+      return true;
+    });
+
+    // Apply sorting
+    if (scriptWriterSort.field && scriptWriterSort.direction) {
+      result.sort((a, b) => {
+        const statsA = scriptWriterStats[a.id] || {};
+        const statsB = scriptWriterStats[b.id] || {};
+
+        let valueA: number | string = 0;
+        let valueB: number | string = 0;
+
+        switch (scriptWriterSort.field) {
+          case 'name':
+            valueA = a.full_name || a.email;
+            valueB = b.full_name || b.email;
+            break;
+          case 'total':
+            valueA = statsA.total_submitted || 0;
+            valueB = statsB.total_submitted || 0;
+            break;
+          case 'approved':
+            valueA = statsA.approved || 0;
+            valueB = statsB.approved || 0;
+            break;
+          case 'rejected':
+            valueA = statsA.rejected || 0;
+            valueB = statsB.rejected || 0;
+            break;
+          case 'pending':
+            valueA = statsA.pending || 0;
+            valueB = statsB.pending || 0;
+            break;
+          case 'rate':
+            valueA = statsA.approval_rate || 0;
+            valueB = statsB.approval_rate || 0;
+            break;
+        }
+
+        if (typeof valueA === 'string' && typeof valueB === 'string') {
+          return scriptWriterSort.direction === 'asc'
+            ? valueA.localeCompare(valueB)
+            : valueB.localeCompare(valueA);
+        }
+
+        return scriptWriterSort.direction === 'asc'
+          ? (valueA as number) - (valueB as number)
+          : (valueB as number) - (valueA as number);
+      });
+    }
+
+    return result;
+  }, [groupedMembers.SCRIPT_WRITER, scriptWriterSearch, scriptWriterFilters, scriptWriterSort, scriptWriterStats]);
 
   const filteredVideographers = useMemo(() => {
     if (!videographerSearch.trim()) return groupedMembers.VIDEOGRAPHER;
@@ -343,24 +454,102 @@ export default function TeamMembersPage() {
                   <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-50">
                       <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                          Name
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                          Total Scripts
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                          Approved
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                          Rejected
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                          Pending
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                          Approval Rate
-                        </th>
+                        <SortableTableHeader
+                          label="Name"
+                          field="name"
+                          currentSort={scriptWriterSort}
+                          onSort={handleScriptWriterSort}
+                        />
+                        <SortableTableHeader
+                          label="Total Scripts"
+                          field="total"
+                          currentSort={scriptWriterSort}
+                          onSort={handleScriptWriterSort}
+                          filterComponent={
+                            <TableColumnFilter
+                              column="Total Scripts"
+                              type="number"
+                              currentFilter={{ min: scriptWriterFilters.totalMin, max: scriptWriterFilters.totalMax }}
+                              onFilterChange={(filter) => setScriptWriterFilters(prev => ({
+                                ...prev,
+                                totalMin: filter?.min,
+                                totalMax: filter?.max
+                              }))}
+                            />
+                          }
+                        />
+                        <SortableTableHeader
+                          label="Approved"
+                          field="approved"
+                          currentSort={scriptWriterSort}
+                          onSort={handleScriptWriterSort}
+                          filterComponent={
+                            <TableColumnFilter
+                              column="Approved"
+                              type="number"
+                              currentFilter={{ min: scriptWriterFilters.approvedMin, max: scriptWriterFilters.approvedMax }}
+                              onFilterChange={(filter) => setScriptWriterFilters(prev => ({
+                                ...prev,
+                                approvedMin: filter?.min,
+                                approvedMax: filter?.max
+                              }))}
+                            />
+                          }
+                        />
+                        <SortableTableHeader
+                          label="Rejected"
+                          field="rejected"
+                          currentSort={scriptWriterSort}
+                          onSort={handleScriptWriterSort}
+                          filterComponent={
+                            <TableColumnFilter
+                              column="Rejected"
+                              type="number"
+                              currentFilter={{ min: scriptWriterFilters.rejectedMin, max: scriptWriterFilters.rejectedMax }}
+                              onFilterChange={(filter) => setScriptWriterFilters(prev => ({
+                                ...prev,
+                                rejectedMin: filter?.min,
+                                rejectedMax: filter?.max
+                              }))}
+                            />
+                          }
+                        />
+                        <SortableTableHeader
+                          label="Pending"
+                          field="pending"
+                          currentSort={scriptWriterSort}
+                          onSort={handleScriptWriterSort}
+                          filterComponent={
+                            <TableColumnFilter
+                              column="Pending"
+                              type="number"
+                              currentFilter={{ min: scriptWriterFilters.pendingMin, max: scriptWriterFilters.pendingMax }}
+                              onFilterChange={(filter) => setScriptWriterFilters(prev => ({
+                                ...prev,
+                                pendingMin: filter?.min,
+                                pendingMax: filter?.max
+                              }))}
+                            />
+                          }
+                        />
+                        <SortableTableHeader
+                          label="Approval Rate"
+                          field="rate"
+                          currentSort={scriptWriterSort}
+                          onSort={handleScriptWriterSort}
+                          filterComponent={
+                            <TableColumnFilter
+                              column="Approval Rate"
+                              type="percentage"
+                              currentFilter={{ min: scriptWriterFilters.rateMin, max: scriptWriterFilters.rateMax }}
+                              onFilterChange={(filter) => setScriptWriterFilters(prev => ({
+                                ...prev,
+                                rateMin: filter?.min,
+                                rateMax: filter?.max
+                              }))}
+                            />
+                          }
+                        />
                         <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
                           Actions
                         </th>
