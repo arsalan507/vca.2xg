@@ -192,6 +192,7 @@ export default function VideographerDashboard() {
   const getStageColor = (stage?: string) => {
     switch (stage) {
       case ProductionStage.PRE_PRODUCTION: return 'bg-blue-100 text-blue-800';
+      case ProductionStage.PLANNED: return 'bg-cyan-100 text-cyan-800';
       case ProductionStage.SHOOTING: return 'bg-purple-100 text-purple-800';
       case ProductionStage.SHOOT_REVIEW: return 'bg-yellow-100 text-yellow-800';
       case ProductionStage.EDITING: return 'bg-orange-100 text-orange-800';
@@ -431,6 +432,45 @@ export default function VideographerDashboard() {
                       {selectedAnalysis.reference_url}
                     </a>
                   </div>
+
+                  {/* Admin Remarks - Highlighted Banner */}
+                  {selectedAnalysis.admin_remarks && (
+                    <div className="bg-amber-50 border-2 border-amber-300 rounded-lg p-4 shadow-sm">
+                      <div className="flex items-start gap-3">
+                        <div className="flex-shrink-0">
+                          <span className="inline-block w-3 h-3 rounded-full bg-amber-500 animate-pulse"></span>
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="text-sm font-bold text-amber-800 uppercase tracking-wide mb-1">Admin Remarks</h4>
+                          <p className="text-gray-800 whitespace-pre-wrap">{selectedAnalysis.admin_remarks}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Planned Date - if set */}
+                  {selectedAnalysis.planned_date && (
+                    <div className={`rounded-lg p-4 ${
+                      new Date(selectedAnalysis.planned_date).toDateString() === new Date().toDateString()
+                        ? 'bg-amber-100 border border-amber-300'
+                        : 'bg-blue-50 border border-blue-200'
+                    }`}>
+                      <div className="flex items-center gap-2">
+                        <ClockIcon className="w-5 h-5 text-gray-600" />
+                        <span className="text-sm font-medium text-gray-700">Planned Shoot Date:</span>
+                        <span className={`font-bold ${
+                          new Date(selectedAnalysis.planned_date).toDateString() === new Date().toDateString()
+                            ? 'text-amber-800'
+                            : 'text-blue-800'
+                        }`}>
+                          {new Date(selectedAnalysis.planned_date).toLocaleDateString()}
+                        </span>
+                        {new Date(selectedAnalysis.planned_date).toDateString() === new Date().toDateString() && (
+                          <span className="ml-2 px-2 py-0.5 rounded text-xs font-bold bg-amber-200 text-amber-800">TODAY</span>
+                        )}
+                      </div>
+                    </div>
+                  )}
 
                   {/* Hook */}
                   <div className="bg-gray-50 p-4 rounded-lg">

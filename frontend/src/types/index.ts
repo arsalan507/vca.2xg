@@ -12,6 +12,7 @@ export type UserRole = typeof UserRole[keyof typeof UserRole];
 export const ProductionStage = {
   NOT_STARTED: 'NOT_STARTED',
   PRE_PRODUCTION: 'PRE_PRODUCTION',
+  PLANNED: 'PLANNED',
   SHOOTING: 'SHOOTING',
   SHOOT_REVIEW: 'SHOOT_REVIEW',
   EDITING: 'EDITING',
@@ -221,6 +222,8 @@ export interface ViralAnalysis {
   production_notes?: string;
   production_started_at?: string;
   production_completed_at?: string;
+  planned_date?: string; // Date when shoot is planned
+  admin_remarks?: string; // Admin remarks visible to all team members
 
   // Rejection and dissolution tracking
   rejection_count?: number;
@@ -353,6 +356,15 @@ export interface AssignTeamData {
   autoAssignVideographer?: boolean;
   autoAssignEditor?: boolean;
   autoAssignPostingManager?: boolean;
+  // Production Details (filled by admin on approval)
+  industryId?: string;
+  profileId?: string;
+  hookTagIds?: string[];
+  characterTagIds?: string[];
+  totalPeopleInvolved?: number;
+  shootPossibility?: 25 | 50 | 75 | 100;
+  // Admin remarks visible to all team members
+  adminRemarks?: string;
 }
 
 export interface UpdateProductionStageData {

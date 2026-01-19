@@ -404,6 +404,21 @@ export default function EditorDashboard() {
                     </a>
                   </div>
 
+                  {/* Admin Remarks - Highlighted Banner */}
+                  {selectedAnalysis.admin_remarks && (
+                    <div className="bg-amber-50 border-2 border-amber-300 rounded-lg p-4 shadow-sm">
+                      <div className="flex items-start gap-3">
+                        <div className="flex-shrink-0">
+                          <span className="inline-block w-3 h-3 rounded-full bg-amber-500 animate-pulse"></span>
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="text-sm font-bold text-amber-800 uppercase tracking-wide mb-1">Admin Remarks</h4>
+                          <p className="text-gray-800 whitespace-pre-wrap">{selectedAnalysis.admin_remarks}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Hook */}
                   <div className="bg-gray-50 p-4 rounded-lg">
                     <label className="block text-sm font-medium text-gray-700 mb-2">Hook (First 6 Seconds)</label>

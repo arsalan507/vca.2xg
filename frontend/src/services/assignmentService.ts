@@ -92,6 +92,16 @@ export const assignmentService = {
       assignments.push(assignment);
     }
 
+    // Build update object for production details
+    const updateData: Record<string, any> = {};
+
+    // Add production details if provided
+    if (data.industryId) updateData.industry_id = data.industryId;
+    if (data.profileId) updateData.profile_id = data.profileId;
+    if (data.totalPeopleInvolved !== undefined) updateData.total_people_involved = data.totalPeopleInvolved;
+    if (data.shootPossibility !== undefined) updateData.shoot_possibility = data.shootPossibility;
+    if (data.adminRemarks !== undefined) updateData.admin_remarks = data.adminRemarks;
+
     // Update production stage to PRE_PRODUCTION if still NOT_STARTED
     const { data: analysis } = await supabase
       .from('viral_analyses')
@@ -100,13 +110,52 @@ export const assignmentService = {
       .single();
 
     if (!analysis?.production_stage || analysis.production_stage === 'NOT_STARTED') {
+      updateData.production_stage = 'PRE_PRODUCTION';
+      updateData.production_started_at = new Date().toISOString();
+    }
+
+    // Apply updates if we have any
+    if (Object.keys(updateData).length > 0) {
       await supabase
         .from('viral_analyses')
-        .update({
-          production_stage: 'PRE_PRODUCTION',
-          production_started_at: new Date().toISOString(),
-        })
+        .update(updateData)
         .eq('id', analysisId);
+    }
+
+    // Handle hook tags (many-to-many relationship)
+    if (data.hookTagIds && data.hookTagIds.length > 0) {
+      // Delete existing hook tag relationships
+      await supabase
+        .from('analysis_hook_tags')
+        .delete()
+        .eq('analysis_id', analysisId);
+
+      // Insert new hook tag relationships
+      const hookTagInserts = data.hookTagIds.map((tagId) => ({
+        analysis_id: analysisId,
+        hook_tag_id: tagId,
+      }));
+      await supabase
+        .from('analysis_hook_tags')
+        .insert(hookTagInserts);
+    }
+
+    // Handle character tags (many-to-many relationship)
+    if (data.characterTagIds && data.characterTagIds.length > 0) {
+      // Delete existing character tag relationships
+      await supabase
+        .from('analysis_character_tags')
+        .delete()
+        .eq('analysis_id', analysisId);
+
+      // Insert new character tag relationships
+      const characterTagInserts = data.characterTagIds.map((tagId) => ({
+        analysis_id: analysisId,
+        character_tag_id: tagId,
+      }));
+      await supabase
+        .from('analysis_character_tags')
+        .insert(characterTagInserts);
     }
 
     // Fetch updated analysis with assignments

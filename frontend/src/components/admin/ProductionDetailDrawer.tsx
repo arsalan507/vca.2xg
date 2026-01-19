@@ -3,9 +3,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { assignmentService } from '@/services/assignmentService';
+import { contentConfigService } from '@/services/contentConfigService';
 import { supabase } from '@/lib/supabase';
 import { ProductionStage } from '@/types';
 import type { ViralAnalysis, AssignTeamData } from '@/types';
+import MultiSelectTags from '@/components/MultiSelectTags';
 import {
   XMarkIcon,
   VideoCameraIcon,
@@ -19,6 +21,10 @@ import {
   FlagIcon,
   ArrowRightIcon,
   XCircleIcon,
+  BuildingOfficeIcon,
+  UsersIcon,
+  ChartBarIcon,
+  PencilIcon,
 } from '@heroicons/react/24/outline';
 
 interface ProductionDetailDrawerProps {
@@ -27,6 +33,13 @@ interface ProductionDetailDrawerProps {
   onClose: () => void;
 }
 
+const SHOOT_POSSIBILITIES = [
+  { value: 25, label: '25%', description: 'Low', color: 'bg-red-100 text-red-800 border-red-300' },
+  { value: 50, label: '50%', description: 'Medium', color: 'bg-yellow-100 text-yellow-800 border-yellow-300' },
+  { value: 75, label: '75%', description: 'Good', color: 'bg-blue-100 text-blue-800 border-blue-300' },
+  { value: 100, label: '100%', description: 'Ready', color: 'bg-green-100 text-green-800 border-green-300' },
+];
+
 export default function ProductionDetailDrawer({
   analysis,
   isOpen,
@@ -34,6 +47,7 @@ export default function ProductionDetailDrawer({
 }: ProductionDetailDrawerProps) {
   const queryClient = useQueryClient();
   const [showAssignTeam, setShowAssignTeam] = useState(false);
+  const [showEditProductionDetails, setShowEditProductionDetails] = useState(false);
   const [formData, setFormData] = useState<AssignTeamData>({
     videographerId: undefined,
     editorId: undefined,
@@ -41,6 +55,21 @@ export default function ProductionDetailDrawer({
     autoAssignVideographer: false,
     autoAssignEditor: false,
     autoAssignPostingManager: false,
+  });
+  const [productionDetailsData, setProductionDetailsData] = useState<{
+    industryId: string;
+    profileId: string;
+    hookTagIds: string[];
+    characterTagIds: string[];
+    totalPeopleInvolved: number;
+    shootPossibility: 25 | 50 | 75 | 100 | undefined;
+  }>({
+    industryId: '',
+    profileId: '',
+    hookTagIds: [],
+    characterTagIds: [],
+    totalPeopleInvolved: 1,
+    shootPossibility: undefined,
   });
 
   // Fetch latest analysis data to ensure we have fresh data after mutations
@@ -57,7 +86,11 @@ export default function ProductionDetailDrawer({
           project_assignments (
             role,
             user:user_id (id, email, full_name, avatar_url)
-          )
+          ),
+          industry:industry_id (id, name, short_code),
+          profile:profile_id (id, name),
+          analysis_hook_tags (hook_tag:hook_tag_id (id, name)),
+          analysis_character_tags (character_tag:character_tag_id (id, name))
         `)
         .eq('id', analysis.id)
         .single();
@@ -72,6 +105,8 @@ export default function ProductionDetailDrawer({
         videographer: data.project_assignments?.find((a: any) => a.role === 'VIDEOGRAPHER')?.user,
         editor: data.project_assignments?.find((a: any) => a.role === 'EDITOR')?.user,
         posting_manager: data.project_assignments?.find((a: any) => a.role === 'POSTING_MANAGER')?.user,
+        hook_tags: data.analysis_hook_tags?.map((t: any) => t.hook_tag) || [],
+        character_tags: data.analysis_character_tags?.map((t: any) => t.character_tag) || [],
       } as ViralAnalysis;
     },
     enabled: isOpen && !!analysis?.id,
@@ -91,8 +126,42 @@ export default function ProductionDetailDrawer({
         autoAssignEditor: false,
         autoAssignPostingManager: false,
       });
+      // Update production details
+      setProductionDetailsData({
+        industryId: currentAnalysis.industry_id || '',
+        profileId: currentAnalysis.profile_id || '',
+        hookTagIds: currentAnalysis.hook_tags?.map((t: any) => t.id) || [],
+        characterTagIds: currentAnalysis.character_tags?.map((t: any) => t.id) || [],
+        totalPeopleInvolved: currentAnalysis.total_people_involved || 1,
+        shootPossibility: currentAnalysis.shoot_possibility || undefined,
+      });
     }
   }, [currentAnalysis]);
+
+  // Fetch production details options
+  const { data: industries = [] } = useQuery({
+    queryKey: ['industries'],
+    queryFn: contentConfigService.getAllIndustries,
+    enabled: isOpen && showEditProductionDetails,
+  });
+
+  const { data: profiles = [] } = useQuery({
+    queryKey: ['profile-list'],
+    queryFn: contentConfigService.getAllProfiles,
+    enabled: isOpen && showEditProductionDetails,
+  });
+
+  const { data: hookTags = [] } = useQuery({
+    queryKey: ['hook-tags'],
+    queryFn: contentConfigService.getAllHookTags,
+    enabled: isOpen && showEditProductionDetails,
+  });
+
+  const { data: characterTags = [] } = useQuery({
+    queryKey: ['character-tags'],
+    queryFn: contentConfigService.getAllCharacterTags,
+    enabled: isOpen && showEditProductionDetails,
+  });
 
   // Fetch users by role
   const { data: videographers = [] } = useQuery({
@@ -126,6 +195,68 @@ export default function ProductionDetailDrawer({
     },
     onError: (error: Error) => {
       toast.error(error.message || 'Failed to assign team');
+    },
+  });
+
+  // Production details mutation
+  const productionDetailsMutation = useMutation({
+    mutationFn: async (data: typeof productionDetailsData) => {
+      // Update basic fields
+      const updateData: Record<string, any> = {
+        industry_id: data.industryId || null,
+        profile_id: data.profileId || null,
+        total_people_involved: data.totalPeopleInvolved,
+        shoot_possibility: data.shootPossibility || null,
+      };
+
+      const { error: updateError } = await supabase
+        .from('viral_analyses')
+        .update(updateData)
+        .eq('id', analysis!.id);
+
+      if (updateError) throw updateError;
+
+      // Handle hook tags
+      await supabase
+        .from('analysis_hook_tags')
+        .delete()
+        .eq('analysis_id', analysis!.id);
+
+      if (data.hookTagIds.length > 0) {
+        const hookTagInserts = data.hookTagIds.map((tagId) => ({
+          analysis_id: analysis!.id,
+          hook_tag_id: tagId,
+        }));
+        await supabase
+          .from('analysis_hook_tags')
+          .insert(hookTagInserts);
+      }
+
+      // Handle character tags
+      await supabase
+        .from('analysis_character_tags')
+        .delete()
+        .eq('analysis_id', analysis!.id);
+
+      if (data.characterTagIds.length > 0) {
+        const characterTagInserts = data.characterTagIds.map((tagId) => ({
+          analysis_id: analysis!.id,
+          character_tag_id: tagId,
+        }));
+        await supabase
+          .from('analysis_character_tags')
+          .insert(characterTagInserts);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'production-all'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'production-status'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'production-detail', analysis?.id] });
+      toast.success('Production details saved!');
+      setShowEditProductionDetails(false);
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to save production details');
     },
   });
 
@@ -204,7 +335,12 @@ export default function ProductionDetailDrawer({
         { next: ProductionStage.PRE_PRODUCTION, label: 'Start Production', description: 'Assign team and begin' }
       ],
       [ProductionStage.PRE_PRODUCTION]: [
-        { next: ProductionStage.SHOOTING, label: 'Begin Shooting', description: 'Videographer starts shooting' }
+        { next: ProductionStage.PLANNED, label: 'Set as Planned', description: 'Set planned date for shoot' },
+        { next: ProductionStage.SHOOTING, label: 'Begin Shooting', description: 'Skip planning, start immediately' }
+      ],
+      [ProductionStage.PLANNED]: [
+        { next: ProductionStage.SHOOTING, label: 'Start Shooting', description: 'Videographer starts shooting' },
+        { next: ProductionStage.PRE_PRODUCTION, label: 'Back to Planning', description: 'Needs more planning' }
       ],
       [ProductionStage.SHOOTING]: [
         { next: ProductionStage.SHOOT_REVIEW, label: 'Submit for Review', description: 'Send to admin for review' }
@@ -308,6 +444,261 @@ export default function ProductionDetailDrawer({
                 </div>
               </section>
 
+              {/* Production Details (Categorization) */}
+              <section className="bg-white border border-blue-200 rounded-lg p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+                    <BuildingOfficeIcon className="w-5 h-5 mr-2 text-blue-600" />
+                    Production Details
+                  </h3>
+                  {!showEditProductionDetails && (
+                    <button
+                      onClick={() => setShowEditProductionDetails(true)}
+                      className="px-3 py-1.5 text-sm text-blue-600 hover:bg-blue-50 rounded-lg transition flex items-center"
+                    >
+                      <PencilIcon className="w-4 h-4 mr-1" />
+                      Edit
+                    </button>
+                  )}
+                </div>
+
+                {!showEditProductionDetails ? (
+                  // View Mode
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-sm font-medium text-gray-500">Industry</label>
+                        <p className="text-gray-900 mt-1">
+                          {currentAnalysis.industry?.name || <span className="text-gray-400">Not set</span>}
+                        </p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-gray-500">Profile</label>
+                        <p className="text-gray-900 mt-1">
+                          {currentAnalysis.profile?.name || <span className="text-gray-400">Not set</span>}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Hook Tags */}
+                    <div>
+                      <label className="text-sm font-medium text-gray-500">Hook Tags</label>
+                      <div className="flex flex-wrap gap-1.5 mt-1">
+                        {currentAnalysis.hook_tags && currentAnalysis.hook_tags.length > 0 ? (
+                          currentAnalysis.hook_tags.map((tag: any) => (
+                            <span
+                              key={tag.id}
+                              className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800 border border-orange-200"
+                            >
+                              {tag.name}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="text-gray-400 text-sm">No tags</span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Character Tags */}
+                    <div>
+                      <label className="text-sm font-medium text-gray-500">Character Tags</label>
+                      <div className="flex flex-wrap gap-1.5 mt-1">
+                        {currentAnalysis.character_tags && currentAnalysis.character_tags.length > 0 ? (
+                          currentAnalysis.character_tags.map((tag: any) => (
+                            <span
+                              key={tag.id}
+                              className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-teal-100 text-teal-800 border border-teal-200"
+                            >
+                              {tag.name}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="text-gray-400 text-sm">No tags</span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-sm font-medium text-gray-500 flex items-center">
+                          <UsersIcon className="w-4 h-4 mr-1" />
+                          People Involved
+                        </label>
+                        <p className="text-gray-900 mt-1 font-medium">
+                          {currentAnalysis.total_people_involved || <span className="text-gray-400">Not set</span>}
+                        </p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-gray-500 flex items-center">
+                          <ChartBarIcon className="w-4 h-4 mr-1" />
+                          Shoot Possibility
+                        </label>
+                        <p className="text-gray-900 mt-1 font-medium">
+                          {currentAnalysis.shoot_possibility ? (
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                              currentAnalysis.shoot_possibility === 100 ? 'bg-green-100 text-green-800' :
+                              currentAnalysis.shoot_possibility === 75 ? 'bg-blue-100 text-blue-800' :
+                              currentAnalysis.shoot_possibility === 50 ? 'bg-yellow-100 text-yellow-800' :
+                              'bg-red-100 text-red-800'
+                            }`}>
+                              {currentAnalysis.shoot_possibility}%
+                            </span>
+                          ) : (
+                            <span className="text-gray-400">Not set</span>
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  // Edit Mode
+                  <form onSubmit={(e) => { e.preventDefault(); productionDetailsMutation.mutate(productionDetailsData); }} className="space-y-4">
+                    {/* Industry & Profile */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                          Industry
+                        </label>
+                        <select
+                          value={productionDetailsData.industryId}
+                          onChange={(e) => setProductionDetailsData({ ...productionDetailsData, industryId: e.target.value })}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition bg-white text-sm"
+                        >
+                          <option value="">Select industry...</option>
+                          {industries
+                            .filter((i: any) => i.is_active)
+                            .map((industry: any) => (
+                              <option key={industry.id} value={industry.id}>
+                                {industry.name} ({industry.short_code})
+                              </option>
+                            ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                          Profile
+                        </label>
+                        <select
+                          value={productionDetailsData.profileId}
+                          onChange={(e) => setProductionDetailsData({ ...productionDetailsData, profileId: e.target.value })}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition bg-white text-sm"
+                        >
+                          <option value="">Select profile...</option>
+                          {profiles
+                            .filter((p: any) => p.is_active)
+                            .map((profile: any) => (
+                              <option key={profile.id} value={profile.id}>
+                                {profile.name}
+                              </option>
+                            ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Hook Tags */}
+                    <div className="bg-orange-50 rounded-lg p-4 border border-orange-200">
+                      <MultiSelectTags
+                        label="Hook Tags"
+                        options={hookTags.filter((t: any) => t.is_active).map((t: any) => ({ id: t.id, name: t.name }))}
+                        selectedIds={productionDetailsData.hookTagIds}
+                        onChange={(ids) => setProductionDetailsData({ ...productionDetailsData, hookTagIds: ids })}
+                        placeholder="Select hook types..."
+                        allowCreate={true}
+                        onAddCustomTag={(tagName) => {
+                          console.log('Custom hook tag added:', tagName);
+                        }}
+                      />
+                    </div>
+
+                    {/* Character Tags */}
+                    <div className="bg-teal-50 rounded-lg p-4 border border-teal-200">
+                      <MultiSelectTags
+                        label="Character Tags"
+                        options={characterTags.filter((t: any) => t.is_active).map((t: any) => ({ id: t.id, name: t.name }))}
+                        selectedIds={productionDetailsData.characterTagIds}
+                        onChange={(ids) => setProductionDetailsData({ ...productionDetailsData, characterTagIds: ids })}
+                        placeholder="Select characters..."
+                        allowCreate={true}
+                        onAddCustomTag={(tagName) => {
+                          console.log('Custom character tag added:', tagName);
+                        }}
+                      />
+                    </div>
+
+                    {/* Total People & Shoot Possibility */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                          <UsersIcon className="w-4 h-4 inline mr-1 text-gray-500" />
+                          Total People Involved
+                        </label>
+                        <input
+                          type="number"
+                          min={1}
+                          max={50}
+                          value={productionDetailsData.totalPeopleInvolved}
+                          onChange={(e) => setProductionDetailsData({ ...productionDetailsData, totalPeopleInvolved: parseInt(e.target.value) || 1 })}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition text-sm"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          <ChartBarIcon className="w-4 h-4 inline mr-1 text-gray-500" />
+                          Shoot Possibility
+                        </label>
+                        <div className="grid grid-cols-2 gap-2">
+                          {SHOOT_POSSIBILITIES.map((option) => (
+                            <button
+                              key={option.value}
+                              type="button"
+                              onClick={() => setProductionDetailsData({ ...productionDetailsData, shootPossibility: option.value as 25 | 50 | 75 | 100 })}
+                              className={`px-2 py-1.5 rounded-lg border-2 text-xs font-medium transition-all ${
+                                productionDetailsData.shootPossibility === option.value
+                                  ? `${option.color} ring-2 ring-offset-1 ring-primary-400`
+                                  : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300'
+                              }`}
+                            >
+                              <div className="font-bold">{option.label}</div>
+                              <div className="text-xs mt-0.5 opacity-75">{option.description}</div>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex gap-3 pt-2">
+                      <button
+                        type="button"
+                        onClick={() => setShowEditProductionDetails(false)}
+                        className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={productionDetailsMutation.isPending}
+                        className="flex-1 px-4 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition disabled:opacity-50 flex items-center justify-center gap-2"
+                      >
+                        {productionDetailsMutation.isPending ? (
+                          <>
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                            Saving...
+                          </>
+                        ) : (
+                          <>
+                            <CheckCircleIcon className="w-5 h-5" />
+                            Save Details
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </form>
+                )}
+              </section>
+
               {/* Production Status */}
               <section className="bg-white border border-gray-200 rounded-lg p-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
@@ -327,6 +718,24 @@ export default function ProductionDetailDrawer({
                       {currentAnalysis.priority || 'NORMAL'}
                     </p>
                   </div>
+                  {currentAnalysis.planned_date && (
+                    <div>
+                      <label className="text-sm font-medium text-gray-500 flex items-center gap-1">
+                        <CalendarIcon className="w-4 h-4" />
+                        Planned Shoot Date
+                      </label>
+                      <p className={`mt-1 font-medium ${
+                        new Date(currentAnalysis.planned_date).toDateString() === new Date().toDateString()
+                          ? 'text-amber-700'
+                          : 'text-gray-900'
+                      }`}>
+                        {new Date(currentAnalysis.planned_date).toLocaleDateString()}
+                        {new Date(currentAnalysis.planned_date).toDateString() === new Date().toDateString() && (
+                          <span className="ml-2 px-1.5 py-0.5 rounded text-xs bg-amber-100 text-amber-800">Today</span>
+                        )}
+                      </p>
+                    </div>
+                  )}
                   {currentAnalysis.deadline && (
                     <div>
                       <label className="text-sm font-medium text-gray-500 flex items-center gap-1">
@@ -348,6 +757,17 @@ export default function ProductionDetailDrawer({
                     </p>
                   </div>
                 </div>
+
+                {/* Admin Remarks - Highlighted */}
+                {currentAnalysis.admin_remarks && (
+                  <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                    <label className="text-sm font-semibold text-amber-800 flex items-center gap-1 mb-2">
+                      <span className="inline-block w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+                      Admin Remarks
+                    </label>
+                    <p className="text-gray-800 whitespace-pre-wrap">{currentAnalysis.admin_remarks}</p>
+                  </div>
+                )}
               </section>
 
               {/* Stage Transitions */}
@@ -383,6 +803,7 @@ export default function ProductionDetailDrawer({
                 !currentAnalysis.production_stage ||
                 currentAnalysis.production_stage === ProductionStage.NOT_STARTED ||
                 currentAnalysis.production_stage === ProductionStage.PRE_PRODUCTION ||
+                currentAnalysis.production_stage === ProductionStage.PLANNED ||
                 currentAnalysis.production_stage === ProductionStage.SHOOTING ||
                 currentAnalysis.production_stage === ProductionStage.SHOOT_REVIEW
               ) && (

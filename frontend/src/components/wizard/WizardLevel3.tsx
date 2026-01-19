@@ -439,15 +439,15 @@ export default function WizardLevel3({ formData, onChange }: WizardLevel3Props) 
             </span>
           </div>
           <div>
-            <span className="text-gray-500">Shoot:</span>{' '}
+            <span className="text-gray-500">Location:</span>{' '}
             <span className="font-medium text-gray-900">
-              {formData.shootPossibility ? `${formData.shootPossibility}%` : 'Not set'}
+              {formData.shootLocation || 'Not set'}
             </span>
           </div>
           <div>
-            <span className="text-gray-500">People:</span>{' '}
+            <span className="text-gray-500">Planning:</span>{' '}
             <span className="font-medium text-gray-900">
-              {formData.totalPeopleInvolved || 1}
+              {formData.planningDate || 'Not set'}
             </span>
           </div>
         </div>

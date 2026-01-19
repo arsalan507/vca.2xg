@@ -1,12 +1,13 @@
 import { useState, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
-import { ChartBarIcon, MagnifyingGlassIcon, CheckCircleIcon, ExclamationTriangleIcon, MinusCircleIcon, ArrowDownTrayIcon, EyeIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
+import toast from 'react-hot-toast';
+import { ChartBarIcon, MagnifyingGlassIcon, CheckCircleIcon, ExclamationTriangleIcon, MinusCircleIcon, ArrowDownTrayIcon, EyeIcon, ChevronRightIcon, CalendarIcon, PlayIcon, SunIcon } from '@heroicons/react/24/outline';
 import { ProductionStage } from '@/types';
 import type { ViralAnalysis } from '@/types';
 import ProductionDetailDrawer from '@/components/admin/ProductionDetailDrawer';
 
-type TabType = 'unassigned' | 'shooting' | 'editing' | 'ready' | 'posted';
+type TabType = 'unassigned' | 'planning' | 'shooting' | 'editing' | 'ready' | 'posted';
 
 interface ProductionFile {
   id: string;
@@ -18,10 +19,13 @@ interface ProductionFile {
 }
 
 export default function ProductionStatusPage() {
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<TabType>('unassigned');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedAnalysis, setSelectedAnalysis] = useState<ViralAnalysis | null>(null);
   const [showDetailDrawer, setShowDetailDrawer] = useState(false);
+  const [showTodayOnly, setShowTodayOnly] = useState(false);
+  const [showShootingTodayOnly, setShowShootingTodayOnly] = useState(false);
 
   // Fetch all approved analyses
   const { data: analyses = [], isLoading } = useQuery({
@@ -80,6 +84,45 @@ export default function ProductionStatusPage() {
     },
   });
 
+  // Mutation to set planned date
+  const setPlannedDateMutation = useMutation({
+    mutationFn: async ({ analysisId, plannedDate }: { analysisId: string; plannedDate: string }) => {
+      const { error } = await supabase
+        .from('viral_analyses')
+        .update({
+          planned_date: plannedDate,
+          production_stage: ProductionStage.PLANNED
+        })
+        .eq('id', analysisId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'production-all'] });
+      toast.success('Planned date set successfully');
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to set planned date');
+    },
+  });
+
+  // Mutation to start shooting (move to SHOOTING stage)
+  const startShootingMutation = useMutation({
+    mutationFn: async (analysisId: string) => {
+      const { error } = await supabase
+        .from('viral_analyses')
+        .update({ production_stage: ProductionStage.SHOOTING })
+        .eq('id', analysisId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'production-all'] });
+      toast.success('Moved to Shooting stage');
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to start shooting');
+    },
+  });
+
   // Filter by search
   const filteredAnalyses = useMemo(() => {
     if (!searchQuery.trim()) return analyses;
@@ -93,13 +136,31 @@ export default function ProductionStatusPage() {
     );
   }, [analyses, searchQuery]);
 
+  // Helper to check if a date is today
+  const isToday = (dateStr?: string) => {
+    if (!dateStr) return false;
+    const date = new Date(dateStr);
+    const today = new Date();
+    return date.toDateString() === today.toDateString();
+  };
+
   // Group by tabs
   const unassigned = filteredAnalyses.filter(a => !a.videographer && !a.editor && !a.posting_manager);
-  const shooting = filteredAnalyses.filter(a =>
+
+  // Planning tab: PRE_PRODUCTION and PLANNED stages
+  const planningAll = filteredAnalyses.filter(a =>
     a.production_stage === ProductionStage.PRE_PRODUCTION ||
+    a.production_stage === ProductionStage.PLANNED
+  );
+  const planningToday = planningAll.filter(a => isToday(a.planned_date));
+  const planning = showTodayOnly ? planningToday : planningAll;
+
+  const shootingAll = filteredAnalyses.filter(a =>
     a.production_stage === ProductionStage.SHOOTING ||
     a.production_stage === ProductionStage.SHOOT_REVIEW
   );
+  const shootingToday = shootingAll.filter(a => isToday(a.planned_date));
+  const shooting = showShootingTodayOnly ? shootingToday : shootingAll;
   const editing = filteredAnalyses.filter(a =>
     a.production_stage === ProductionStage.EDITING ||
     a.production_stage === ProductionStage.EDIT_REVIEW
@@ -124,7 +185,8 @@ export default function ProductionStatusPage() {
 
   const tabs = [
     { id: 'unassigned' as TabType, label: 'Unassigned', count: unassigned.length, color: 'red' },
-    { id: 'shooting' as TabType, label: 'Shooting', count: shooting.length, color: 'indigo' },
+    { id: 'planning' as TabType, label: 'Planning', count: planningAll.length, todayCount: planningToday.length, color: 'cyan' },
+    { id: 'shooting' as TabType, label: 'Shooting', count: shootingAll.length, todayCount: shootingToday.length, color: 'indigo' },
     { id: 'editing' as TabType, label: 'Editing', count: editing.length, color: 'purple' },
     { id: 'ready' as TabType, label: 'Ready to Post', count: ready.length, color: 'green' },
     { id: 'posted' as TabType, label: 'Posted', count: posted.length, color: 'emerald' },
@@ -133,6 +195,7 @@ export default function ProductionStatusPage() {
   const getCurrentData = () => {
     switch (activeTab) {
       case 'unassigned': return unassigned;
+      case 'planning': return planning;
       case 'shooting': return shooting;
       case 'editing': return editing;
       case 'ready': return ready;
@@ -196,6 +259,7 @@ export default function ProductionStatusPage() {
   const getStageColor = (stage?: string) => {
     switch (stage) {
       case ProductionStage.PRE_PRODUCTION: return 'bg-blue-100 text-blue-800';
+      case ProductionStage.PLANNED: return 'bg-cyan-100 text-cyan-800';
       case ProductionStage.SHOOTING: return 'bg-indigo-100 text-indigo-800';
       case ProductionStage.SHOOT_REVIEW: return 'bg-yellow-100 text-yellow-800';
       case ProductionStage.EDITING: return 'bg-purple-100 text-purple-800';
@@ -236,27 +300,82 @@ export default function ProductionStatusPage() {
 
       {/* Tabs */}
       <div className="bg-white border-b border-gray-200 px-4 md:px-8">
-        <div className="flex overflow-x-auto hide-scrollbar">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`
-                flex-shrink-0 px-4 md:px-6 py-3 md:py-4 text-sm font-medium border-b-2 transition whitespace-nowrap
-                ${activeTab === tab.id
-                  ? 'border-primary-600 text-primary-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }
-              `}
-            >
-              {tab.label}
-              <span className={`ml-2 px-2 py-0.5 rounded-full text-xs ${
-                activeTab === tab.id ? `bg-${tab.color}-100 text-${tab.color}-800` : 'bg-gray-100 text-gray-600'
-              }`}>
-                {tab.count}
-              </span>
-            </button>
-          ))}
+        <div className="flex items-center justify-between">
+          <div className="flex overflow-x-auto hide-scrollbar">
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`
+                  flex-shrink-0 px-4 md:px-6 py-3 md:py-4 text-sm font-medium border-b-2 transition whitespace-nowrap
+                  ${activeTab === tab.id
+                    ? 'border-primary-600 text-primary-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }
+                `}
+              >
+                {tab.label}
+                <span className={`ml-2 px-2 py-0.5 rounded-full text-xs ${
+                  activeTab === tab.id ? `bg-${tab.color}-100 text-${tab.color}-800` : 'bg-gray-100 text-gray-600'
+                }`}>
+                  {tab.count}
+                </span>
+                {(tab.id === 'planning' || tab.id === 'shooting') && tab.todayCount !== undefined && tab.todayCount > 0 && (
+                  <span className="ml-1 px-1.5 py-0.5 rounded-full text-xs bg-amber-100 text-amber-800 font-bold">
+                    {tab.todayCount} today
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+
+          {/* Planning tab controls */}
+          {activeTab === 'planning' && (
+            <div className="flex items-center gap-3 ml-4">
+              <button
+                onClick={() => setShowTodayOnly(!showTodayOnly)}
+                className={`
+                  flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition
+                  ${showTodayOnly
+                    ? 'bg-amber-100 text-amber-800 border border-amber-300'
+                    : 'bg-gray-100 text-gray-600 border border-gray-200 hover:bg-gray-200'
+                  }
+                `}
+              >
+                <SunIcon className="w-4 h-4" />
+                Planned for Today
+                {planningToday.length > 0 && (
+                  <span className="px-1.5 py-0.5 rounded-full text-xs bg-amber-200 text-amber-900">
+                    {planningToday.length}
+                  </span>
+                )}
+              </button>
+            </div>
+          )}
+
+          {/* Shooting tab controls */}
+          {activeTab === 'shooting' && (
+            <div className="flex items-center gap-3 ml-4">
+              <button
+                onClick={() => setShowShootingTodayOnly(!showShootingTodayOnly)}
+                className={`
+                  flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition
+                  ${showShootingTodayOnly
+                    ? 'bg-amber-100 text-amber-800 border border-amber-300'
+                    : 'bg-gray-100 text-gray-600 border border-gray-200 hover:bg-gray-200'
+                  }
+                `}
+              >
+                <SunIcon className="w-4 h-4" />
+                Shooting Today
+                {shootingToday.length > 0 && (
+                  <span className="px-1.5 py-0.5 rounded-full text-xs bg-amber-200 text-amber-900">
+                    {shootingToday.length}
+                  </span>
+                )}
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -294,9 +413,21 @@ export default function ProductionStatusPage() {
                     <th className="px-3 md:px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
                       Priority
                     </th>
-                    <th className="px-3 md:px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                      Deadline
-                    </th>
+                    {activeTab === 'planning' && (
+                      <th className="px-3 md:px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                        Planned Date
+                      </th>
+                    )}
+                    {activeTab === 'shooting' && (
+                      <th className="px-3 md:px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                        Shoot Date
+                      </th>
+                    )}
+                    {activeTab !== 'planning' && activeTab !== 'shooting' && (
+                      <th className="px-3 md:px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                        Deadline
+                      </th>
+                    )}
                     <th className="px-3 md:px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
                       Days
                     </th>
@@ -390,31 +521,86 @@ export default function ProductionStatusPage() {
                             {project.priority || 'NORMAL'}
                           </span>
                         </td>
-                        <td className="px-3 md:px-6 py-4 whitespace-nowrap text-sm text-center">
-                          {project.deadline ? (
-                            <div className={`${new Date(project.deadline) < new Date() ? 'text-red-600 font-medium' : 'text-gray-600'}`}>
-                              {new Date(project.deadline).toLocaleDateString()}
-                            </div>
-                          ) : (
-                            <span className="text-gray-400">-</span>
-                          )}
-                        </td>
+                        {activeTab === 'planning' && (
+                          <td className="px-3 md:px-6 py-4 whitespace-nowrap text-sm text-center">
+                            {project.planned_date ? (
+                              <div className={`flex items-center justify-center gap-1 ${isToday(project.planned_date) ? 'text-amber-700 font-semibold' : 'text-gray-600'}`}>
+                                <CalendarIcon className="w-4 h-4" />
+                                {new Date(project.planned_date).toLocaleDateString()}
+                                {isToday(project.planned_date) && (
+                                  <span className="ml-1 px-1.5 py-0.5 rounded text-xs bg-amber-100 text-amber-800">Today</span>
+                                )}
+                              </div>
+                            ) : (
+                              <input
+                                type="date"
+                                min={new Date().toISOString().split('T')[0]}
+                                className="px-2 py-1 text-xs border border-gray-300 rounded focus:ring-2 focus:ring-primary-500"
+                                onChange={(e) => {
+                                  if (e.target.value) {
+                                    setPlannedDateMutation.mutate({ analysisId: project.id, plannedDate: e.target.value });
+                                  }
+                                }}
+                              />
+                            )}
+                          </td>
+                        )}
+                        {activeTab === 'shooting' && (
+                          <td className="px-3 md:px-6 py-4 whitespace-nowrap text-sm text-center">
+                            {project.planned_date ? (
+                              <div className={`flex items-center justify-center gap-1 ${isToday(project.planned_date) ? 'text-amber-700 font-semibold' : 'text-gray-600'}`}>
+                                <CalendarIcon className="w-4 h-4" />
+                                {new Date(project.planned_date).toLocaleDateString()}
+                                {isToday(project.planned_date) && (
+                                  <span className="ml-1 px-1.5 py-0.5 rounded text-xs bg-amber-100 text-amber-800">Today</span>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-gray-400">Not set</span>
+                            )}
+                          </td>
+                        )}
+                        {activeTab !== 'planning' && activeTab !== 'shooting' && (
+                          <td className="px-3 md:px-6 py-4 whitespace-nowrap text-sm text-center">
+                            {project.deadline ? (
+                              <div className={`${new Date(project.deadline) < new Date() ? 'text-red-600 font-medium' : 'text-gray-600'}`}>
+                                {new Date(project.deadline).toLocaleDateString()}
+                              </div>
+                            ) : (
+                              <span className="text-gray-400">-</span>
+                            )}
+                          </td>
+                        )}
                         <td className="px-3 md:px-6 py-4 whitespace-nowrap text-sm text-center">
                           <span className={`${daysInStage > 7 ? 'text-orange-600 font-medium' : 'text-gray-600'}`}>
                             {daysInStage}d
                           </span>
                         </td>
                         <td className="px-3 md:px-6 py-4 whitespace-nowrap text-center">
-                          <button
-                            onClick={() => {
-                              setSelectedAnalysis(project);
-                              setShowDetailDrawer(true);
-                            }}
-                            className="inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-md text-xs font-medium text-gray-700 bg-white hover:bg-gray-50"
-                            title="View details"
-                          >
-                            View <ChevronRightIcon className="w-4 h-4 ml-1" />
-                          </button>
+                          <div className="flex items-center justify-center gap-2">
+                            {/* Quick Start Shooting button for PLANNED items */}
+                            {activeTab === 'planning' && project.production_stage === ProductionStage.PLANNED && (
+                              <button
+                                onClick={() => startShootingMutation.mutate(project.id)}
+                                disabled={startShootingMutation.isPending}
+                                className="inline-flex items-center px-2.5 py-1.5 bg-indigo-600 text-white rounded-md text-xs font-medium hover:bg-indigo-700 disabled:opacity-50"
+                                title="Start Shooting"
+                              >
+                                <PlayIcon className="w-3.5 h-3.5 mr-1" />
+                                Start
+                              </button>
+                            )}
+                            <button
+                              onClick={() => {
+                                setSelectedAnalysis(project);
+                                setShowDetailDrawer(true);
+                              }}
+                              className="inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-md text-xs font-medium text-gray-700 bg-white hover:bg-gray-50"
+                              title="View details"
+                            >
+                              View <ChevronRightIcon className="w-4 h-4 ml-1" />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     );

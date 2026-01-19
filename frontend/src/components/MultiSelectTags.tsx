@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, type ReactNode } from 'react';
 import { ChevronDownIcon, XMarkIcon } from '@heroicons/react/24/outline';
 
 interface Tag {
@@ -7,7 +7,7 @@ interface Tag {
 }
 
 interface MultiSelectTagsProps {
-  label: string;
+  label: ReactNode;
   options: Tag[];
   selectedIds: string[];
   onChange: (selectedIds: string[]) => void;
