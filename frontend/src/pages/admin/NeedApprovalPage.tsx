@@ -427,15 +427,15 @@ export default function NeedApprovalPage() {
               <p className="text-gray-500">No shoots pending review</p>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-3 md:space-y-4">
               {shootReviews.map((shoot: ViralAnalysis) => (
                 <div
                   key={shoot.id}
-                  className="bg-white border border-gray-200 rounded-lg p-5 hover:shadow-md transition"
+                  className="bg-white border border-gray-200 rounded-lg p-4 md:p-5 hover:shadow-md transition"
                 >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-3 mb-2">
+                  <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex flex-wrap items-center gap-2 mb-2">
                         {shoot.content_id && (
                           <span className="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-mono font-semibold bg-gray-100 text-gray-800 border border-gray-300">
                             {shoot.content_id}
@@ -444,32 +444,33 @@ export default function NeedApprovalPage() {
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
                           🟢 SHOOT DONE
                         </span>
-                        <span className="text-xs text-gray-500">
-                          Uploaded {new Date(shoot.updated_at).toLocaleString()}
-                        </span>
                       </div>
 
-                      <h3 className="text-base font-semibold text-gray-900 mb-1">
+                      <div className="text-xs text-gray-500 mb-2">
+                        Uploaded {new Date(shoot.updated_at).toLocaleString()}
+                      </div>
+
+                      <h3 className="text-sm md:text-base font-semibold text-gray-900 mb-1 break-words">
                         {shoot.hook || 'No hook provided'}
                       </h3>
 
-                      <p className="text-sm text-gray-600 mb-3">
+                      <p className="text-xs md:text-sm text-gray-600 mb-3">
                         Videographer: <span className="font-medium">{shoot.videographer?.full_name || shoot.videographer?.email || 'Unknown'}</span>
                       </p>
 
                       {shoot.production_notes && (
-                        <p className="text-sm text-gray-700 bg-gray-50 p-3 rounded border border-gray-200 mb-3">
+                        <p className="text-xs md:text-sm text-gray-700 bg-gray-50 p-3 rounded border border-gray-200">
                           <span className="font-medium">Notes:</span> {shoot.production_notes}
                         </p>
                       )}
                     </div>
 
-                    <div className="flex items-center space-x-2 ml-4">
+                    <div className="flex flex-col md:flex-row gap-2 md:gap-2 md:ml-4 w-full md:w-auto">
                       <button
                         onClick={() => setSelectedShoot(shoot)}
-                        className="px-4 py-2 text-sm font-medium text-primary-700 bg-primary-50 border border-primary-200 rounded-lg hover:bg-primary-100 transition flex items-center"
+                        className="w-full md:w-auto px-4 py-2.5 min-h-[48px] text-sm font-medium text-primary-700 bg-primary-50 border border-primary-200 rounded-lg hover:bg-primary-100 active:bg-primary-200 transition flex items-center justify-center"
                       >
-                        <EyeIcon className="w-4 h-4 mr-1.5" />
+                        <EyeIcon className="w-5 h-5 mr-2" />
                         View Files
                       </button>
                       <button
@@ -478,9 +479,9 @@ export default function NeedApprovalPage() {
                           approveShootMutation.mutate({ production_stage: 'EDITING' });
                         }}
                         disabled={approveShootMutation.isPending}
-                        className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition disabled:opacity-50 flex items-center"
+                        className="w-full md:w-auto px-4 py-2.5 min-h-[48px] text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 active:bg-green-800 transition disabled:opacity-50 flex items-center justify-center"
                       >
-                        <CheckCircleIcon className="w-4 h-4 mr-1.5" />
+                        <CheckCircleIcon className="w-5 h-5 mr-2" />
                         Approve
                       </button>
                       <button
@@ -488,9 +489,9 @@ export default function NeedApprovalPage() {
                           setSelectedShoot(shoot);
                           approveShootMutation.mutate({ production_stage: 'SHOOTING', production_notes: 'Reshoot required' });
                         }}
-                        className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition flex items-center"
+                        className="w-full md:w-auto px-4 py-2.5 min-h-[48px] text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 active:bg-red-800 transition flex items-center justify-center"
                       >
-                        <XCircleIcon className="w-4 h-4 mr-1.5" />
+                        <XCircleIcon className="w-5 h-5 mr-2" />
                         Reject
                       </button>
                     </div>
@@ -523,15 +524,15 @@ export default function NeedApprovalPage() {
               <p className="text-gray-500">No edits pending review</p>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-3 md:space-y-4">
               {editReviews.map((edit: ViralAnalysis) => (
                 <div
                   key={edit.id}
-                  className="bg-white border border-gray-200 rounded-lg p-5 hover:shadow-md transition"
+                  className="bg-white border border-gray-200 rounded-lg p-4 md:p-5 hover:shadow-md transition"
                 >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-3 mb-2">
+                  <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex flex-wrap items-center gap-2 mb-2">
                         {edit.content_id && (
                           <span className="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-mono font-semibold bg-gray-100 text-gray-800 border border-gray-300">
                             {edit.content_id}
@@ -540,26 +541,27 @@ export default function NeedApprovalPage() {
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
                           🟣 EDIT DONE
                         </span>
-                        <span className="text-xs text-gray-500">
-                          Submitted {new Date(edit.updated_at).toLocaleString()}
-                        </span>
                       </div>
 
-                      <h3 className="text-base font-semibold text-gray-900 mb-1">
+                      <div className="text-xs text-gray-500 mb-2">
+                        Submitted {new Date(edit.updated_at).toLocaleString()}
+                      </div>
+
+                      <h3 className="text-sm md:text-base font-semibold text-gray-900 mb-1 break-words">
                         {edit.hook || 'No hook provided'}
                       </h3>
 
-                      <p className="text-sm text-gray-600 mb-3">
+                      <p className="text-xs md:text-sm text-gray-600">
                         Editor: <span className="font-medium">{edit.editor?.full_name || edit.editor?.email || 'Unknown'}</span>
                       </p>
                     </div>
 
-                    <div className="flex items-center space-x-2 ml-4">
+                    <div className="flex flex-col md:flex-row gap-2 md:gap-2 md:ml-4 w-full md:w-auto">
                       <button
                         onClick={() => setSelectedEdit(edit)}
-                        className="px-4 py-2 text-sm font-medium text-primary-700 bg-primary-50 border border-primary-200 rounded-lg hover:bg-primary-100 transition flex items-center"
+                        className="w-full md:w-auto px-4 py-2.5 min-h-[48px] text-sm font-medium text-primary-700 bg-primary-50 border border-primary-200 rounded-lg hover:bg-primary-100 active:bg-primary-200 transition flex items-center justify-center"
                       >
-                        <EyeIcon className="w-4 h-4 mr-1.5" />
+                        <EyeIcon className="w-5 h-5 mr-2" />
                         Watch Video
                       </button>
                       <button
@@ -568,9 +570,9 @@ export default function NeedApprovalPage() {
                           approveEditMutation.mutate({ production_stage: 'FINAL_REVIEW' });
                         }}
                         disabled={approveEditMutation.isPending}
-                        className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition disabled:opacity-50 flex items-center"
+                        className="w-full md:w-auto px-4 py-2.5 min-h-[48px] text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 active:bg-green-800 transition disabled:opacity-50 flex items-center justify-center"
                       >
-                        <CheckCircleIcon className="w-4 h-4 mr-1.5" />
+                        <CheckCircleIcon className="w-5 h-5 mr-2" />
                         Approve
                       </button>
                       <button
@@ -578,9 +580,9 @@ export default function NeedApprovalPage() {
                           setSelectedEdit(edit);
                           approveEditMutation.mutate({ production_stage: 'EDITING', production_notes: 'Revision needed' });
                         }}
-                        className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition flex items-center"
+                        className="w-full md:w-auto px-4 py-2.5 min-h-[48px] text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 active:bg-red-800 transition flex items-center justify-center"
                       >
-                        <XCircleIcon className="w-4 h-4 mr-1.5" />
+                        <XCircleIcon className="w-5 h-5 mr-2" />
                         Request Fix
                       </button>
                     </div>

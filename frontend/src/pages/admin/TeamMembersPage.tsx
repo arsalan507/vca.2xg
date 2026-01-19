@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
-import { UserGroupIcon, DocumentTextIcon, VideoCameraIcon, FilmIcon, MegaphoneIcon, TableCellsIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
+import { UserGroupIcon, DocumentTextIcon, VideoCameraIcon, FilmIcon, MegaphoneIcon, TableCellsIcon, MagnifyingGlassIcon, QuestionMarkCircleIcon } from '@heroicons/react/24/outline';
 import TeamMemberProjectsModal from '@/components/admin/TeamMemberProjectsModal';
 import TableColumnFilter from '@/components/admin/TableColumnFilter';
 import SortableTableHeader from '@/components/admin/SortableTableHeader';
@@ -669,7 +669,10 @@ export default function TeamMembersPage() {
                           Name
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                          Assigned
+                          <span className="inline-flex items-center gap-1" title="Production assignments only (excludes unassigned scripts)">
+                            Assigned
+                            <QuestionMarkCircleIcon className="w-3.5 h-3.5 text-gray-400" />
+                          </span>
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
                           Shooting
@@ -680,12 +683,15 @@ export default function TeamMembersPage() {
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
                           Completed
                         </th>
+                        <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                          Actions
+                        </th>
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                       {filteredVideographers.length === 0 ? (
                         <tr>
-                          <td colSpan={5} className="px-6 py-8 text-center text-sm text-gray-500">
+                          <td colSpan={6} className="px-6 py-8 text-center text-sm text-gray-500">
                             {videographerSearch ? `No videographers found matching "${videographerSearch}"` : 'No videographers yet'}
                           </td>
                         </tr>
@@ -693,7 +699,7 @@ export default function TeamMembersPage() {
                         filteredVideographers.map((member) => {
                           const stats = videographerStats[member.id] || {};
                           return (
-                            <tr key={member.id} className="hover:bg-gray-50 cursor-pointer">
+                            <tr key={member.id} className="hover:bg-gray-50">
                               <td className="px-6 py-4 whitespace-nowrap">
                                 <button
                                   onClick={() => handleMemberClick(member)}
@@ -713,6 +719,15 @@ export default function TeamMembersPage() {
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-green-600 font-medium">
                                 {stats.completed || 0}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-center">
+                                <button
+                                  onClick={(e) => handleViewAnalyses(member.id, e)}
+                                  className="inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-md text-xs font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition"
+                                >
+                                  <TableCellsIcon className="w-4 h-4 mr-1.5" />
+                                  View Table
+                                </button>
                               </td>
                             </tr>
                           );
@@ -755,7 +770,10 @@ export default function TeamMembersPage() {
                           Name
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                          Assigned
+                          <span className="inline-flex items-center gap-1" title="Production assignments only (excludes unassigned scripts)">
+                            Assigned
+                            <QuestionMarkCircleIcon className="w-3.5 h-3.5 text-gray-400" />
+                          </span>
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
                           Editing
@@ -766,12 +784,15 @@ export default function TeamMembersPage() {
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
                           Completed
                         </th>
+                        <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                          Actions
+                        </th>
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                       {filteredEditors.length === 0 ? (
                         <tr>
-                          <td colSpan={5} className="px-6 py-8 text-center text-sm text-gray-500">
+                          <td colSpan={6} className="px-6 py-8 text-center text-sm text-gray-500">
                             {editorSearch ? `No editors found matching "${editorSearch}"` : 'No editors yet'}
                           </td>
                         </tr>
@@ -779,7 +800,7 @@ export default function TeamMembersPage() {
                         filteredEditors.map((member) => {
                           const stats = editorStats[member.id] || {};
                           return (
-                            <tr key={member.id} className="hover:bg-gray-50 cursor-pointer">
+                            <tr key={member.id} className="hover:bg-gray-50">
                               <td className="px-6 py-4 whitespace-nowrap">
                                 <button
                                   onClick={() => handleMemberClick(member)}
@@ -799,6 +820,15 @@ export default function TeamMembersPage() {
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-green-600 font-medium">
                                 {stats.completed || 0}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-center">
+                                <button
+                                  onClick={(e) => handleViewAnalyses(member.id, e)}
+                                  className="inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-md text-xs font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition"
+                                >
+                                  <TableCellsIcon className="w-4 h-4 mr-1.5" />
+                                  View Table
+                                </button>
                               </td>
                             </tr>
                           );
@@ -841,7 +871,10 @@ export default function TeamMembersPage() {
                           Name
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                          Assigned
+                          <span className="inline-flex items-center gap-1" title="Production assignments only (excludes unassigned scripts)">
+                            Assigned
+                            <QuestionMarkCircleIcon className="w-3.5 h-3.5 text-gray-400" />
+                          </span>
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
                           Ready to Post
@@ -852,12 +885,15 @@ export default function TeamMembersPage() {
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
                           This Week
                         </th>
+                        <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                          Actions
+                        </th>
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                       {filteredPostingManagers.length === 0 ? (
                         <tr>
-                          <td colSpan={5} className="px-6 py-8 text-center text-sm text-gray-500">
+                          <td colSpan={6} className="px-6 py-8 text-center text-sm text-gray-500">
                             {postingSearch ? `No posting managers found matching "${postingSearch}"` : 'No posting managers yet'}
                           </td>
                         </tr>
@@ -865,7 +901,7 @@ export default function TeamMembersPage() {
                         filteredPostingManagers.map((member) => {
                           const stats = postingStats[member.id] || {};
                           return (
-                            <tr key={member.id} className="hover:bg-gray-50 cursor-pointer">
+                            <tr key={member.id} className="hover:bg-gray-50">
                               <td className="px-6 py-4 whitespace-nowrap">
                                 <button
                                   onClick={() => handleMemberClick(member)}
@@ -885,6 +921,15 @@ export default function TeamMembersPage() {
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-blue-600 font-medium">
                                 {stats.posted_this_week || 0}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-center">
+                                <button
+                                  onClick={(e) => handleViewAnalyses(member.id, e)}
+                                  className="inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-md text-xs font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition"
+                                >
+                                  <TableCellsIcon className="w-4 h-4 mr-1.5" />
+                                  View Table
+                                </button>
                               </td>
                             </tr>
                           );
