@@ -18,6 +18,7 @@ import {
   ClockIcon,
   FlagIcon,
   ArrowRightIcon,
+  XCircleIcon,
 } from '@heroicons/react/24/outline';
 
 interface ProductionDetailDrawerProps {
@@ -146,6 +147,32 @@ export default function ProductionDetailDrawer({
     },
     onError: (error: Error) => {
       toast.error(error.message || 'Failed to update stage');
+    },
+  });
+
+  // Disapprove mutation - sends script back to PENDING status
+  const disapproveMutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase
+        .from('viral_analyses')
+        .update({
+          status: 'PENDING',
+          production_stage: null
+        })
+        .eq('id', analysis!.id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'production-all'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'production-status'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'production-detail', analysis?.id] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'pending-scripts'] });
+      toast.success('Script disapproved and sent back for revision');
+      onClose();
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to disapprove script');
     },
   });
 
@@ -348,6 +375,36 @@ export default function ProductionDetailDrawer({
                       </button>
                     ))}
                   </div>
+                </section>
+              )}
+
+              {/* Disapprove Script - Only show for early stage scripts */}
+              {currentAnalysis.status === 'APPROVED' && (
+                currentAnalysis.production_stage === ProductionStage.NOT_STARTED ||
+                currentAnalysis.production_stage === ProductionStage.PRE_PRODUCTION ||
+                currentAnalysis.production_stage === ProductionStage.SHOOTING ||
+                currentAnalysis.production_stage === ProductionStage.SHOOT_REVIEW
+              ) && (
+                <section className="bg-white border border-red-200 rounded-lg p-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center">
+                    <XCircleIcon className="w-5 h-5 mr-2 text-red-600" />
+                    Disapprove Script
+                  </h3>
+                  <p className="text-sm text-gray-600 mb-4">
+                    This script is already approved. You can disapprove it to send it back for revision.
+                  </p>
+                  <button
+                    onClick={() => {
+                      if (window.confirm('Are you sure you want to disapprove this script? It will be sent back to pending status for revision.')) {
+                        disapproveMutation.mutate();
+                      }
+                    }}
+                    disabled={disapproveMutation.isPending}
+                    className="w-full px-4 py-2.5 min-h-[48px] bg-red-600 text-white rounded-lg hover:bg-red-700 active:bg-red-800 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center font-medium"
+                  >
+                    <XCircleIcon className="w-5 h-5 mr-2" />
+                    {disapproveMutation.isPending ? 'Disapproving...' : 'Disapprove Script'}
+                  </button>
                 </section>
               )}
 
