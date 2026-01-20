@@ -7,7 +7,7 @@ import { useState } from 'react';
 import toast from 'react-hot-toast';
 import type { ViralAnalysis, UpdateProductionStageData, ProductionFile } from '@/types';
 import { ProductionStage, FileType } from '@/types';
-import GoogleDriveOAuthUploader from '@/components/GoogleDriveOAuthUploader';
+import MultiFileUploadQueue from '@/components/MultiFileUploadQueue';
 
 export default function VideographerDashboard() {
   const queryClient = useQueryClient();
@@ -26,9 +26,6 @@ export default function VideographerDashboard() {
 
   // File upload state
   const [showFileForm, setShowFileForm] = useState(false);
-  const [fileName, setFileName] = useState('');
-  const [fileType, setFileType] = useState<string>(FileType.A_ROLL);
-  const [fileDescription, setFileDescription] = useState('');
 
   // Fetch assigned analyses
   const { data: assignmentsData, isLoading } = useQuery({
@@ -45,30 +42,26 @@ export default function VideographerDashboard() {
     enabled: !!selectedAnalysis?.id,
   });
 
-  // Upload file mutation
+  // Upload file mutation (for single file from multi-upload queue)
   const uploadFileMutation = useMutation({
     mutationFn: (fileData: {
       analysisId: string;
       fileName: string;
-      fileType: 'raw-footage' | 'edited-video' | 'final-video';
+      fileType: string;
       fileUrl: string;
       fileId: string;
       description?: string;
     }) => productionFilesService.uploadFile({
       analysisId: fileData.analysisId,
       fileName: fileData.fileName,
-      fileType: fileData.fileType,
+      fileType: 'raw-footage',
       fileUrl: fileData.fileUrl,
       fileId: fileData.fileId,
-      description: fileData.description,
+      description: fileData.fileType, // Store the tag in description
     }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['production-files', selectedAnalysis?.id] });
       toast.success('File added successfully!');
-      setShowFileForm(false);
-      setFileName('');
-            setFileDescription('');
-      setFileType(FileType.RAW_FOOTAGE);
     },
     onError: (error: Error) => {
       toast.error(error.message || 'Failed to add file');
@@ -152,8 +145,6 @@ export default function VideographerDashboard() {
     setSelectedStage('');
     setProductionNotes('');
     setShowFileForm(false);
-    setFileName('');
-        setFileDescription('');
   };
 
   const handleUpdateStage = (stageOverride?: string) => {
@@ -557,91 +548,46 @@ export default function VideographerDashboard() {
                       </button>
                     </div>
 
-                    {/* Add File Form */}
+                    {/* Multi-File Upload Form */}
                     {showFileForm && (
                       <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-4">
-                        <div className="space-y-4">
-                          {/* File Metadata */}
-                          <div className="grid grid-cols-2 gap-3">
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1">File Name</label>
-                              <input
-                                type="text"
-                                value={fileName}
-                                onChange={(e) => setFileName(e.target.value)}
-                                placeholder="e.g., Main_Footage_Take1"
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500"
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1">File Type</label>
-                              <select
-                                value={fileType}
-                                onChange={(e) => setFileType(e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500"
-                              >
-                                <option value={FileType.A_ROLL}>A-Roll (Main Footage)</option>
-                                <option value={FileType.B_ROLL}>B-Roll (Supporting Footage)</option>
-                                <option value={FileType.HOOK}>Hook (First 3-6 seconds)</option>
-                                <option value={FileType.BODY}>Body (Main Content)</option>
-                                <option value={FileType.CTA}>CTA (Call to Action)</option>
-                                <option value={FileType.AUDIO_CLIP}>Audio Clip</option>
-                                <option value={FileType.OTHER}>Other</option>
-                              </select>
-                            </div>
-                          </div>
-
-                          {/* Google Drive OAuth Upload */}
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                              Upload Video File
-                            </label>
-                            <GoogleDriveOAuthUploader
-                              fileType="raw-footage"
-                              projectId={selectedAnalysis?.content_id || ''}
-                              onUploadComplete={(uploadedFileUrl: string, uploadedFileName: string, fileId: string) => {
-                                // Auto-submit after successful upload
-                                if (selectedAnalysis && uploadedFileUrl) {
-                                  uploadFileMutation.mutate({
-                                    analysisId: selectedAnalysis.id,
-                                    fileName: fileName || uploadedFileName,
-                                    fileType: 'raw-footage',
-                                    fileUrl: uploadedFileUrl,
-                                    fileId: fileId,
-                                    description: fileDescription,
-                                  });
-                                }
-                              }}
-                              acceptedFileTypes="video/*"
-                              maxSizeMB={500}
-                            />
-                          </div>
-
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Description (Optional)</label>
-                            <textarea
-                              value={fileDescription}
-                              onChange={(e) => setFileDescription(e.target.value)}
-                              rows={2}
-                              placeholder="Add any notes about this file..."
-                              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500"
-                            />
-                          </div>
-
-                          <div className="flex justify-end space-x-2 pt-2">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setShowFileForm(false);
-                                setFileName('');
-                                                                setFileDescription('');
-                              }}
-                              className="px-3 py-1.5 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 text-sm"
-                            >
-                              Cancel
-                            </button>
-                          </div>
+                        <div className="flex justify-between items-center mb-4">
+                          <h4 className="text-sm font-semibold text-gray-900">Upload Multiple Files</h4>
+                          <button
+                            type="button"
+                            onClick={() => setShowFileForm(false)}
+                            className="text-gray-400 hover:text-gray-600"
+                          >
+                            <span className="sr-only">Close</span>
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
                         </div>
+                        <MultiFileUploadQueue
+                          projectId={selectedAnalysis?.content_id || ''}
+                          acceptedFileTypes="video/*,audio/*"
+                          maxSizeMB={500}
+                          onSingleFileComplete={(file) => {
+                            // Save each file to database as it completes
+                            if (selectedAnalysis) {
+                              uploadFileMutation.mutate({
+                                analysisId: selectedAnalysis.id,
+                                fileName: file.fileName,
+                                fileType: file.fileType,
+                                fileUrl: file.fileUrl,
+                                fileId: file.fileId,
+                              });
+                            }
+                          }}
+                          onUploadComplete={(files) => {
+                            // All files uploaded
+                            if (files.length > 0) {
+                              toast.success(`${files.length} file${files.length > 1 ? 's' : ''} uploaded successfully!`);
+                              setShowFileForm(false);
+                            }
+                          }}
+                        />
                       </div>
                     )}
 

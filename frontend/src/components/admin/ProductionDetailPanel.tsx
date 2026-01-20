@@ -71,6 +71,8 @@ export default function ProductionDetailPanel({
   });
   const [showDisapproveForm, setShowDisapproveForm] = useState(false);
   const [disapproveFeedback, setDisapproveFeedback] = useState('');
+  const [pendingStageTransition, setPendingStageTransition] = useState<{ stage: string; label: string } | null>(null);
+  const [stageTransitionFeedback, setStageTransitionFeedback] = useState('');
 
   // Fetch latest analysis data to ensure we have fresh data after mutations
   const { data: latestAnalysis } = useQuery({
@@ -311,10 +313,26 @@ export default function ProductionDetailPanel({
 
   // Stage transition mutation
   const stageTransitionMutation = useMutation({
-    mutationFn: async (newStage: string) => {
+    mutationFn: async ({ newStage, feedback }: { newStage: string; feedback: string }) => {
+      // Get existing admin_remarks to append new feedback
+      const { data: existingData } = await supabase
+        .from('viral_analyses')
+        .select('admin_remarks')
+        .eq('id', analysis!.id)
+        .single();
+
+      const timestamp = new Date().toLocaleString();
+      const newRemark = `[${timestamp}] Stage → ${newStage.replace(/_/g, ' ')}: ${feedback}`;
+      const updatedRemarks = existingData?.admin_remarks
+        ? `${existingData.admin_remarks}\n\n${newRemark}`
+        : newRemark;
+
       const { error } = await supabase
         .from('viral_analyses')
-        .update({ production_stage: newStage })
+        .update({
+          production_stage: newStage,
+          admin_remarks: updatedRemarks,
+        })
         .eq('id', analysis!.id);
 
       if (error) throw error;
@@ -323,6 +341,8 @@ export default function ProductionDetailPanel({
       queryClient.invalidateQueries({ queryKey: ['admin', 'production-all'] });
       queryClient.invalidateQueries({ queryKey: ['admin', 'production-detail', analysis?.id] });
       toast.success('Stage updated successfully!');
+      setPendingStageTransition(null);
+      setStageTransitionFeedback('');
     },
     onError: (error: Error) => {
       toast.error(error.message || 'Failed to update stage');
@@ -562,24 +582,88 @@ export default function ProductionDetailPanel({
               <ArrowRightIcon className="w-4 h-4 mr-1.5 text-blue-600" />
               Stage Transitions
             </h3>
-            <div className="space-y-2">
-              {nextStageOptions.map((option) => (
-                <button
-                  key={option.next}
-                  onClick={() => stageTransitionMutation.mutate(option.next)}
-                  disabled={stageTransitionMutation.isPending}
-                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-left hover:bg-gray-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <div className="font-medium text-sm text-gray-900">{option.label}</div>
-                      <div className="text-xs text-gray-500 mt-0.5">{option.description}</div>
+
+            {pendingStageTransition ? (
+              // Feedback form for stage transition
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  stageTransitionMutation.mutate({
+                    newStage: pendingStageTransition.stage,
+                    feedback: stageTransitionFeedback,
+                  });
+                }}
+                className="space-y-3"
+              >
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <p className="text-sm font-medium text-blue-800">
+                    Moving to: {pendingStageTransition.label}
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    Feedback / Notes <span className="text-red-500">*</span>
+                  </label>
+                  <textarea
+                    value={stageTransitionFeedback}
+                    onChange={(e) => setStageTransitionFeedback(e.target.value)}
+                    placeholder="Add notes about this stage transition..."
+                    rows={3}
+                    required
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPendingStageTransition(null);
+                      setStageTransitionFeedback('');
+                    }}
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-gray-700 text-sm font-medium hover:bg-gray-50 transition"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={stageTransitionMutation.isPending || !stageTransitionFeedback.trim()}
+                    className="flex-1 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50 flex items-center justify-center text-sm font-medium"
+                  >
+                    {stageTransitionMutation.isPending ? (
+                      <>
+                        <div className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-white mr-1.5"></div>
+                        Updating...
+                      </>
+                    ) : (
+                      <>
+                        <ArrowRightIcon className="w-4 h-4 mr-1.5" />
+                        Confirm
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            ) : (
+              // Stage transition buttons
+              <div className="space-y-2">
+                {nextStageOptions.map((option) => (
+                  <button
+                    key={option.next}
+                    onClick={() => setPendingStageTransition({ stage: option.next, label: option.label })}
+                    disabled={stageTransitionMutation.isPending}
+                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-left hover:bg-gray-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <div className="font-medium text-sm text-gray-900">{option.label}</div>
+                        <div className="text-xs text-gray-500 mt-0.5">{option.description}</div>
+                      </div>
+                      <ArrowRightIcon className="w-4 h-4 text-gray-400 flex-shrink-0 ml-2" />
                     </div>
-                    <ArrowRightIcon className="w-4 h-4 text-gray-400 flex-shrink-0 ml-2" />
-                  </div>
-                </button>
-              ))}
-            </div>
+                  </button>
+                ))}
+              </div>
+            )}
           </section>
         )}
 

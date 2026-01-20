@@ -6,6 +6,7 @@ import { useState } from 'react';
 import toast from 'react-hot-toast';
 import type { ViralAnalysis, UpdateProductionStageData, ProductionFile } from '@/types';
 import { ProductionStage, FileType } from '@/types';
+import MultiFileUploadQueue, { EDITOR_FILE_TYPES } from '@/components/MultiFileUploadQueue';
 
 export default function EditorDashboard() {
   const queryClient = useQueryClient();
@@ -16,10 +17,6 @@ export default function EditorDashboard() {
 
   // File upload state
   const [showFileForm, setShowFileForm] = useState(false);
-  const [fileName, setFileName] = useState('');
-  const [fileType, setFileType] = useState<string>(FileType.EDITED_VIDEO);
-  const [fileUrl, setFileUrl] = useState('');
-  const [fileDescription, setFileDescription] = useState('');
 
   // Fetch assigned analyses
   const { data: assignmentsData, isLoading } = useQuery({
@@ -44,31 +41,26 @@ export default function EditorDashboard() {
     f.file_type === 'edited-video' || f.file_type === 'final-video'
   );
 
-  // Upload file mutation
+  // Upload file mutation (for single file from multi-upload queue)
   const uploadFileMutation = useMutation({
     mutationFn: (fileData: {
       analysisId: string;
       fileName: string;
-      fileType: 'raw-footage' | 'edited-video' | 'final-video';
+      fileType: string;
       fileUrl: string;
       fileId: string;
       description?: string;
     }) => productionFilesService.uploadFile({
       analysisId: fileData.analysisId,
       fileName: fileData.fileName,
-      fileType: fileData.fileType,
+      fileType: fileData.fileType === 'FINAL_VIDEO' ? 'final-video' : 'edited-video',
       fileUrl: fileData.fileUrl,
       fileId: fileData.fileId,
-      description: fileData.description,
+      description: fileData.fileType, // Store the tag in description
     }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['production-files', selectedAnalysis?.id] });
       toast.success('File added successfully!');
-      setShowFileForm(false);
-      setFileName('');
-      setFileUrl('');
-      setFileDescription('');
-      setFileType(FileType.EDITED_VIDEO);
     },
     onError: (error: Error) => {
       toast.error(error.message || 'Failed to add file');
@@ -116,9 +108,6 @@ export default function EditorDashboard() {
     setSelectedStage('');
     setProductionNotes('');
     setShowFileForm(false);
-    setFileName('');
-    setFileUrl('');
-    setFileDescription('');
   };
 
   const handleUpdateStage = (stageOverride?: string) => {
@@ -130,24 +119,6 @@ export default function EditorDashboard() {
         production_stage: (stageOverride || selectedStage) as any,
         production_notes: productionNotes,
       },
-    });
-  };
-
-  const handleUploadFile = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedAnalysis || !fileName || !fileUrl) {
-      toast.error('Please fill in all required fields');
-      return;
-    }
-
-    uploadFileMutation.mutate({
-      analysisId: selectedAnalysis.id,
-      fileName,
-      fileType: fileType === 'EDITED_VIDEO' ? 'edited-video' :
-                fileType === 'FINAL_VIDEO' ? 'final-video' : 'raw-footage',
-      fileUrl,
-      fileId: 'temp-' + Date.now(),
-      description: fileDescription,
     });
   };
 
@@ -564,87 +535,50 @@ export default function EditorDashboard() {
                       </button>
                     </div>
 
-                    {/* Add File Form */}
+                    {/* Multi-File Upload Form */}
                     {showFileForm && (
-                      <form onSubmit={handleUploadFile} className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-4">
-                        <div className="space-y-3">
-                          <div className="grid grid-cols-2 gap-3">
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1">File Name</label>
-                              <input
-                                type="text"
-                                value={fileName}
-                                onChange={(e) => setFileName(e.target.value)}
-                                required
-                                placeholder="e.g., Final_Edit_v1"
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500"
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1">File Type</label>
-                              <select
-                                value={fileType}
-                                onChange={(e) => setFileType(e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500"
-                              >
-                                <option value={FileType.EDITED_VIDEO}>Edited Video</option>
-                                <option value={FileType.FINAL_VIDEO}>Final Video</option>
-                              </select>
-                            </div>
-                          </div>
-
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                              Google Drive URL
-                              <span className="text-red-500 ml-1">*</span>
-                            </label>
-                            <input
-                              type="url"
-                              value={fileUrl}
-                              onChange={(e) => setFileUrl(e.target.value)}
-                              required
-                              placeholder="https://drive.google.com/file/d/..."
-                              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500"
-                            />
-                            <p className="text-xs text-gray-500 mt-1">
-                              Upload the edited video to Google Drive first, then paste the shareable link here
-                            </p>
-                          </div>
-
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Description (Optional)</label>
-                            <textarea
-                              value={fileDescription}
-                              onChange={(e) => setFileDescription(e.target.value)}
-                              rows={2}
-                              placeholder="Changes made, version notes, etc..."
-                              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500"
-                            />
-                          </div>
-
-                          <div className="flex justify-end space-x-2 pt-2">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setShowFileForm(false);
-                                setFileName('');
-                                setFileUrl('');
-                                setFileDescription('');
-                              }}
-                              className="px-3 py-1.5 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 text-sm"
-                            >
-                              Cancel
-                            </button>
-                            <button
-                              type="submit"
-                              disabled={uploadFileMutation.isPending}
-                              className="px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 text-sm"
-                            >
-                              {uploadFileMutation.isPending ? 'Uploading...' : 'Upload Video'}
-                            </button>
-                          </div>
+                      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-4">
+                        <div className="flex justify-between items-center mb-4">
+                          <h4 className="text-sm font-semibold text-gray-900">Upload Edited Videos</h4>
+                          <button
+                            type="button"
+                            onClick={() => setShowFileForm(false)}
+                            className="text-gray-400 hover:text-gray-600"
+                          >
+                            <span className="sr-only">Close</span>
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
                         </div>
-                      </form>
+                        <MultiFileUploadQueue
+                          projectId={selectedAnalysis?.content_id || ''}
+                          acceptedFileTypes="video/*"
+                          maxSizeMB={500}
+                          fileTypeOptions={EDITOR_FILE_TYPES as any}
+                          defaultFileType="EDITED_VIDEO"
+                          driveFolder="edited-video"
+                          onSingleFileComplete={(file) => {
+                            // Save each file to database as it completes
+                            if (selectedAnalysis) {
+                              uploadFileMutation.mutate({
+                                analysisId: selectedAnalysis.id,
+                                fileName: file.fileName,
+                                fileType: file.fileType,
+                                fileUrl: file.fileUrl,
+                                fileId: file.fileId,
+                              });
+                            }
+                          }}
+                          onUploadComplete={(files) => {
+                            // All files uploaded
+                            if (files.length > 0) {
+                              toast.success(`${files.length} file${files.length > 1 ? 's' : ''} uploaded successfully!`);
+                              setShowFileForm(false);
+                            }
+                          }}
+                        />
+                      </div>
                     )}
 
                     {/* Edited Videos List */}
