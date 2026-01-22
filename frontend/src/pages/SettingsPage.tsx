@@ -109,13 +109,14 @@ function TeamManagement() {
   const [fullName, setFullName] = useState('');
   const [role, setRole] = useState<UserRole>(UserRole.VIDEOGRAPHER);
 
-  // Fetch all team members
+  // Fetch all active team members (exclude deactivated users with null role)
   const { data: teamMembers, isLoading } = useQuery({
     queryKey: ['team-members'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
+        .not('role', 'is', null) // Exclude deactivated users (role = null)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
