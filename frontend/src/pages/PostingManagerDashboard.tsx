@@ -1,10 +1,37 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { assignmentService } from '@/services/assignmentService';
-import { MegaphoneIcon, CheckCircleIcon, RocketLaunchIcon, EyeIcon } from '@heroicons/react/24/outline';
-import { useState } from 'react';
+import {
+  MegaphoneIcon,
+  CheckCircleIcon,
+  RocketLaunchIcon,
+  EyeIcon,
+  TableCellsIcon,
+  ViewColumnsIcon,
+  CalendarDaysIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  FunnelIcon,
+  XMarkIcon
+} from '@heroicons/react/24/outline';
+import { useState, useMemo } from 'react';
 import toast from 'react-hot-toast';
 import type { ViralAnalysis, UpdateProductionStageData } from '@/types';
 import { ProductionStage } from '@/types';
+
+// View types for the dashboard
+type ViewType = 'table' | 'kanban' | 'calendar';
+
+// Kanban columns configuration for posting manager
+const KANBAN_COLUMNS = [
+  { id: ProductionStage.FINAL_REVIEW, label: 'Final Review', color: 'bg-indigo-500' },
+  { id: ProductionStage.READY_TO_POST, label: 'Ready to Post', color: 'bg-green-500' },
+  { id: ProductionStage.POSTED, label: 'Posted', color: 'bg-gray-500' },
+];
+
+// Calendar helper functions
+const getDaysInMonth = (year: number, month: number) => new Date(year, month + 1, 0).getDate();
+const getFirstDayOfMonth = (year: number, month: number) => new Date(year, month, 1).getDay();
+const formatMonthYear = (date: Date) => date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 
 export default function PostingManagerDashboard() {
   const queryClient = useQueryClient();
@@ -12,6 +39,13 @@ export default function PostingManagerDashboard() {
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [selectedStage, setSelectedStage] = useState<string>('');
   const [productionNotes, setProductionNotes] = useState('');
+
+  // View management state
+  const [currentView, setCurrentView] = useState<ViewType>('table');
+  const [calendarDate, setCalendarDate] = useState(new Date());
+  const [filterStage, setFilterStage] = useState<string>('');
+  const [filterPriority, setFilterPriority] = useState<string>('');
+  const [showFilters, setShowFilters] = useState(false);
 
   // Fetch assigned analyses
   const { data: assignmentsData, isLoading } = useQuery({
@@ -90,6 +124,84 @@ export default function PostingManagerDashboard() {
     finalReview: analyses.filter(a => a.production_stage === ProductionStage.FINAL_REVIEW).length,
   };
 
+  // Filtered analyses based on selected filters
+  const filteredAnalyses = useMemo(() => {
+    return analyses.filter(analysis => {
+      if (filterStage && analysis.production_stage !== filterStage) return false;
+      if (filterPriority && analysis.priority !== filterPriority) return false;
+      return true;
+    });
+  }, [analyses, filterStage, filterPriority]);
+
+  // Group analyses by stage for Kanban view
+  const kanbanGroups = useMemo(() => {
+    const groups: Record<string, ViralAnalysis[]> = {};
+    KANBAN_COLUMNS.forEach(col => {
+      groups[col.id] = filteredAnalyses.filter(a => a.production_stage === col.id);
+    });
+    return groups;
+  }, [filteredAnalyses]);
+
+  // Group analyses by date for Calendar view
+  const calendarEvents = useMemo(() => {
+    const events: Record<string, ViralAnalysis[]> = {};
+    filteredAnalyses.forEach(analysis => {
+      // Use deadline or planned_date for calendar positioning
+      const dateStr = analysis.deadline || analysis.planned_date;
+      if (dateStr) {
+        const date = new Date(dateStr).toISOString().split('T')[0];
+        if (!events[date]) events[date] = [];
+        events[date].push(analysis);
+      }
+    });
+    return events;
+  }, [filteredAnalyses]);
+
+  // Calendar navigation
+  const prevMonth = () => {
+    setCalendarDate(new Date(calendarDate.getFullYear(), calendarDate.getMonth() - 1, 1));
+  };
+
+  const nextMonth = () => {
+    setCalendarDate(new Date(calendarDate.getFullYear(), calendarDate.getMonth() + 1, 1));
+  };
+
+  const goToToday = () => {
+    setCalendarDate(new Date());
+  };
+
+  // Generate calendar days
+  const calendarDays = useMemo(() => {
+    const year = calendarDate.getFullYear();
+    const month = calendarDate.getMonth();
+    const daysInMonth = getDaysInMonth(year, month);
+    const firstDay = getFirstDayOfMonth(year, month);
+    const days: { date: Date | null; isCurrentMonth: boolean }[] = [];
+
+    // Previous month padding
+    for (let i = 0; i < firstDay; i++) {
+      days.push({ date: null, isCurrentMonth: false });
+    }
+
+    // Current month days
+    for (let i = 1; i <= daysInMonth; i++) {
+      days.push({ date: new Date(year, month, i), isCurrentMonth: true });
+    }
+
+    // Next month padding (fill to 42 cells for 6 rows)
+    while (days.length < 42) {
+      days.push({ date: null, isCurrentMonth: false });
+    }
+
+    return days;
+  }, [calendarDate]);
+
+  // Clear all filters
+  const clearFilters = () => {
+    setFilterStage('');
+    setFilterPriority('');
+  };
+
   // Posting Managers can only mark as POSTED
   // They cannot change other stages - that's admin-only
   // const postingManagerStages = [
@@ -161,95 +273,414 @@ export default function PostingManagerDashboard() {
         </div>
       </div>
 
-      {/* Assigned Projects */}
+      {/* View Switcher & Filters - Notion-style header */}
       <div className="bg-white rounded-lg shadow">
         <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900">My Assigned Projects</h2>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <h2 className="text-lg font-semibold text-gray-900">My Assigned Projects</h2>
+
+            <div className="flex items-center gap-3">
+              {/* View Switcher Tabs - Notion style */}
+              <div className="flex items-center bg-gray-100 rounded-lg p-1">
+                <button
+                  onClick={() => setCurrentView('table')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
+                    currentView === 'table'
+                      ? 'bg-white text-gray-900 shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  <TableCellsIcon className="w-4 h-4" />
+                  Table
+                </button>
+                <button
+                  onClick={() => setCurrentView('kanban')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
+                    currentView === 'kanban'
+                      ? 'bg-white text-gray-900 shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  <ViewColumnsIcon className="w-4 h-4" />
+                  Kanban
+                </button>
+                <button
+                  onClick={() => setCurrentView('calendar')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
+                    currentView === 'calendar'
+                      ? 'bg-white text-gray-900 shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  <CalendarDaysIcon className="w-4 h-4" />
+                  Calendar
+                </button>
+              </div>
+
+              {/* Filter Toggle */}
+              <button
+                onClick={() => setShowFilters(!showFilters)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all border ${
+                  showFilters || filterStage || filterPriority
+                    ? 'bg-pink-50 text-pink-700 border-pink-200'
+                    : 'text-gray-600 hover:text-gray-900 border-gray-200 hover:border-gray-300'
+                }`}
+              >
+                <FunnelIcon className="w-4 h-4" />
+                Filter
+                {(filterStage || filterPriority) && (
+                  <span className="ml-1 w-5 h-5 bg-pink-600 text-white rounded-full text-xs flex items-center justify-center">
+                    {(filterStage ? 1 : 0) + (filterPriority ? 1 : 0)}
+                  </span>
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* Filter Panel */}
+          {showFilters && (
+            <div className="mt-4 pt-4 border-t border-gray-100 flex flex-wrap items-center gap-3">
+              <select
+                value={filterStage}
+                onChange={(e) => setFilterStage(e.target.value)}
+                className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-pink-500 focus:border-pink-500"
+              >
+                <option value="">All Stages</option>
+                <option value={ProductionStage.FINAL_REVIEW}>Final Review</option>
+                <option value={ProductionStage.READY_TO_POST}>Ready to Post</option>
+                <option value={ProductionStage.POSTED}>Posted</option>
+              </select>
+
+              <select
+                value={filterPriority}
+                onChange={(e) => setFilterPriority(e.target.value)}
+                className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-pink-500 focus:border-pink-500"
+              >
+                <option value="">All Priorities</option>
+                <option value="URGENT">Urgent</option>
+                <option value="HIGH">High</option>
+                <option value="NORMAL">Normal</option>
+                <option value="LOW">Low</option>
+              </select>
+
+              {(filterStage || filterPriority) && (
+                <button
+                  onClick={clearFilters}
+                  className="flex items-center gap-1 px-2 py-1 text-sm text-gray-500 hover:text-gray-700"
+                >
+                  <XMarkIcon className="w-4 h-4" />
+                  Clear filters
+                </button>
+              )}
+            </div>
+          )}
         </div>
-        <div className="overflow-x-auto">
+
+        {/* Content Area */}
+        <div className="overflow-hidden">
           {isLoading ? (
             <div className="flex justify-center items-center h-64">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pink-600"></div>
             </div>
-          ) : analyses && analyses.length > 0 ? (
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Project
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Priority
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Stage
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Deadline
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Team
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {analyses.map((analysis) => (
-                  <tr key={analysis.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4">
-                      <div className="text-sm font-medium text-gray-900 line-clamp-2 max-w-xs">
-                        {analysis.hook || 'No hook provided'}
-                      </div>
-                      <div className="text-xs text-gray-500 mt-1">
-                        {analysis.target_emotion} • {analysis.expected_outcome}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getPriorityColor(analysis.priority)}`}>
-                        {analysis.priority || 'NORMAL'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStageColor(analysis.production_stage)}`}>
-                        {analysis.production_stage?.replace(/_/g, ' ') || 'NOT STARTED'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {analysis.deadline ? new Date(analysis.deadline).toLocaleDateString() : 'No deadline'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center space-x-2">
-                        {analysis.videographer && (
-                          <div className="w-6 h-6 rounded-full bg-primary-100 flex items-center justify-center" title={`Videographer: ${analysis.videographer.full_name || analysis.videographer.email}`}>
-                            <span className="text-xs font-medium text-primary-700">V</span>
-                          </div>
-                        )}
-                        {analysis.editor && (
-                          <div className="w-6 h-6 rounded-full bg-purple-100 flex items-center justify-center" title={`Editor: ${analysis.editor.full_name || analysis.editor.email}`}>
-                            <span className="text-xs font-medium text-purple-700">E</span>
-                          </div>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <button
-                        onClick={() => openViewModal(analysis)}
-                        className="text-pink-600 hover:text-pink-900"
-                      >
-                        View & Update
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          ) : (
+          ) : filteredAnalyses.length === 0 ? (
             <div className="text-center py-12">
               <MegaphoneIcon className="mx-auto h-12 w-12 text-gray-400" />
-              <p className="mt-2 text-gray-500">No projects assigned yet</p>
+              <p className="mt-2 text-gray-500">
+                {analyses.length === 0 ? 'No projects assigned yet' : 'No projects match your filters'}
+              </p>
+              {(filterStage || filterPriority) && (
+                <button
+                  onClick={clearFilters}
+                  className="mt-2 text-sm text-pink-600 hover:text-pink-700"
+                >
+                  Clear filters
+                </button>
+              )}
             </div>
+          ) : (
+            <>
+              {/* TABLE VIEW */}
+              {currentView === 'table' && (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Project
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Priority
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Stage
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Deadline
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Team
+                        </th>
+                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Actions
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {filteredAnalyses.map((analysis) => (
+                        <tr key={analysis.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => openViewModal(analysis)}>
+                          <td className="px-6 py-4">
+                            <div className="text-sm font-medium text-gray-900 line-clamp-2 max-w-xs">
+                              {analysis.hook || 'No hook provided'}
+                            </div>
+                            <div className="text-xs text-gray-500 mt-1">
+                              {analysis.target_emotion} • {analysis.expected_outcome}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getPriorityColor(analysis.priority)}`}>
+                              {analysis.priority || 'NORMAL'}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStageColor(analysis.production_stage)}`}>
+                              {analysis.production_stage?.replace(/_/g, ' ') || 'NOT STARTED'}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {analysis.deadline ? new Date(analysis.deadline).toLocaleDateString() : 'No deadline'}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="flex items-center space-x-2">
+                              {analysis.videographer && (
+                                <div className="w-6 h-6 rounded-full bg-primary-100 flex items-center justify-center" title={`Videographer: ${analysis.videographer.full_name || analysis.videographer.email}`}>
+                                  <span className="text-xs font-medium text-primary-700">V</span>
+                                </div>
+                              )}
+                              {analysis.editor && (
+                                <div className="w-6 h-6 rounded-full bg-purple-100 flex items-center justify-center" title={`Editor: ${analysis.editor.full_name || analysis.editor.email}`}>
+                                  <span className="text-xs font-medium text-purple-700">E</span>
+                                </div>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <button
+                              onClick={(e) => { e.stopPropagation(); openViewModal(analysis); }}
+                              className="text-pink-600 hover:text-pink-900"
+                            >
+                              View & Update
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {/* KANBAN VIEW */}
+              {currentView === 'kanban' && (
+                <div className="p-6">
+                  <div className="flex gap-4 overflow-x-auto pb-4">
+                    {KANBAN_COLUMNS.map((column) => (
+                      <div key={column.id} className="flex-shrink-0 w-80">
+                        {/* Column Header */}
+                        <div className="flex items-center gap-2 mb-3 px-2">
+                          <div className={`w-3 h-3 rounded-full ${column.color}`}></div>
+                          <h3 className="font-semibold text-gray-700">{column.label}</h3>
+                          <span className="ml-auto text-sm text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
+                            {kanbanGroups[column.id]?.length || 0}
+                          </span>
+                        </div>
+
+                        {/* Column Cards */}
+                        <div className="space-y-3 min-h-[200px] bg-gray-50 rounded-lg p-2">
+                          {kanbanGroups[column.id]?.map((analysis) => (
+                            <div
+                              key={analysis.id}
+                              onClick={() => openViewModal(analysis)}
+                              className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                            >
+                              {/* Card Priority Badge */}
+                              <div className="flex items-center justify-between mb-2">
+                                <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium border ${getPriorityColor(analysis.priority)}`}>
+                                  {analysis.priority || 'NORMAL'}
+                                </span>
+                                {analysis.deadline && (
+                                  <span className="text-xs text-gray-500">
+                                    {new Date(analysis.deadline).toLocaleDateString()}
+                                  </span>
+                                )}
+                              </div>
+
+                              {/* Card Title */}
+                              <p className="text-sm font-medium text-gray-900 line-clamp-2 mb-2">
+                                {analysis.hook || 'No hook provided'}
+                              </p>
+
+                              {/* Card Meta */}
+                              <div className="flex items-center justify-between text-xs text-gray-500">
+                                <span>{analysis.target_emotion}</span>
+                                <div className="flex items-center gap-1">
+                                  {analysis.videographer && (
+                                    <div className="w-5 h-5 rounded-full bg-primary-100 flex items-center justify-center" title={analysis.videographer.full_name || analysis.videographer.email}>
+                                      <span className="text-[10px] font-medium text-primary-700">V</span>
+                                    </div>
+                                  )}
+                                  {analysis.editor && (
+                                    <div className="w-5 h-5 rounded-full bg-purple-100 flex items-center justify-center" title={analysis.editor.full_name || analysis.editor.email}>
+                                      <span className="text-[10px] font-medium text-purple-700">E</span>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Quality Score */}
+                              {analysis.overall_score && (
+                                <div className="mt-2 pt-2 border-t border-gray-100">
+                                  <div className="flex items-center gap-1">
+                                    <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                                      <div
+                                        className="h-full bg-gradient-to-r from-pink-500 to-purple-500 rounded-full"
+                                        style={{ width: `${analysis.overall_score * 10}%` }}
+                                      ></div>
+                                    </div>
+                                    <span className="text-xs font-medium text-gray-600">{analysis.overall_score}/10</span>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          ))}
+
+                          {(!kanbanGroups[column.id] || kanbanGroups[column.id].length === 0) && (
+                            <div className="text-center py-8 text-gray-400 text-sm">
+                              No items
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* CALENDAR VIEW */}
+              {currentView === 'calendar' && (
+                <div className="p-6">
+                  {/* Calendar Header */}
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-4">
+                      <h3 className="text-lg font-semibold text-gray-900">
+                        {formatMonthYear(calendarDate)}
+                      </h3>
+                      <button
+                        onClick={goToToday}
+                        className="px-3 py-1 text-sm text-gray-600 hover:text-gray-900 border border-gray-200 rounded-lg hover:border-gray-300"
+                      >
+                        Today
+                      </button>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={prevMonth}
+                        className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                      >
+                        <ChevronLeftIcon className="w-5 h-5 text-gray-600" />
+                      </button>
+                      <button
+                        onClick={nextMonth}
+                        className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                      >
+                        <ChevronRightIcon className="w-5 h-5 text-gray-600" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Calendar Grid */}
+                  <div className="border border-gray-200 rounded-lg overflow-hidden">
+                    {/* Weekday Headers */}
+                    <div className="grid grid-cols-7 bg-gray-50 border-b border-gray-200">
+                      {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
+                        <div key={day} className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase">
+                          {day}
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Calendar Days */}
+                    <div className="grid grid-cols-7">
+                      {calendarDays.map((day, index) => {
+                        const dateStr = day.date?.toISOString().split('T')[0];
+                        const dayEvents = dateStr ? calendarEvents[dateStr] || [] : [];
+                        const isToday = day.date?.toDateString() === new Date().toDateString();
+
+                        return (
+                          <div
+                            key={index}
+                            className={`min-h-[120px] border-b border-r border-gray-200 p-2 ${
+                              day.isCurrentMonth ? 'bg-white' : 'bg-gray-50'
+                            } ${index % 7 === 0 ? '' : ''}`}
+                          >
+                            {day.date && (
+                              <>
+                                <div className={`text-sm font-medium mb-1 ${
+                                  isToday
+                                    ? 'w-7 h-7 bg-pink-600 text-white rounded-full flex items-center justify-center'
+                                    : day.isCurrentMonth ? 'text-gray-900' : 'text-gray-400'
+                                }`}>
+                                  {day.date.getDate()}
+                                </div>
+
+                                {/* Events for this day */}
+                                <div className="space-y-1">
+                                  {dayEvents.slice(0, 3).map((event) => (
+                                    <div
+                                      key={event.id}
+                                      onClick={() => openViewModal(event)}
+                                      className={`text-xs p-1 rounded truncate cursor-pointer hover:opacity-80 ${
+                                        event.production_stage === ProductionStage.READY_TO_POST
+                                          ? 'bg-green-100 text-green-800'
+                                          : event.production_stage === ProductionStage.POSTED
+                                          ? 'bg-gray-100 text-gray-800'
+                                          : 'bg-indigo-100 text-indigo-800'
+                                      }`}
+                                      title={event.hook || 'No hook'}
+                                    >
+                                      {event.hook?.slice(0, 20) || 'No hook'}...
+                                    </div>
+                                  ))}
+                                  {dayEvents.length > 3 && (
+                                    <div className="text-xs text-gray-500 pl-1">
+                                      +{dayEvents.length - 3} more
+                                    </div>
+                                  )}
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Calendar Legend */}
+                  <div className="mt-4 flex items-center gap-6 text-sm">
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded bg-indigo-100 border border-indigo-200"></div>
+                      <span className="text-gray-600">Final Review</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded bg-green-100 border border-green-200"></div>
+                      <span className="text-gray-600">Ready to Post</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded bg-gray-100 border border-gray-200"></div>
+                      <span className="text-gray-600">Posted</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
