@@ -457,7 +457,11 @@ export default function MultiFileUploadQueue({
           {/* Folder info */}
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-xs text-blue-800">
             <p>
-              <strong>📁 Upload location:</strong> Your Google Drive → Production Files → {projectId} → Raw Footage
+              <strong>📁 Upload location:</strong> Your Google Drive → Production Files → {projectId} → {
+                driveFolder === 'raw-footage' ? 'Raw Footage' :
+                driveFolder === 'edited-video' ? 'Edited Videos' :
+                driveFolder === 'final-video' ? 'Final Videos' : 'Raw Footage'
+              }
             </p>
           </div>
         </>
