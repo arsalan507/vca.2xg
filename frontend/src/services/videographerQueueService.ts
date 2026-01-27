@@ -15,6 +15,7 @@ export const videographerQueueService = {
    * Get available projects in PLANNING stage
    * These are approved scripts waiting to be picked by a videographer
    * Excludes projects that already have a videographer assigned
+   * Includes legacy stages and null stages for backwards compatibility
    */
   async getAvailableProjects(): Promise<ViralAnalysis[]> {
     const { data, error } = await supabase
@@ -32,19 +33,41 @@ export const videographerQueueService = {
         )
       `)
       .eq('status', 'APPROVED')
-      .eq('production_stage', 'PLANNING')
       .order('priority', { ascending: false })
-      .order('created_at', { ascending: true });
+      .order('created_at', { ascending: false });
 
-    if (error) throw error;
+    if (error) {
+      console.error('Error fetching available projects:', error);
+      throw error;
+    }
 
-    // Filter out projects that already have a videographer assigned
+    console.log('Total APPROVED projects fetched:', data?.length || 0);
+
+    // Filter client-side to match admin's Planning tab logic exactly:
+    // - PLANNING, NOT_STARTED, PRE_PRODUCTION, PLANNED stages
+    // - OR no stage set (null/undefined/empty string) for approved projects
+    const planningStages = ['PLANNING', 'NOT_STARTED', 'PRE_PRODUCTION', 'PLANNED'];
+
     const availableProjects = (data || []).filter((project: any) => {
+      const stage = project.production_stage;
+      const isInPlanningStage = planningStages.includes(stage) || !stage;
+
+      // Also filter out projects that already have a videographer assigned
       const hasVideographer = project.assignments?.some(
         (a: any) => a.role === 'VIDEOGRAPHER'
       );
-      return !hasVideographer;
+
+      return isInPlanningStage && !hasVideographer;
     });
+
+    console.log('Available projects after filtering:', availableProjects.length);
+    if (availableProjects.length === 0 && data && data.length > 0) {
+      // Debug: show why projects were filtered out
+      const planningProjects = data.filter((p: any) => planningStages.includes(p.production_stage) || !p.production_stage);
+      console.log('Projects in planning stages:', planningProjects.length);
+      const withoutVideographer = planningProjects.filter((p: any) => !p.assignments?.some((a: any) => a.role === 'VIDEOGRAPHER'));
+      console.log('Without videographer:', withoutVideographer.length);
+    }
 
     // Transform the data
     return availableProjects.map((project: any) => ({
@@ -79,7 +102,10 @@ export const videographerQueueService = {
 
     if (fetchError) throw fetchError;
 
-    if (project.production_stage !== 'PLANNING') {
+    // Match the same stages that getAvailableProjects() considers as "available"
+    const planningStages = ['PLANNING', 'NOT_STARTED', 'PRE_PRODUCTION', 'PLANNED'];
+    const isInPlanningStage = planningStages.includes(project.production_stage) || !project.production_stage;
+    if (!isInPlanningStage) {
       throw new Error('This project is no longer available for picking');
     }
 
@@ -123,12 +149,12 @@ export const videographerQueueService = {
       updateData.profile_id = data.profileId;
     }
 
-    if (data.totalPeopleInvolved !== undefined) {
-      updateData.total_people_involved = data.totalPeopleInvolved;
+    // Set cast composition if provided (includes total_people_involved)
+    if (data.castComposition) {
+      updateData.cast_composition = data.castComposition;
+      updateData.total_people_involved = data.castComposition.total || 0;
     }
-    if (data.shootPossibility !== undefined) {
-      updateData.shoot_possibility = data.shootPossibility;
-    }
+
     if (data.deadline) {
       updateData.deadline = data.deadline;
     }
@@ -168,22 +194,6 @@ export const videographerQueueService = {
       await supabase.from('analysis_hook_tags').insert(hookTagInserts);
     }
 
-    // Link character tags if provided
-    if (data.characterTagIds && data.characterTagIds.length > 0) {
-      // First remove existing character tags
-      await supabase
-        .from('analysis_character_tags')
-        .delete()
-        .eq('analysis_id', data.analysisId);
-
-      // Insert new ones
-      const charTagInserts = data.characterTagIds.map(tagId => ({
-        analysis_id: data.analysisId,
-        character_tag_id: tagId,
-      }));
-      await supabase.from('analysis_character_tags').insert(charTagInserts);
-    }
-
     // Fetch and return the updated project
     return this.getProjectById(data.analysisId);
   },
@@ -205,19 +215,35 @@ export const videographerQueueService = {
 
     if (checkError) {
       console.error('Error checking raw footage:', checkError);
-      // Fallback: check manually
+      // Fallback: check manually - accept both uppercase (legacy) and lowercase (current) file types
       const { count } = await supabase
         .from('production_files')
         .select('id', { count: 'exact', head: true })
         .eq('analysis_id', data.analysisId)
-        .in('file_type', ['RAW_FOOTAGE', 'A_ROLL', 'B_ROLL', 'HOOK', 'BODY', 'CTA', 'AUDIO_CLIP'])
+        .in('file_type', [
+          'RAW_FOOTAGE', 'A_ROLL', 'B_ROLL', 'HOOK', 'BODY', 'CTA', 'AUDIO_CLIP',
+          'raw-footage', 'edited-video', 'final-video'
+        ])
         .eq('is_deleted', false);
 
       if (!count || count === 0) {
         throw new Error('Please upload at least one raw footage file before marking as complete');
       }
     } else if (!hasFiles) {
-      throw new Error('Please upload at least one raw footage file before marking as complete');
+      // RPC returned false - do a manual check as fallback
+      const { count } = await supabase
+        .from('production_files')
+        .select('id', { count: 'exact', head: true })
+        .eq('analysis_id', data.analysisId)
+        .in('file_type', [
+          'RAW_FOOTAGE', 'A_ROLL', 'B_ROLL', 'HOOK', 'BODY', 'CTA', 'AUDIO_CLIP',
+          'raw-footage', 'edited-video', 'final-video'
+        ])
+        .eq('is_deleted', false);
+
+      if (!count || count === 0) {
+        throw new Error('Please upload at least one raw footage file before marking as complete');
+      }
     }
 
     // Update the analysis

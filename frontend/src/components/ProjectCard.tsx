@@ -4,6 +4,8 @@ import {
   VideoCameraIcon,
   ChevronRightIcon,
   DocumentTextIcon,
+  LinkIcon,
+  PlayIcon,
 } from '@heroicons/react/24/outline';
 import type { ViralAnalysis } from '@/types';
 import { ProductionStageLabels, ProductionStageColors } from '@/types';
@@ -11,6 +13,7 @@ import { ProductionStageLabels, ProductionStageColors } from '@/types';
 interface ProjectCardProps {
   project: ViralAnalysis;
   onClick?: () => void;
+  onPlayReel?: (e: React.MouseEvent) => void;
   actionButton?: {
     label: string;
     onClick: (e: React.MouseEvent) => void;
@@ -38,6 +41,7 @@ const getPriorityConfig = (priority?: string) => {
 export default function ProjectCard({
   project,
   onClick,
+  onPlayReel,
   actionButton,
   showStage = true,
   showFileCount = false,
@@ -122,9 +126,37 @@ export default function ProjectCard({
 
       {/* Script Writer */}
       {project.full_name && (
-        <div className="flex items-center gap-2 text-xs text-gray-500 mb-3">
+        <div className="flex items-center gap-2 text-xs text-gray-500 mb-2">
           <DocumentTextIcon className="w-4 h-4" />
           <span>Script by {project.full_name}</span>
+        </div>
+      )}
+
+      {/* Reference Link */}
+      {project.reference_url && (
+        <div className="mb-3 flex items-center gap-2">
+          <a
+            href={project.reference_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="inline-flex items-center gap-1.5 text-xs text-primary-600 hover:text-primary-700 hover:underline bg-primary-50 px-2 py-1 rounded-lg transition-colors"
+          >
+            <LinkIcon className="w-3.5 h-3.5" />
+            <span>View Reference</span>
+          </a>
+          {onPlayReel && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onPlayReel(e);
+              }}
+              className="inline-flex items-center gap-1.5 text-xs text-white bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 px-2.5 py-1 rounded-lg transition-all shadow-sm hover:shadow"
+            >
+              <PlayIcon className="w-3.5 h-3.5" />
+              <span>View Reel</span>
+            </button>
+          )}
         </div>
       )}
 

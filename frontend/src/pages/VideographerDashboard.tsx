@@ -6,11 +6,13 @@ import { productionFilesService } from '@/services/productionFilesService';
 import { videographerProjectService } from '@/services/videographerProjectService';
 import { videographerQueueService } from '@/services/videographerQueueService';
 import { contentConfigService } from '@/services/contentConfigService';
-import { VideoCameraIcon, ClockIcon, CheckCircleIcon, PlayCircleIcon, CloudArrowUpIcon, TrashIcon, DocumentIcon, MagnifyingGlassIcon, XMarkIcon, FunnelIcon, UserGroupIcon, PlusIcon, ArrowPathIcon, InboxIcon } from '@heroicons/react/24/outline';
-import { useState, useMemo, useEffect } from 'react';
+import { VideoCameraIcon, ClockIcon, CheckCircleIcon, PlayCircleIcon, CloudArrowUpIcon, TrashIcon, DocumentIcon, MagnifyingGlassIcon, XMarkIcon, FunnelIcon, UserGroupIcon, PlusIcon, ArrowPathIcon, InboxIcon, ChevronLeftIcon, ChevronRightIcon, ArrowPathRoundedSquareIcon, ForwardIcon } from '@heroicons/react/24/outline';
+import { CheckIcon } from '@heroicons/react/24/solid';
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import toast from 'react-hot-toast';
-import type { ViralAnalysis, UpdateProductionStageData, ProductionFile } from '@/types';
+import type { ViralAnalysis, UpdateProductionStageData, ProductionFile, CastFilter, CastComposition } from '@/types';
 import { ProductionStage, FileType, UserRole, ProductionStageV2 } from '@/types';
+import { CastFilterDropdown, ActiveCastFilters } from '@/components/filters';
 import MultiFileUploadQueue from '@/components/MultiFileUploadQueue';
 import BottomNavigation from '@/components/BottomNavigation';
 import ProjectCard from '@/components/ProjectCard';
@@ -74,11 +76,18 @@ export default function VideographerDashboard() {
   // Profile selection state for view modal (when profile not set during pick)
   const [editingProfileId, setEditingProfileId] = useState<string>('');
 
+  // Reel viewer state
+  const [isReelViewerOpen, setIsReelViewerOpen] = useState(false);
+  const [reelViewerIndex, setReelViewerIndex] = useState(0);
+  const [iframeKey, setIframeKey] = useState(0);
+
   // Search and filter state
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStage, setFilterStage] = useState<string>('');
   const [filterPriority, setFilterPriority] = useState<string>('');
   const [showFilters, setShowFilters] = useState(false);
+  const [castFilter, setCastFilter] = useState<CastFilter>({});
+  const [availableCastFilter, setAvailableCastFilter] = useState<CastFilter>({});
 
   // Fetch available projects (PLANNING queue)
   const { data: availableProjects = [], isLoading: isLoadingAvailable, refetch: refetchAvailable } = useQuery({
@@ -437,6 +446,47 @@ export default function VideographerDashboard() {
     ProductionStageV2.READY_FOR_EDIT,
   ];
 
+  // Helper function to check if a project matches cast filter
+  const matchesCastFilter = (project: ViralAnalysis, filter: CastFilter): boolean => {
+    const cast = project.cast_composition as CastComposition | null;
+    if (!cast) return Object.keys(filter).length === 0; // If no cast, only match if no filters
+
+    // Check men filter
+    if (filter.minMen !== undefined && (cast.man || 0) < filter.minMen) return false;
+    if (filter.maxMen !== undefined && (cast.man || 0) > filter.maxMen) return false;
+
+    // Check women filter
+    if (filter.minWomen !== undefined && (cast.woman || 0) < filter.minWomen) return false;
+    if (filter.maxWomen !== undefined && (cast.woman || 0) > filter.maxWomen) return false;
+
+    // Check boys filter
+    if (filter.minBoys !== undefined && (cast.boy || 0) < filter.minBoys) return false;
+    if (filter.maxBoys !== undefined && (cast.boy || 0) > filter.maxBoys) return false;
+
+    // Check girls filter
+    if (filter.minGirls !== undefined && (cast.girl || 0) < filter.minGirls) return false;
+    if (filter.maxGirls !== undefined && (cast.girl || 0) > filter.maxGirls) return false;
+
+    // Check total filter
+    if (filter.minTotal !== undefined && (cast.total || 0) < filter.minTotal) return false;
+    if (filter.maxTotal !== undefined && (cast.total || 0) > filter.maxTotal) return false;
+
+    // Check owner filter
+    if (filter.ownerRequired === true && !cast.include_owner) return false;
+    if (filter.ownerRequired === false && cast.include_owner) return false;
+
+    // Check needs children
+    if (filter.needsChildren && (cast.boy || 0) === 0 && (cast.girl || 0) === 0) return false;
+
+    // Check needs seniors
+    if (filter.needsSeniors && (cast.senior_man || 0) === 0 && (cast.senior_woman || 0) === 0) return false;
+
+    // Check needs teens
+    if (filter.needsTeens && (cast.teen_boy || 0) === 0 && (cast.teen_girl || 0) === 0) return false;
+
+    return true;
+  };
+
   // Filtered analyses based on search and filters
   const filteredMyProjects = useMemo(() => {
     return myProjects.filter(analysis => {
@@ -450,18 +500,135 @@ export default function VideographerDashboard() {
       }
       if (filterStage && analysis.production_stage !== filterStage) return false;
       if (filterPriority && analysis.priority !== filterPriority) return false;
+
+      // Cast filter
+      if (Object.keys(castFilter).length > 0 && !matchesCastFilter(analysis, castFilter)) return false;
+
       return true;
     });
-  }, [myProjects, searchQuery, filterStage, filterPriority]);
+  }, [myProjects, searchQuery, filterStage, filterPriority, castFilter]);
+
+  // Filtered available projects based on cast filter
+  const filteredAvailableProjects = useMemo(() => {
+    if (Object.keys(availableCastFilter).length === 0) return availableProjects;
+    return availableProjects.filter(project => matchesCastFilter(project, availableCastFilter));
+  }, [availableProjects, availableCastFilter]);
 
   // Check if any filters are active
-  const hasActiveFilters = searchQuery || filterStage || filterPriority;
+  const hasActiveFilters = searchQuery || filterStage || filterPriority || Object.keys(castFilter).length > 0;
+  const hasAvailableFilters = Object.keys(availableCastFilter).length > 0;
 
   // Clear all filters
   const clearFilters = () => {
     setSearchQuery('');
     setFilterStage('');
     setFilterPriority('');
+    setCastFilter({});
+  };
+
+  // Clear available project filters
+  const clearAvailableFilters = () => {
+    setAvailableCastFilter({});
+  };
+
+  // Instagram embed URL helper
+  const getInstagramEmbedUrl = (url: string): string | null => {
+    const match = url.match(/instagram\.com\/(?:reel|p)\/([A-Za-z0-9_-]+)/);
+    if (!match) return null;
+    return `https://www.instagram.com/reel/${match[1]}/embed`;
+  };
+
+  // Reel viewer handlers
+  const openReelViewer = useCallback((projectIndex: number) => {
+    setReelViewerIndex(projectIndex);
+    setIframeKey(0);
+    setIsReelViewerOpen(true);
+  }, []);
+
+  const closeReelViewer = useCallback(() => {
+    setIsReelViewerOpen(false);
+  }, []);
+
+  const goToNextReel = useCallback(() => {
+    if (reelViewerIndex < filteredAvailableProjects.length - 1) {
+      setReelViewerIndex(prev => prev + 1);
+      setIframeKey(0);
+    }
+  }, [reelViewerIndex, filteredAvailableProjects.length]);
+
+  const goToPrevReel = useCallback(() => {
+    if (reelViewerIndex > 0) {
+      setReelViewerIndex(prev => prev - 1);
+      setIframeKey(0);
+    }
+  }, [reelViewerIndex]);
+
+  const replayReel = useCallback(() => {
+    setIframeKey(prev => prev + 1);
+  }, []);
+
+  const handleAcceptFromViewer = useCallback(() => {
+    const project = filteredAvailableProjects[reelViewerIndex];
+    if (!project) return;
+    setIsReelViewerOpen(false);
+    handlePickProject(project);
+  }, [filteredAvailableProjects, reelViewerIndex]);
+
+  const handleSkipReel = useCallback(() => {
+    if (reelViewerIndex < filteredAvailableProjects.length - 1) {
+      goToNextReel();
+    } else {
+      setIsReelViewerOpen(false);
+    }
+  }, [reelViewerIndex, filteredAvailableProjects.length, goToNextReel]);
+
+  // Swipe handling for mobile reel viewer
+  const touchStartY = useRef<number>(0);
+  const touchEndY = useRef<number>(0);
+  const isSwiping = useRef(false);
+
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    touchStartY.current = e.targetTouches[0].clientY;
+    touchEndY.current = e.targetTouches[0].clientY;
+    isSwiping.current = false;
+  }, []);
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    touchEndY.current = e.targetTouches[0].clientY;
+    const distance = Math.abs(touchStartY.current - touchEndY.current);
+    if (distance > 10) isSwiping.current = true;
+  }, []);
+
+  const handleTouchEnd = useCallback(() => {
+    if (!isSwiping.current) return;
+    const swipeDistance = touchStartY.current - touchEndY.current;
+    const minSwipeDistance = 60;
+
+    if (swipeDistance > minSwipeDistance) {
+      // Swipe up → next reel
+      goToNextReel();
+    } else if (swipeDistance < -minSwipeDistance) {
+      // Swipe down → previous reel
+      goToPrevReel();
+    }
+  }, [goToNextReel, goToPrevReel]);
+
+  // Remove specific cast filter key
+  const removeCastFilterKey = (key: keyof CastFilter) => {
+    setCastFilter(prev => {
+      const newFilter = { ...prev };
+      delete newFilter[key];
+      return newFilter;
+    });
+  };
+
+  // Remove specific available cast filter key
+  const removeAvailableCastFilterKey = (key: keyof CastFilter) => {
+    setAvailableCastFilter(prev => {
+      const newFilter = { ...prev };
+      delete newFilter[key];
+      return newFilter;
+    });
   };
 
   // Set tab in URL
@@ -472,33 +639,50 @@ export default function VideographerDashboard() {
   // Render Available Projects Tab
   const renderAvailableTab = () => (
     <div className="space-y-4">
-      {/* Pull to refresh indicator */}
+      {/* Header with refresh and filter */}
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-bold text-gray-900">Available Projects</h2>
-        <button
-          onClick={() => refetchAvailable()}
-          disabled={isLoadingAvailable}
-          className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition"
-        >
-          <ArrowPathIcon className={`w-5 h-5 ${isLoadingAvailable ? 'animate-spin' : ''}`} />
-        </button>
+        <div className="flex items-center gap-2">
+          <CastFilterDropdown
+            filters={availableCastFilter}
+            onChange={setAvailableCastFilter}
+            matchCount={filteredAvailableProjects.length}
+          />
+          <button
+            onClick={() => refetchAvailable()}
+            disabled={isLoadingAvailable}
+            className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition"
+          >
+            <ArrowPathIcon className={`w-5 h-5 ${isLoadingAvailable ? 'animate-spin' : ''}`} />
+          </button>
+        </div>
       </div>
 
       <p className="text-sm text-gray-600">
         Pick a project to start shooting. Projects in the planning stage are waiting for a videographer.
       </p>
 
+      {/* Active Cast Filters */}
+      {hasAvailableFilters && (
+        <ActiveCastFilters
+          filters={availableCastFilter}
+          onRemove={removeAvailableCastFilterKey}
+          onClearAll={clearAvailableFilters}
+        />
+      )}
+
       {isLoadingAvailable ? (
         <div className="flex justify-center items-center py-16">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
         </div>
-      ) : availableProjects.length > 0 ? (
+      ) : filteredAvailableProjects.length > 0 ? (
         <div className="space-y-4">
-          {availableProjects.map((project) => (
+          {filteredAvailableProjects.map((project, index) => (
             <ProjectCard
               key={project.id}
               project={project}
               showStage={false}
+              onPlayReel={project.reference_url ? () => openReelViewer(index) : undefined}
               actionButton={{
                 label: 'Pick Project',
                 onClick: () => handlePickProject(project),
@@ -509,10 +693,22 @@ export default function VideographerDashboard() {
       ) : (
         <div className="text-center py-16">
           <InboxIcon className="mx-auto h-12 w-12 text-gray-400" />
-          <h3 className="mt-4 text-lg font-medium text-gray-900">No projects available</h3>
+          <h3 className="mt-4 text-lg font-medium text-gray-900">
+            {availableProjects.length === 0 ? 'No projects available' : 'No projects match your filters'}
+          </h3>
           <p className="mt-2 text-sm text-gray-500">
-            All projects have been picked up. Check back later for new ones.
+            {availableProjects.length === 0
+              ? 'All projects have been picked up. Check back later for new ones.'
+              : 'Try adjusting your cast filter to see more projects.'}
           </p>
+          {hasAvailableFilters && (
+            <button
+              onClick={clearAvailableFilters}
+              className="mt-4 text-sm text-primary-600 hover:text-primary-700 font-medium"
+            >
+              Clear filters
+            </button>
+          )}
         </div>
       )}
     </div>
@@ -586,6 +782,12 @@ export default function VideographerDashboard() {
               <option value="LOW">Low</option>
             </select>
 
+            <CastFilterDropdown
+              filters={castFilter}
+              onChange={setCastFilter}
+              matchCount={filteredMyProjects.length}
+            />
+
             {hasActiveFilters && (
               <button
                 onClick={clearFilters}
@@ -595,6 +797,15 @@ export default function VideographerDashboard() {
               </button>
             )}
           </div>
+        )}
+
+        {/* Active Cast Filters */}
+        {Object.keys(castFilter).length > 0 && (
+          <ActiveCastFilters
+            filters={castFilter}
+            onRemove={removeCastFilterKey}
+            onClearAll={() => setCastFilter({})}
+          />
         )}
       </div>
 
@@ -794,6 +1005,278 @@ export default function VideographerDashboard() {
           myWork: stats.shooting > 0 ? stats.shooting : undefined,
         }}
       />
+
+      {/* Full-Screen Reel Viewer */}
+      {isReelViewerOpen && filteredAvailableProjects.length > 0 && (() => {
+        const currentProject = filteredAvailableProjects[reelViewerIndex];
+        if (!currentProject) return null;
+        const embedUrl = currentProject.reference_url ? getInstagramEmbedUrl(currentProject.reference_url) : null;
+
+        return (
+          <div className="fixed inset-0 z-50 bg-black">
+            {/* Mobile View */}
+            <div
+              className="md:hidden h-full w-full flex flex-col"
+              onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
+            >
+              <div className="relative flex-1 w-full">
+                {embedUrl ? (
+                  <iframe
+                    key={`${currentProject.id}-${iframeKey}`}
+                    src={embedUrl}
+                    className="absolute inset-0 w-full h-full border-0"
+                    allowFullScreen
+                    allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
+                    title={currentProject.hook || currentProject.title || `Reel ${reelViewerIndex + 1}`}
+                    loading="eager"
+                  />
+                ) : (
+                  <div className="absolute inset-0 flex items-center justify-center text-white">
+                    <p className="text-center px-4">No embeddable reel found for this reference URL</p>
+                  </div>
+                )}
+
+                {/* Top black overlay to hide profile/username */}
+                <div className="absolute top-0 left-0 right-0 h-[70px] bg-black z-10" />
+
+                {/* Top overlay with close button and info */}
+                <div className="absolute top-0 left-0 right-0 p-3 flex items-center justify-between z-20">
+                  <div className="flex items-center gap-2">
+                    <span className="text-white text-sm font-medium bg-black/50 px-2 py-1 rounded-full">
+                      {reelViewerIndex + 1}/{filteredAvailableProjects.length}
+                    </span>
+                    {currentProject.content_id && (
+                      <span className="text-xs font-mono text-pink-300 bg-black/50 px-2 py-1 rounded-full">
+                        {currentProject.content_id}
+                      </span>
+                    )}
+                  </div>
+                  <button
+                    onClick={closeReelViewer}
+                    className="p-2 rounded-full bg-black/50 text-white active:bg-white/20"
+                  >
+                    <XMarkIcon className="h-5 w-5" />
+                  </button>
+                </div>
+
+                {/* Project info overlay */}
+                <div className="absolute top-[70px] left-0 right-0 px-3 py-2 z-20">
+                  <p className="text-white text-sm font-medium line-clamp-2 drop-shadow-lg">
+                    {currentProject.hook || currentProject.title || 'Untitled'}
+                  </p>
+                  {currentProject.full_name && (
+                    <p className="text-white/70 text-xs mt-0.5 drop-shadow-lg">
+                      Script by {currentProject.full_name}
+                    </p>
+                  )}
+                </div>
+
+                {/* Bottom overlay */}
+                <div className="absolute bottom-0 left-0 right-0 h-[130px] bg-black z-10" />
+
+                {/* Replay button */}
+                <button
+                  onClick={replayReel}
+                  className="absolute bottom-[140px] left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 px-4 py-2 rounded-full bg-white/20 active:bg-white/30 text-white text-sm"
+                >
+                  <ArrowPathRoundedSquareIcon className="h-4 w-4" />
+                  Replay
+                </button>
+              </div>
+
+              {/* Fixed bottom action bar for mobile */}
+              <div className="flex-shrink-0 bg-black px-4 py-3 pb-safe">
+                <div className="flex items-center justify-between max-w-sm mx-auto gap-3">
+                  <button
+                    onClick={handleSkipReel}
+                    className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-full bg-white/10 text-white active:bg-white/20 transition-all"
+                  >
+                    <ForwardIcon className="h-5 w-5" />
+                    <span className="font-medium">Skip</span>
+                  </button>
+
+                  <button
+                    onClick={handleAcceptFromViewer}
+                    className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-full bg-green-500 text-white active:bg-green-600 transition-all shadow-lg"
+                  >
+                    <CheckIcon className="h-5 w-5" />
+                    <span className="font-medium">Accept</span>
+                  </button>
+                </div>
+
+                {/* Navigation dots */}
+                <div className="flex items-center justify-center gap-1.5 mt-3">
+                  {filteredAvailableProjects.slice(0, 8).map((_, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => { setReelViewerIndex(idx); setIframeKey(0); }}
+                      className={`rounded-full transition-all ${
+                        idx === reelViewerIndex
+                          ? 'bg-white w-2 h-2'
+                          : 'bg-white/40 w-1.5 h-1.5'
+                      }`}
+                    />
+                  ))}
+                  {filteredAvailableProjects.length > 8 && (
+                    <span className="text-white/50 text-xs ml-1">+{filteredAvailableProjects.length - 8}</span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Desktop View */}
+            <div className="hidden md:flex h-full w-full items-center justify-center">
+              {/* Close button */}
+              <button
+                onClick={closeReelViewer}
+                className="absolute top-4 right-4 p-2 rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors z-20"
+              >
+                <XMarkIcon className="h-6 w-6" />
+              </button>
+
+              {/* Top info */}
+              <div className="absolute top-4 left-4 z-20 flex items-center gap-3">
+                <span className="text-white text-sm font-medium bg-black/50 px-3 py-1 rounded-full">
+                  {reelViewerIndex + 1} / {filteredAvailableProjects.length}
+                </span>
+                {currentProject.priority && (
+                  <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
+                    currentProject.priority === 'URGENT' ? 'bg-red-500/80 text-white' :
+                    currentProject.priority === 'HIGH' ? 'bg-orange-500/80 text-white' :
+                    currentProject.priority === 'NORMAL' ? 'bg-blue-500/80 text-white' :
+                    'bg-gray-500/80 text-white'
+                  }`}>
+                    {currentProject.priority}
+                  </span>
+                )}
+              </div>
+
+              {/* Project info panel (left side) */}
+              <div className="absolute left-4 top-16 bottom-20 w-64 z-20 flex flex-col">
+                <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 text-white space-y-3 overflow-y-auto">
+                  <h3 className="font-semibold text-sm line-clamp-3">
+                    {currentProject.hook || currentProject.title || 'Untitled'}
+                  </h3>
+                  {currentProject.full_name && (
+                    <p className="text-white/70 text-xs">Script by {currentProject.full_name}</p>
+                  )}
+                  {currentProject.content_id && (
+                    <span className="inline-block text-xs font-mono text-pink-300 bg-black/30 px-2 py-1 rounded">
+                      {currentProject.content_id}
+                    </span>
+                  )}
+                  {currentProject.total_people_involved && (
+                    <div className="flex items-center gap-1.5 text-xs text-white/70">
+                      <UserGroupIcon className="w-4 h-4" />
+                      <span>{currentProject.total_people_involved} people</span>
+                    </div>
+                  )}
+                  {currentProject.deadline && (
+                    <div className="flex items-center gap-1.5 text-xs text-white/70">
+                      <ClockIcon className="w-4 h-4" />
+                      <span>{new Date(currentProject.deadline).toLocaleDateString()}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex items-center gap-6">
+                {/* Prev button */}
+                <button
+                  onClick={goToPrevReel}
+                  disabled={reelViewerIndex === 0}
+                  className="p-3 rounded-full bg-white/10 text-white hover:bg-white/20 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                >
+                  <ChevronLeftIcon className="h-6 w-6" />
+                </button>
+
+                {/* Iframe container */}
+                <div className="relative" style={{ width: '380px', height: 'calc(100vh - 180px)' }}>
+                  {embedUrl ? (
+                    <iframe
+                      key={`${currentProject.id}-${iframeKey}`}
+                      src={embedUrl}
+                      className="w-full h-full border-0 rounded-lg"
+                      allowFullScreen
+                      allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
+                      title={currentProject.hook || currentProject.title || `Reel ${reelViewerIndex + 1}`}
+                      loading="eager"
+                    />
+                  ) : (
+                    <div className="w-full h-full border-0 rounded-lg bg-gray-900 flex items-center justify-center text-white">
+                      <p className="text-center px-4">No embeddable reel for this URL</p>
+                    </div>
+                  )}
+
+                  {/* Top black overlay */}
+                  <div className="absolute top-0 left-0 right-0 h-[65px] bg-black rounded-t-lg z-10" />
+                  {/* Bottom black overlay */}
+                  <div className="absolute bottom-0 left-0 right-0 h-[140px] bg-black rounded-b-lg z-10" />
+
+                  {/* Replay button */}
+                  <button
+                    onClick={replayReel}
+                    className="absolute bottom-[150px] left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 px-4 py-2 rounded-full bg-white/20 hover:bg-white/30 text-white text-sm transition-all"
+                  >
+                    <ArrowPathRoundedSquareIcon className="h-4 w-4" />
+                    Replay
+                  </button>
+                </div>
+
+                {/* Next button */}
+                <button
+                  onClick={goToNextReel}
+                  disabled={reelViewerIndex === filteredAvailableProjects.length - 1}
+                  className="p-3 rounded-full bg-white/10 text-white hover:bg-white/20 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                >
+                  <ChevronRightIcon className="h-6 w-6" />
+                </button>
+              </div>
+
+              {/* Bottom action bar */}
+              <div className="absolute bottom-6 left-1/2 -translate-x-1/2">
+                <div className="flex items-center gap-6">
+                  <button
+                    onClick={handleSkipReel}
+                    className="flex items-center gap-2 px-6 py-2.5 rounded-full border-2 border-white/40 text-white/80 hover:bg-white/10 hover:text-white transition-all"
+                  >
+                    <ForwardIcon className="h-5 w-5" />
+                    <span className="font-medium">Skip</span>
+                  </button>
+
+                  {/* Navigation dots */}
+                  <div className="flex items-center gap-1.5">
+                    {filteredAvailableProjects.slice(0, 10).map((_, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => { setReelViewerIndex(idx); setIframeKey(0); }}
+                        className={`rounded-full transition-all ${
+                          idx === reelViewerIndex
+                            ? 'bg-white w-2.5 h-2.5'
+                            : 'bg-white/40 w-2 h-2 hover:bg-white/60'
+                        }`}
+                      />
+                    ))}
+                    {filteredAvailableProjects.length > 10 && (
+                      <span className="text-white/50 text-xs ml-1">+{filteredAvailableProjects.length - 10}</span>
+                    )}
+                  </div>
+
+                  <button
+                    onClick={handleAcceptFromViewer}
+                    className="flex items-center gap-2 px-6 py-2.5 rounded-full bg-green-500 text-white hover:bg-green-600 transition-all shadow-lg"
+                  >
+                    <CheckIcon className="h-5 w-5" />
+                    <span className="font-medium">Accept & Pick</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Pick Project Modal */}
       <PickProjectModal
