@@ -722,44 +722,59 @@ export default function EditorDashboard() {
                     </div>
                   )}
 
-                  {/* Hook */}
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Hook (First 6 Seconds)</label>
-                    {selectedAnalysis.hook && (
-                      <p className="text-gray-900 mb-3">{selectedAnalysis.hook}</p>
-                    )}
-                    {selectedAnalysis.hook_voice_note_url && (
-                      <audio controls className="w-full">
-                        <source src={selectedAnalysis.hook_voice_note_url} type="audio/webm" />
-                      </audio>
-                    )}
-                  </div>
+                  {/* Script Details Section - Only show if there's actual content */}
+                  {(selectedAnalysis.hook || selectedAnalysis.hook_voice_note_url ||
+                    selectedAnalysis.why_viral || selectedAnalysis.why_viral_voice_note_url ||
+                    selectedAnalysis.how_to_replicate || selectedAnalysis.how_to_replicate_voice_note_url) && (
+                    <div className="space-y-4">
+                      <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Script Details</h3>
 
-                  {/* Why Viral */}
-                  <div className="bg-blue-50 p-4 rounded-lg">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Why Did It Go Viral?</label>
-                    {selectedAnalysis.why_viral && (
-                      <p className="text-gray-900 mb-3">{selectedAnalysis.why_viral}</p>
-                    )}
-                    {selectedAnalysis.why_viral_voice_note_url && (
-                      <audio controls className="w-full">
-                        <source src={selectedAnalysis.why_viral_voice_note_url} type="audio/webm" />
-                      </audio>
-                    )}
-                  </div>
+                      {/* Hook - only show if has content */}
+                      {(selectedAnalysis.hook || selectedAnalysis.hook_voice_note_url) && (
+                        <div className="bg-gray-50 p-4 rounded-lg">
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Hook (First 6 Seconds)</label>
+                          {selectedAnalysis.hook && (
+                            <p className="text-gray-900 mb-3">{selectedAnalysis.hook}</p>
+                          )}
+                          {selectedAnalysis.hook_voice_note_url && (
+                            <audio controls className="w-full">
+                              <source src={selectedAnalysis.hook_voice_note_url} type="audio/webm" />
+                            </audio>
+                          )}
+                        </div>
+                      )}
 
-                  {/* How to Replicate */}
-                  <div className="bg-green-50 p-4 rounded-lg">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">How to Replicate</label>
-                    {selectedAnalysis.how_to_replicate && (
-                      <p className="text-gray-900 mb-3">{selectedAnalysis.how_to_replicate}</p>
-                    )}
-                    {selectedAnalysis.how_to_replicate_voice_note_url && (
-                      <audio controls className="w-full">
-                        <source src={selectedAnalysis.how_to_replicate_voice_note_url} type="audio/webm" />
-                      </audio>
-                    )}
-                  </div>
+                      {/* Why Viral - only show if has content */}
+                      {(selectedAnalysis.why_viral || selectedAnalysis.why_viral_voice_note_url) && (
+                        <div className="bg-blue-50 p-4 rounded-lg">
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Why Did It Go Viral?</label>
+                          {selectedAnalysis.why_viral && (
+                            <p className="text-gray-900 mb-3">{selectedAnalysis.why_viral}</p>
+                          )}
+                          {selectedAnalysis.why_viral_voice_note_url && (
+                            <audio controls className="w-full">
+                              <source src={selectedAnalysis.why_viral_voice_note_url} type="audio/webm" />
+                            </audio>
+                          )}
+                        </div>
+                      )}
+
+                      {/* How to Replicate - only show if has content */}
+                      {(selectedAnalysis.how_to_replicate || selectedAnalysis.how_to_replicate_voice_note_url) && (
+                        <div className="bg-green-50 p-4 rounded-lg">
+                          <label className="block text-sm font-medium text-gray-700 mb-2">How to Replicate</label>
+                          {selectedAnalysis.how_to_replicate && (
+                            <p className="text-gray-900 mb-3">{selectedAnalysis.how_to_replicate}</p>
+                          )}
+                          {selectedAnalysis.how_to_replicate_voice_note_url && (
+                            <audio controls className="w-full">
+                              <source src={selectedAnalysis.how_to_replicate_voice_note_url} type="audio/webm" />
+                            </audio>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   {/* Raw Footage Section */}
                   <div className="border-t pt-6">

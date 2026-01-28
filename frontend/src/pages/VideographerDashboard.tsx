@@ -1432,56 +1432,77 @@ export default function VideographerDashboard() {
                     </div>
                   )}
 
-                  {/* Hook */}
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Hook (First 6 Seconds)</label>
-                    {selectedAnalysis.hook && (
-                      <p className="text-gray-900 mb-3">{selectedAnalysis.hook}</p>
-                    )}
-                    {selectedAnalysis.hook_voice_note_url && (
-                      <audio controls className="w-full">
-                        <source src={selectedAnalysis.hook_voice_note_url} type="audio/webm" />
-                      </audio>
-                    )}
-                  </div>
+                  {/* Script Details Section - Only show if there's actual content */}
+                  {(selectedAnalysis.hook || selectedAnalysis.hook_voice_note_url ||
+                    selectedAnalysis.why_viral || selectedAnalysis.why_viral_voice_note_url ||
+                    selectedAnalysis.how_to_replicate || selectedAnalysis.how_to_replicate_voice_note_url) && (
+                    <div className="space-y-4">
+                      <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Script Details</h3>
 
-                  {/* Why Viral */}
-                  <div className="bg-blue-50 p-4 rounded-lg">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Why Did It Go Viral?</label>
-                    {selectedAnalysis.why_viral && (
-                      <p className="text-gray-900 mb-3">{selectedAnalysis.why_viral}</p>
-                    )}
-                    {selectedAnalysis.why_viral_voice_note_url && (
-                      <audio controls className="w-full">
-                        <source src={selectedAnalysis.why_viral_voice_note_url} type="audio/webm" />
-                      </audio>
-                    )}
-                  </div>
+                      {/* Hook - only show if has content */}
+                      {(selectedAnalysis.hook || selectedAnalysis.hook_voice_note_url) && (
+                        <div className="bg-gray-50 p-4 rounded-lg">
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Hook (First 6 Seconds)</label>
+                          {selectedAnalysis.hook && (
+                            <p className="text-gray-900 mb-3">{selectedAnalysis.hook}</p>
+                          )}
+                          {selectedAnalysis.hook_voice_note_url && (
+                            <audio controls className="w-full">
+                              <source src={selectedAnalysis.hook_voice_note_url} type="audio/webm" />
+                            </audio>
+                          )}
+                        </div>
+                      )}
 
-                  {/* How to Replicate */}
-                  <div className="bg-green-50 p-4 rounded-lg">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">How to Replicate</label>
-                    {selectedAnalysis.how_to_replicate && (
-                      <p className="text-gray-900 mb-3">{selectedAnalysis.how_to_replicate}</p>
-                    )}
-                    {selectedAnalysis.how_to_replicate_voice_note_url && (
-                      <audio controls className="w-full">
-                        <source src={selectedAnalysis.how_to_replicate_voice_note_url} type="audio/webm" />
-                      </audio>
-                    )}
-                  </div>
+                      {/* Why Viral - only show if has content */}
+                      {(selectedAnalysis.why_viral || selectedAnalysis.why_viral_voice_note_url) && (
+                        <div className="bg-blue-50 p-4 rounded-lg">
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Why Did It Go Viral?</label>
+                          {selectedAnalysis.why_viral && (
+                            <p className="text-gray-900 mb-3">{selectedAnalysis.why_viral}</p>
+                          )}
+                          {selectedAnalysis.why_viral_voice_note_url && (
+                            <audio controls className="w-full">
+                              <source src={selectedAnalysis.why_viral_voice_note_url} type="audio/webm" />
+                            </audio>
+                          )}
+                        </div>
+                      )}
 
-                  {/* Target Emotion & Expected Outcome */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Target Emotion</label>
-                      <p className="text-gray-900 font-medium">{selectedAnalysis.target_emotion}</p>
+                      {/* How to Replicate - only show if has content */}
+                      {(selectedAnalysis.how_to_replicate || selectedAnalysis.how_to_replicate_voice_note_url) && (
+                        <div className="bg-green-50 p-4 rounded-lg">
+                          <label className="block text-sm font-medium text-gray-700 mb-2">How to Replicate</label>
+                          {selectedAnalysis.how_to_replicate && (
+                            <p className="text-gray-900 mb-3">{selectedAnalysis.how_to_replicate}</p>
+                          )}
+                          {selectedAnalysis.how_to_replicate_voice_note_url && (
+                            <audio controls className="w-full">
+                              <source src={selectedAnalysis.how_to_replicate_voice_note_url} type="audio/webm" />
+                            </audio>
+                          )}
+                        </div>
+                      )}
                     </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Expected Outcome</label>
-                      <p className="text-gray-900 font-medium">{selectedAnalysis.expected_outcome}</p>
+                  )}
+
+                  {/* Target Emotion & Expected Outcome - only show if has content */}
+                  {(selectedAnalysis.target_emotion || selectedAnalysis.expected_outcome) && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                      {selectedAnalysis.target_emotion && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Target Emotion</label>
+                          <p className="text-gray-900 font-medium">{selectedAnalysis.target_emotion}</p>
+                        </div>
+                      )}
+                      {selectedAnalysis.expected_outcome && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Expected Outcome</label>
+                          <p className="text-gray-900 font-medium">{selectedAnalysis.expected_outcome}</p>
+                        </div>
+                      )}
                     </div>
-                  </div>
+                  )}
 
                   {/* Deadline & Budget */}
                   {(selectedAnalysis.deadline || selectedAnalysis.budget) && (

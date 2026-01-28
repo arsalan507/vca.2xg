@@ -48,7 +48,7 @@ export const editorQueueService = {
       if (hasEditor) return false;
 
       // Check if has raw footage files (support both legacy uppercase and current lowercase types)
-      const rawFileTypes = ['RAW_FOOTAGE', 'A_ROLL', 'B_ROLL', 'HOOK', 'BODY', 'CTA', 'AUDIO_CLIP', 'raw-footage'];
+      const rawFileTypes = ['RAW_FOOTAGE', 'A_ROLL', 'B_ROLL', 'HOOK', 'BODY', 'CTA', 'AUDIO_CLIP', 'OTHER', 'raw-footage'];
       const hasRawFiles = project.production_files?.some(
         (f: any) => rawFileTypes.includes(f.file_type) && !f.is_deleted
       );
@@ -106,7 +106,7 @@ export const editorQueueService = {
       .from('production_files')
       .select('id', { count: 'exact', head: true })
       .eq('analysis_id', data.analysisId)
-      .in('file_type', ['RAW_FOOTAGE', 'A_ROLL', 'B_ROLL', 'HOOK', 'BODY', 'CTA', 'AUDIO_CLIP', 'raw-footage'])
+      .in('file_type', ['RAW_FOOTAGE', 'A_ROLL', 'B_ROLL', 'HOOK', 'BODY', 'CTA', 'AUDIO_CLIP', 'OTHER', 'raw-footage'])
       .eq('is_deleted', false);
 
     if (!rawFilesCount || rawFilesCount === 0) {
@@ -306,7 +306,7 @@ export const editorQueueService = {
         uploader:profiles!production_files_uploaded_by_fkey(id, email, full_name, avatar_url)
       `)
       .eq('analysis_id', analysisId)
-      .in('file_type', ['RAW_FOOTAGE', 'A_ROLL', 'B_ROLL', 'HOOK', 'BODY', 'CTA', 'AUDIO_CLIP', 'raw-footage'])
+      .in('file_type', ['RAW_FOOTAGE', 'A_ROLL', 'B_ROLL', 'HOOK', 'BODY', 'CTA', 'AUDIO_CLIP', 'OTHER', 'raw-footage'])
       .eq('is_deleted', false)
       .order('created_at', { ascending: false });
 

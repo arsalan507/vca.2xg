@@ -36,18 +36,25 @@ export const assignmentService = {
     }
 
     // Create/update assignments
+    // First, delete existing assignments for each role that's being updated, then insert new ones
     const assignments: ProjectAssignment[] = [];
 
     if (data.videographerId) {
+      // Delete existing videographer assignment for this analysis
+      await supabase
+        .from('project_assignments')
+        .delete()
+        .eq('analysis_id', analysisId)
+        .eq('role', 'VIDEOGRAPHER');
+
+      // Insert new assignment
       const { data: assignment, error } = await supabase
         .from('project_assignments')
-        .upsert({
+        .insert({
           analysis_id: analysisId,
           user_id: data.videographerId,
           role: 'VIDEOGRAPHER',
           assigned_by: user.id,
-        }, {
-          onConflict: 'analysis_id,user_id,role',
         })
         .select()
         .single();
@@ -57,15 +64,21 @@ export const assignmentService = {
     }
 
     if (data.editorId) {
+      // Delete existing editor assignment for this analysis
+      await supabase
+        .from('project_assignments')
+        .delete()
+        .eq('analysis_id', analysisId)
+        .eq('role', 'EDITOR');
+
+      // Insert new assignment
       const { data: assignment, error } = await supabase
         .from('project_assignments')
-        .upsert({
+        .insert({
           analysis_id: analysisId,
           user_id: data.editorId,
           role: 'EDITOR',
           assigned_by: user.id,
-        }, {
-          onConflict: 'analysis_id,user_id,role',
         })
         .select()
         .single();
@@ -75,15 +88,21 @@ export const assignmentService = {
     }
 
     if (data.postingManagerId) {
+      // Delete existing posting manager assignment for this analysis
+      await supabase
+        .from('project_assignments')
+        .delete()
+        .eq('analysis_id', analysisId)
+        .eq('role', 'POSTING_MANAGER');
+
+      // Insert new assignment
       const { data: assignment, error } = await supabase
         .from('project_assignments')
-        .upsert({
+        .insert({
           analysis_id: analysisId,
           user_id: data.postingManagerId,
           role: 'POSTING_MANAGER',
           assigned_by: user.id,
-        }, {
-          onConflict: 'analysis_id,user_id,role',
         })
         .select()
         .single();
@@ -101,6 +120,24 @@ export const assignmentService = {
     if (data.totalPeopleInvolved !== undefined) updateData.total_people_involved = data.totalPeopleInvolved;
     if (data.shootPossibility !== undefined) updateData.shoot_possibility = data.shootPossibility;
     if (data.adminRemarks !== undefined) updateData.admin_remarks = data.adminRemarks;
+
+    // Generate content_id if profile is selected (new logic - BCH + profile first 3 letters + sequence)
+    if (data.profileId) {
+      const { data: contentIdResult, error: contentIdError } = await supabase.rpc(
+        'generate_content_id_on_approval',
+        {
+          p_analysis_id: analysisId,
+          p_profile_id: data.profileId,
+        }
+      );
+
+      if (contentIdError) {
+        console.error('Failed to generate content_id:', contentIdError);
+        // Don't throw - allow assignment to proceed, content_id might already exist
+      } else {
+        console.log('Generated content_id:', contentIdResult);
+      }
+    }
 
     // Update production stage to PRE_PRODUCTION if still NOT_STARTED
     const { data: analysis } = await supabase
@@ -364,6 +401,29 @@ export const assignmentService = {
     analysisId: string,
     data: UpdateProductionStageData
   ): Promise<ViralAnalysis> {
+    // VALIDATION: If transitioning to READY_FOR_EDIT, verify files exist
+    if (data.production_stage === 'READY_FOR_EDIT') {
+      const rawFileTypes = [
+        'RAW_FOOTAGE', 'A_ROLL', 'B_ROLL', 'HOOK', 'BODY', 'CTA', 'AUDIO_CLIP', 'OTHER',
+        'raw-footage'
+      ];
+
+      const { count: fileCount, error: countError } = await supabase
+        .from('production_files')
+        .select('id', { count: 'exact', head: true })
+        .eq('analysis_id', analysisId)
+        .in('file_type', rawFileTypes)
+        .eq('is_deleted', false);
+
+      if (countError) {
+        throw new Error('Failed to verify files. Please try again.');
+      }
+
+      if (!fileCount || fileCount === 0) {
+        throw new Error('Cannot move to Ready for Edit - please upload at least one raw footage file first.');
+      }
+    }
+
     const updateData: any = {
       production_stage: data.production_stage,
     };
