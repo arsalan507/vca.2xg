@@ -433,13 +433,7 @@ export default function VideographerDashboard() {
     }
   };
 
-  // Stats calculations
-  const stats = {
-    available: availableProjects.length,
-    shooting: myProjects.filter(a => a.production_stage === ProductionStageV2.SHOOTING).length,
-    readyForEdit: myProjects.filter(a => a.production_stage === ProductionStageV2.READY_FOR_EDIT).length,
-    total: myProjects.length,
-  };
+  // Stats calculations are below (after filteredAvailableProjects is defined)
 
   // Videographers can only move to SHOOTING or submit for READY_FOR_EDIT
   const videographerStages = [
@@ -519,6 +513,14 @@ export default function VideographerDashboard() {
     }
     return projects;
   }, [availableProjects, availableCastFilter, rejectedIds]);
+
+  // Stats calculations — use filtered count so rejected projects are excluded from the tab badge
+  const stats = {
+    available: filteredAvailableProjects.length,
+    shooting: myProjects.filter(a => a.production_stage === ProductionStageV2.SHOOTING).length,
+    readyForEdit: myProjects.filter(a => a.production_stage === ProductionStageV2.READY_FOR_EDIT).length,
+    total: myProjects.length,
+  };
 
   // Check if any filters are active
   const hasActiveFilters = searchQuery || filterStage || filterPriority || Object.keys(castFilter).length > 0;
