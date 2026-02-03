@@ -257,7 +257,7 @@ export const editorQueueService = {
       return [];
     }
 
-    const analysisIds = assignments.map(a => a.analysis_id);
+    const analysisIds = assignments.map((a: any) => a.analysis_id);
 
     // Fetch the full projects
     const { data, error } = await supabase

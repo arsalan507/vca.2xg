@@ -358,7 +358,7 @@ function TeamManagement() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {teamMembers.map((member) => (
+                {teamMembers.map((member: any) => (
                   <tr key={member.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
@@ -428,7 +428,7 @@ function TeamManagement() {
 
             {/* Mobile Card List */}
             <div className="md:hidden divide-y divide-gray-200">
-              {teamMembers.map((member) => (
+              {teamMembers.map((member: any) => (
                 <div key={member.id} className="p-4 hover:bg-gray-50">
                   <div className="flex items-start justify-between">
                     <div className="flex items-center">

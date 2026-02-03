@@ -22,6 +22,37 @@ const MAX_RETRIES = 3;
 const FIVE_MB = 5 * 1024 * 1024;
 const PROGRESS_THROTTLE_MS = 500; // Max 2 progress updates per second
 
+/**
+ * Extract Google Drive file ID from a URL or return as-is if already an ID.
+ * Handles formats:
+ *   - https://drive.google.com/file/d/FILE_ID/view?usp=sharing
+ *   - https://drive.google.com/open?id=FILE_ID
+ *   - https://drive.google.com/uc?id=FILE_ID&export=download
+ *   - Plain file ID string
+ */
+export function extractDriveFileId(fileIdOrUrl: string): string {
+  if (!fileIdOrUrl) return fileIdOrUrl;
+  // Already a plain ID (no slashes or protocol)
+  if (!fileIdOrUrl.includes('/') && !fileIdOrUrl.includes('?')) return fileIdOrUrl;
+  // /file/d/FILE_ID/ pattern
+  const fileMatch = fileIdOrUrl.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+  if (fileMatch) return fileMatch[1];
+  // ?id=FILE_ID pattern
+  const idMatch = fileIdOrUrl.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+  if (idMatch) return idMatch[1];
+  // Fallback: return as-is
+  return fileIdOrUrl;
+}
+
+/**
+ * Build a direct download URL for a Google Drive file.
+ * Uses the /uc?export=download endpoint which triggers browser download.
+ */
+export function getDriveDownloadUrl(fileIdOrUrl: string): string {
+  const fileId = extractDriveFileId(fileIdOrUrl);
+  return `https://drive.google.com/uc?id=${fileId}&export=download`;
+}
+
 declare const google: any;
 declare const gapi: any;
 
@@ -793,8 +824,8 @@ class GoogleDriveOAuthService {
    * Includes retry with exponential backoff for reliability.
    */
   async downloadFileAsBlob(fileIdOrUrl: string): Promise<Blob> {
-    const fileId = extractDriveFileId(fileIdOrUrl);
     await this.ensureSignedIn();
+    const fileId = extractDriveFileId(fileIdOrUrl);
     return this.retryWithBackoff(async () => {
       const response = await fetch(
         `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`,
@@ -814,27 +845,3 @@ class GoogleDriveOAuthService {
 
 // Export singleton instance
 export const googleDriveOAuthService = new GoogleDriveOAuthService();
-
-/**
- * Extract a plain Google Drive file ID from a URL or return as-is if already an ID.
- */
-export function extractDriveFileId(fileIdOrUrl: string): string {
-  if (!fileIdOrUrl) return fileIdOrUrl;
-  // Already a plain ID (no slashes or query params)
-  if (!fileIdOrUrl.includes('/') && !fileIdOrUrl.includes('?')) return fileIdOrUrl;
-  // Match /file/d/FILE_ID/ pattern
-  const fileMatch = fileIdOrUrl.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
-  if (fileMatch) return fileMatch[1];
-  // Match ?id=FILE_ID pattern
-  const idMatch = fileIdOrUrl.match(/[?&]id=([a-zA-Z0-9_-]+)/);
-  if (idMatch) return idMatch[1];
-  return fileIdOrUrl;
-}
-
-/**
- * Get a direct download URL for a Google Drive file.
- */
-export function getDriveDownloadUrl(fileIdOrUrl: string): string {
-  const fileId = extractDriveFileId(fileIdOrUrl);
-  return `https://drive.google.com/uc?id=${fileId}&export=download`;
-}

@@ -250,9 +250,9 @@ export const adminService = {
       .from('viral_analyses')
       .select('status');
 
-    const pending = statusCounts?.filter((a) => a.status === 'PENDING').length || 0;
-    const approved = statusCounts?.filter((a) => a.status === 'APPROVED').length || 0;
-    const rejected = statusCounts?.filter((a) => a.status === 'REJECTED').length || 0;
+    const pending = statusCounts?.filter((a: any) => a.status === 'PENDING').length || 0;
+    const approved = statusCounts?.filter((a: any) => a.status === 'APPROVED').length || 0;
+    const rejected = statusCounts?.filter((a: any) => a.status === 'REJECTED').length || 0;
 
     return {
       totalAnalyses,
@@ -287,34 +287,34 @@ export const adminService = {
     const analyses = data || [];
 
     // Count pending approvals
-    const pending = analyses.filter(a => a.status === 'PENDING').length;
+    const pending = analyses.filter((a: any) => a.status === 'PENDING').length;
 
     // Count by production stage (only approved)
-    const approved = analyses.filter(a => a.status === 'APPROVED');
+    const approved = analyses.filter((a: any) => a.status === 'APPROVED');
 
-    const planning = approved.filter(a =>
+    const planning = approved.filter((a: any) =>
       a.production_stage === 'PLANNING' ||
       a.production_stage === 'NOT_STARTED' ||
       a.production_stage === 'PRE_PRODUCTION' ||
       a.production_stage === 'PLANNED'
     ).length;
 
-    const shooting = approved.filter(a => a.production_stage === 'SHOOTING').length;
+    const shooting = approved.filter((a: any) => a.production_stage === 'SHOOTING').length;
 
-    const readyForEdit = approved.filter(a =>
+    const readyForEdit = approved.filter((a: any) =>
       a.production_stage === 'READY_FOR_EDIT' ||
       a.production_stage === 'SHOOT_REVIEW'
     ).length;
 
-    const editing = approved.filter(a => a.production_stage === 'EDITING').length;
+    const editing = approved.filter((a: any) => a.production_stage === 'EDITING').length;
 
-    const readyToPost = approved.filter(a =>
+    const readyToPost = approved.filter((a: any) =>
       a.production_stage === 'READY_TO_POST' ||
       a.production_stage === 'EDIT_REVIEW' ||
       a.production_stage === 'FINAL_REVIEW'
     ).length;
 
-    const posted = approved.filter(a => a.production_stage === 'POSTED').length;
+    const posted = approved.filter((a: any) => a.production_stage === 'POSTED').length;
 
     // Total active = all except POSTED
     const totalActive = planning + shooting + readyForEdit + editing + readyToPost;

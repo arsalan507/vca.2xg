@@ -1,22 +1,212 @@
 version: '3.8'
 
 services:
-  # Frontend - React + Vite
-  frontend:
+  # ─── PostgreSQL Database ─────────────────────────────────────────────────
+  vca-postgres:
+    image: postgres:16-alpine
+    container_name: vca-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: viral_content_analyzer
+    volumes:
+      - vca-pgdata:/var/lib/postgresql/data
+      - ./supabase/migrations/00-create-authentik-db.sh:/docker-entrypoint-initdb.d/00-create-authentik-db.sh
+      - ./supabase/migrations/self-hosted-init.sql:/docker-entrypoint-initdb.d/01-init.sql
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+    networks:
+      - vca-internal
+
+  # ─── PostgREST (REST API over PostgreSQL) ────────────────────────────────
+  vca-postgrest:
+    image: postgrest/postgrest
+    container_name: vca-postgrest
+    environment:
+      PGRST_DB_URI: postgres://authenticator:${PGRST_DB_PASS}@vca-postgres:5432/viral_content_analyzer
+      PGRST_DB_SCHEMAS: public
+      PGRST_DB_ANON_ROLE: anon
+      PGRST_JWT_SECRET: ${JWT_SECRET}
+      PGRST_SERVER_PORT: 3000
+    depends_on:
+      vca-postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.vca-postgrest.rule=Host(`vca-api.2xg.in`) && PathPrefix(`/postgrest`)"
+      - "traefik.http.routers.vca-postgrest.entrypoints=http,https"
+      - "traefik.http.routers.vca-postgrest.tls=true"
+      - "traefik.http.routers.vca-postgrest.tls.certresolver=letsencrypt"
+      - "traefik.http.middlewares.vca-postgrest-strip.stripprefix.prefixes=/postgrest"
+      - "traefik.http.routers.vca-postgrest.middlewares=vca-postgrest-strip"
+      - "traefik.http.services.vca-postgrest.loadbalancer.server.port=3000"
+    deploy:
+      resources:
+        limits:
+          memory: 64m
+    networks:
+      - vca-internal
+      - coolify
+
+  # ─── Backend (Express.js) ────────────────────────────────────────────────
+  vca-backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: vca-backend
+    environment:
+      PORT: 3001
+      DATABASE_URL: postgres://postgres:${DB_PASSWORD}@vca-postgres:5432/viral_content_analyzer
+      FRONTEND_URL: https://vca.2xg.in
+      AUTHENTIK_URL: https://vca-auth.2xg.in
+      AUTHENTIK_INTERNAL_URL: http://vca-authentik-server:9000
+      AUTHENTIK_JWKS_URI: http://vca-authentik-server:9000/application/o/viral-content-analyzer/.well-known/jwks.json
+      AUTHENTIK_ISSUER: https://vca-auth.2xg.in/application/o/viral-content-analyzer/
+      AUTHENTIK_CLIENT_ID: ${AUTHENTIK_CLIENT_ID}
+      AUTHENTIK_CLIENT_SECRET: ${AUTHENTIK_CLIENT_SECRET}
+      AUTHENTIK_API_TOKEN: ${AUTHENTIK_API_TOKEN}
+      GOOGLE_SERVICE_ACCOUNT_CREDENTIALS: ${GOOGLE_SERVICE_ACCOUNT_CREDENTIALS}
+      GOOGLE_DRIVE_RAW_FOOTAGE_FOLDER_ID: ${GOOGLE_DRIVE_RAW_FOOTAGE_FOLDER_ID}
+      GOOGLE_DRIVE_EDITED_VIDEO_FOLDER_ID: ${GOOGLE_DRIVE_EDITED_VIDEO_FOLDER_ID}
+      GOOGLE_DRIVE_FINAL_VIDEO_FOLDER_ID: ${GOOGLE_DRIVE_FINAL_VIDEO_FOLDER_ID}
+      JWT_SECRET: ${JWT_SECRET}
+      VOICE_NOTES_DIR: /data/voice-notes
+    volumes:
+      - vca-voice-notes:/data/voice-notes
+    depends_on:
+      vca-postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.vca-backend.rule=Host(`vca-api.2xg.in`) && !PathPrefix(`/postgrest`)"
+      - "traefik.http.routers.vca-backend.entrypoints=http,https"
+      - "traefik.http.routers.vca-backend.tls=true"
+      - "traefik.http.routers.vca-backend.tls.certresolver=letsencrypt"
+      - "traefik.http.services.vca-backend.loadbalancer.server.port=3001"
+    deploy:
+      resources:
+        limits:
+          memory: 128m
+    networks:
+      - vca-internal
+      - coolify
+
+  # ─── Frontend (Nginx serving React build) ────────────────────────────────
+  vca-frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    ports:
-      - "5173:80"
-    environment:
-      - VITE_SUPABASE_URL=${VITE_SUPABASE_URL}
-      - VITE_SUPABASE_ANON_KEY=${VITE_SUPABASE_ANON_KEY}
-      - VITE_GOOGLE_CLIENT_ID=${VITE_GOOGLE_CLIENT_ID}
-      - VITE_GOOGLE_API_KEY=${VITE_GOOGLE_API_KEY}
+      args:
+        VITE_POSTGREST_URL: https://vca-api.2xg.in/postgrest
+        VITE_BACKEND_URL: https://vca-api.2xg.in
+        VITE_AUTH_URL: https://vca-auth.2xg.in
+        VITE_GOOGLE_CLIENT_ID: ${VITE_GOOGLE_CLIENT_ID}
+        VITE_GOOGLE_API_KEY: ${VITE_GOOGLE_API_KEY}
+        VITE_ADMIN_GOOGLE_EMAIL: ${VITE_ADMIN_GOOGLE_EMAIL}
+    container_name: vca-frontend
     restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.vca-frontend.rule=Host(`vca.2xg.in`)"
+      - "traefik.http.routers.vca-frontend.entrypoints=http,https"
+      - "traefik.http.routers.vca-frontend.tls=true"
+      - "traefik.http.routers.vca-frontend.tls.certresolver=letsencrypt"
+      - "traefik.http.services.vca-frontend.loadbalancer.server.port=80"
+    deploy:
+      resources:
+        limits:
+          memory: 32m
     networks:
-      - viralcontent-network
+      - coolify
+
+  # ─── Authentik (Authentication) ──────────────────────────────────────────
+  vca-authentik-server:
+    image: ghcr.io/goauthentik/server:2024.12
+    container_name: vca-authentik-server
+    command: server
+    environment:
+      AUTHENTIK_REDIS__HOST: vca-authentik-redis
+      AUTHENTIK_POSTGRESQL__HOST: vca-postgres
+      AUTHENTIK_POSTGRESQL__NAME: authentik
+      AUTHENTIK_POSTGRESQL__USER: postgres
+      AUTHENTIK_POSTGRESQL__PASSWORD: ${DB_PASSWORD}
+      AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY}
+      AUTHENTIK_BOOTSTRAP_PASSWORD: ${AUTHENTIK_BOOTSTRAP_PASSWORD}
+      AUTHENTIK_BOOTSTRAP_EMAIL: ${AUTHENTIK_BOOTSTRAP_EMAIL}
+    depends_on:
+      vca-postgres:
+        condition: service_healthy
+      vca-authentik-redis:
+        condition: service_started
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.vca-authentik.rule=Host(`vca-auth.2xg.in`)"
+      - "traefik.http.routers.vca-authentik.entrypoints=http,https"
+      - "traefik.http.routers.vca-authentik.tls=true"
+      - "traefik.http.routers.vca-authentik.tls.certresolver=letsencrypt"
+      - "traefik.http.services.vca-authentik.loadbalancer.server.port=9000"
+    deploy:
+      resources:
+        limits:
+          memory: 600m
+    networks:
+      - vca-internal
+      - coolify
+
+  vca-authentik-worker:
+    image: ghcr.io/goauthentik/server:2024.12
+    container_name: vca-authentik-worker
+    command: worker
+    environment:
+      AUTHENTIK_REDIS__HOST: vca-authentik-redis
+      AUTHENTIK_POSTGRESQL__HOST: vca-postgres
+      AUTHENTIK_POSTGRESQL__NAME: authentik
+      AUTHENTIK_POSTGRESQL__USER: postgres
+      AUTHENTIK_POSTGRESQL__PASSWORD: ${DB_PASSWORD}
+      AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY}
+      AUTHENTIK_BOOTSTRAP_PASSWORD: ${AUTHENTIK_BOOTSTRAP_PASSWORD}
+      AUTHENTIK_BOOTSTRAP_EMAIL: ${AUTHENTIK_BOOTSTRAP_EMAIL}
+    depends_on:
+      vca-postgres:
+        condition: service_healthy
+      vca-authentik-redis:
+        condition: service_started
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 400m
+    networks:
+      - vca-internal
+
+  vca-authentik-redis:
+    image: redis:7-alpine
+    container_name: vca-authentik-redis
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 32m
+    networks:
+      - vca-internal
+
+volumes:
+  vca-pgdata:
+  vca-voice-notes:
 
 networks:
-  viralcontent-network:
+  vca-internal:
     driver: bridge
+  coolify:
+    external: true

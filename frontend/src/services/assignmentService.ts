@@ -214,7 +214,7 @@ export const assignmentService = {
 
     // Calculate workload for each videographer
     const workloads = await Promise.all(
-      videographers.map(async (v) => {
+      videographers.map(async (v: any) => {
         const { data, error } = await supabase.rpc('get_videographer_workload', {
           videographer_id: v.id,
         });
@@ -268,7 +268,7 @@ export const assignmentService = {
 
     // Calculate workload for each editor (count active assignments)
     const workloads = await Promise.all(
-      editors.map(async (e) => {
+      editors.map(async (e: any) => {
         const { count, error } = await supabase
           .from('project_assignments')
           .select('*', { count: 'exact', head: true })
@@ -324,7 +324,7 @@ export const assignmentService = {
 
     // Calculate workload for each posting manager (count active assignments)
     const workloads = await Promise.all(
-      postingManagers.map(async (pm) => {
+      postingManagers.map(async (pm: any) => {
         const { count, error } = await supabase
           .from('project_assignments')
           .select('*', { count: 'exact', head: true })
@@ -456,7 +456,7 @@ export const assignmentService = {
   ): Promise<ViralAnalysis> {
     const { error } = await supabase
       .from('viral_analyses')
-      .update(data)
+      .update(data as Record<string, any>)
       .eq('id', analysisId)
       .select()
       .single();

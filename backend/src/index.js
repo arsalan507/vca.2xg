@@ -1,119 +1,126 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const { createClient } = require('@supabase/supabase-js');
+const { Pool } = require('pg');
+const { verifyAuth, verifyAdmin } = require('./middleware/jwtAuth');
+const voiceNoteService = require('./services/voiceNoteService');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Initialize Supabase Admin Client with Service Role Key
-const supabaseAdmin = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
+// PostgreSQL connection pool
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+});
 
 // Middleware
 app.use(cors({
   origin: process.env.FRONTEND_URL || 'http://localhost:5173',
-  credentials: true
+  credentials: true,
 }));
 app.use(express.json());
 
-// Middleware to verify admin access
-const verifyAdmin = async (req, res, next) => {
-  const authHeader = req.headers.authorization;
+// Serve voice notes as static files
+app.use('/files/voice-notes', express.static(voiceNoteService.getBaseDir()));
 
-  if (!authHeader) {
-    return res.status(401).json({ error: 'No authorization header' });
-  }
+// ─── Health Check ───────────────────────────────────────────────────────────
 
-  const token = authHeader.replace('Bearer ', '');
-
-  try {
-    // Verify the JWT token
-    const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
-
-    if (error || !user) {
-      return res.status(401).json({ error: 'Invalid token' });
-    }
-
-    // Check if user is admin
-    const { data: profile, error: profileError } = await supabaseAdmin
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single();
-
-    if (profileError || !profile || profile.role !== 'SUPER_ADMIN') {
-      return res.status(403).json({ error: 'Unauthorized - Admin access required' });
-    }
-
-    req.user = user;
-    next();
-  } catch (error) {
-    console.error('Auth error:', error);
-    return res.status(401).json({ error: 'Authentication failed' });
-  }
-};
-
-// Health check endpoint
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', message: 'Backend server is running' });
 });
+
+// ─── Auth Routes ────────────────────────────────────────────────────────────
+
+const authRoutes = require('./routes/authRoutes');
+app.use('/api/auth', authRoutes);
+
+// ─── Admin User Management ──────────────────────────────────────────────────
+
+const AUTHENTIK_URL = process.env.AUTHENTIK_URL;
+const AUTHENTIK_API_TOKEN = process.env.AUTHENTIK_API_TOKEN;
 
 // Create user endpoint (Admin only)
 app.post('/api/admin/users', verifyAdmin, async (req, res) => {
   try {
     const { email, password, fullName, role } = req.body;
 
-    // Validate input
     if (!email || !password || !fullName || !role) {
       return res.status(400).json({
-        error: 'Missing required fields: email, password, fullName, role'
+        error: 'Missing required fields: email, password, fullName, role',
       });
     }
 
-    // Create auth user with admin client
-    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-      email,
-      password,
-      email_confirm: true, // Auto-confirm email
-      user_metadata: {
-        full_name: fullName
-      }
+    // Create user in Authentik
+    const createRes = await fetch(`${AUTHENTIK_URL}/api/v3/core/users/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${AUTHENTIK_API_TOKEN}`,
+      },
+      body: JSON.stringify({
+        username: email,
+        email: email,
+        name: fullName,
+        is_active: true,
+        path: 'users',
+      }),
     });
 
-    if (authError) {
-      console.error('Auth error:', authError);
-      return res.status(400).json({ error: authError.message });
+    if (!createRes.ok) {
+      const errBody = await createRes.json().catch(() => ({}));
+      return res.status(400).json({
+        error: errBody.detail || errBody.username?.[0] || 'Failed to create user in Authentik',
+      });
     }
 
-    // Update profile with role and full name
-    const { error: profileError } = await supabaseAdmin
-      .from('profiles')
-      .update({
-        full_name: fullName,
-        role: role
-      })
-      .eq('id', authData.user.id);
+    const authentikUser = await createRes.json();
 
-    if (profileError) {
-      console.error('Profile error:', profileError);
-      // Try to clean up the auth user if profile update fails
-      await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
-      return res.status(400).json({ error: 'Failed to create user profile' });
+    // Set password in Authentik
+    await fetch(`${AUTHENTIK_URL}/api/v3/core/users/${authentikUser.pk}/set_password/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${AUTHENTIK_API_TOKEN}`,
+      },
+      body: JSON.stringify({ password }),
+    });
+
+    // Create user + profile in our database
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      await client.query(
+        'INSERT INTO users (id, email, created_at) VALUES ($1, $2, NOW())',
+        [authentikUser.pk, email]
+      );
+      await client.query(
+        `INSERT INTO profiles (id, email, full_name, role, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, NOW(), NOW())
+         ON CONFLICT (id) DO UPDATE SET full_name = $3, role = $4, updated_at = NOW()`,
+        [authentikUser.pk, email, fullName, role]
+      );
+      await client.query('COMMIT');
+    } catch (dbError) {
+      await client.query('ROLLBACK');
+      // Try to clean up Authentik user
+      await fetch(`${AUTHENTIK_URL}/api/v3/core/users/${authentikUser.pk}/`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${AUTHENTIK_API_TOKEN}` },
+      }).catch(() => {});
+      throw dbError;
+    } finally {
+      client.release();
     }
 
     res.status(201).json({
       success: true,
       user: {
-        id: authData.user.id,
-        email: authData.user.email,
+        id: authentikUser.pk,
+        email: email,
         full_name: fullName,
-        role: role
-      }
+        role: role,
+      },
     });
-
   } catch (error) {
     console.error('Create user error:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -129,31 +136,50 @@ app.delete('/api/admin/users/:userId', verifyAdmin, async (req, res) => {
       return res.status(400).json({ error: 'User ID is required' });
     }
 
-    // Delete user using admin client
-    const { error } = await supabaseAdmin.auth.admin.deleteUser(userId);
+    // Look up Authentik user and delete
+    const searchRes = await fetch(
+      `${AUTHENTIK_URL}/api/v3/core/users/?search=${userId}`,
+      {
+        headers: { 'Authorization': `Bearer ${AUTHENTIK_API_TOKEN}` },
+      }
+    );
 
-    if (error) {
-      console.error('Delete error:', error);
-      return res.status(400).json({ error: error.message });
+    if (searchRes.ok) {
+      const searchData = await searchRes.json();
+      if (searchData.results && searchData.results.length > 0) {
+        await fetch(`${AUTHENTIK_URL}/api/v3/core/users/${searchData.results[0].pk}/`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${AUTHENTIK_API_TOKEN}` },
+        });
+      }
     }
 
-    res.json({ success: true, message: 'User deleted successfully' });
+    // Delete from database (cascade should handle related records)
+    await pool.query('DELETE FROM users WHERE id = $1', [userId]);
 
+    res.json({ success: true, message: 'User deleted successfully' });
   } catch (error) {
     console.error('Delete user error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
-// ====================
-// Upload Routes (Google Drive Service Account)
-// ====================
+// ─── Storage Routes (Voice Notes) ───────────────────────────────────────────
+
+const storageRoutes = require('./routes/storageRoutes');
+app.use('/api/storage', storageRoutes);
+
+// ─── Upload Routes (Google Drive) ───────────────────────────────────────────
+
 const uploadRoutes = require('./routes/uploadRoutes');
 app.use('/api/upload', uploadRoutes);
 
-// Start server
+// ─── Start Server ───────────────────────────────────────────────────────────
+
 app.listen(PORT, () => {
-  console.log(`🚀 Backend server running on http://localhost:${PORT}`);
-  console.log(`📊 Health check: http://localhost:${PORT}/health`);
-  console.log(`📤 Upload endpoints: http://localhost:${PORT}/api/upload/*`);
+  console.log(`Backend server running on http://localhost:${PORT}`);
+  console.log(`Health check: http://localhost:${PORT}/health`);
+  console.log(`Upload endpoints: http://localhost:${PORT}/api/upload/*`);
+  console.log(`Auth endpoints: http://localhost:${PORT}/api/auth/*`);
+  console.log(`Storage endpoints: http://localhost:${PORT}/api/storage/*`);
 });

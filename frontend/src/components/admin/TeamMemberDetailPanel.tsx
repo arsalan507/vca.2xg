@@ -60,7 +60,7 @@ export default function TeamMemberDetailPanel({
         if (assignmentsError) throw assignmentsError;
 
         if (assignments && assignments.length > 0) {
-          const analysisIds = assignments.map((a) => a.analysis_id);
+          const analysisIds = assignments.map((a: any) => a.analysis_id);
 
           const { data: analyses, error } = await supabase
             .from('viral_analyses')
@@ -93,10 +93,10 @@ export default function TeamMemberDetailPanel({
         data.forEach((project) => {
           if (project.user_id) userIds.add(project.user_id);
         });
-        allAssignments?.forEach((assignment) => {
+        allAssignments?.forEach((assignment: any) => {
           if (assignment.user_id) userIds.add(assignment.user_id);
         });
-        allFiles?.forEach((file) => {
+        allFiles?.forEach((file: any) => {
           if (file.uploaded_by) userIds.add(file.uploaded_by);
         });
 
@@ -106,11 +106,11 @@ export default function TeamMemberDetailPanel({
             .select('id, full_name, email')
             .in('id', Array.from(userIds));
 
-          const profileMap = new Map(profiles?.map((p) => [p.id, p]) || []);
+          const profileMap = new Map(profiles?.map((p: any) => [p.id, p]) || []);
 
           data.forEach((project) => {
             if (project.user_id) {
-              const creator = profileMap.get(project.user_id);
+              const creator: any = profileMap.get(project.user_id);
               if (creator) {
                 project.full_name = creator.full_name;
                 project.email = creator.email;
@@ -118,8 +118,8 @@ export default function TeamMemberDetailPanel({
             }
 
             const projectAssignments =
-              allAssignments?.filter((a) => a.analysis_id === project.id) || [];
-            projectAssignments.forEach((assignment) => {
+              allAssignments?.filter((a: any) => a.analysis_id === project.id) || [];
+            projectAssignments.forEach((assignment: any) => {
               const profile = profileMap.get(assignment.user_id);
               if (profile) {
                 if (assignment.role === 'VIDEOGRAPHER') {
@@ -132,8 +132,8 @@ export default function TeamMemberDetailPanel({
               }
             });
 
-            const projectFiles = allFiles?.filter((f) => f.analysis_id === project.id) || [];
-            projectFiles.forEach((file) => {
+            const projectFiles = allFiles?.filter((f: any) => f.analysis_id === project.id) || [];
+            projectFiles.forEach((file: any) => {
               if (file.uploaded_by) {
                 file.uploader = profileMap.get(file.uploaded_by);
               }
