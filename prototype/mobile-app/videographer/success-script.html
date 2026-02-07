@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#f97316">
+  <title>Script Submitted</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../shared/styles.css">
+  <style>
+    .upload-prompt {
+      background: linear-gradient(135deg, rgba(249, 115, 22, 0.15), rgba(234, 88, 12, 0.1));
+      border: 2px dashed var(--videographer-color);
+      border-radius: var(--radius-lg);
+      padding: var(--space-xl);
+      text-align: center;
+      width: 100%;
+      margin-bottom: var(--space-lg);
+    }
+    .upload-prompt-icon {
+      font-size: 48px;
+      margin-bottom: var(--space-md);
+    }
+    .upload-prompt-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--gray-800);
+      margin-bottom: var(--space-xs);
+    }
+    .upload-prompt-text {
+      font-size: 13px;
+      color: var(--gray-600);
+      margin-bottom: var(--space-lg);
+    }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <div class="success-screen">
+      <div class="success-icon" style="background: linear-gradient(135deg, #22c55e, #16a34a);">✓</div>
+      <h1 class="success-title">Script Submitted!</h1>
+      <p class="success-text">Great! Now upload your footage<br>to start the production process.</p>
+
+      <div class="card" style="width: 100%; text-align: left; margin: var(--space-lg) 0;">
+        <div class="card-header">
+          <div>
+            <div class="card-title">New Content Idea</div>
+            <div class="card-subtitle">BCH-1048 • Just now</div>
+          </div>
+          <span class="card-badge" style="background: rgba(34, 197, 94, 0.1); color: #16a34a;">Your Script</span>
+        </div>
+        <div class="card-meta">
+          <span class="project-tag">📸 Instagram</span>
+          <span class="project-tag">🏠 Indoor</span>
+          <span class="project-tag">🎥 Ready to shoot</span>
+        </div>
+      </div>
+
+      <!-- Upload Prompt -->
+      <div class="upload-prompt">
+        <div class="upload-prompt-icon">📹</div>
+        <div class="upload-prompt-title">Have footage ready?</div>
+        <div class="upload-prompt-text">Upload your video files now and send directly to editing.</div>
+        <a href="upload.html" class="btn btn-block" style="background: var(--videographer-color); color: white;">
+          📤 Upload Footage Now
+        </a>
+      </div>
+
+      <div class="btn-group" style="width: 100%;">
+        <a href="new-script.html" class="btn btn-outline">Submit Another Script</a>
+        <a href="index.html" class="btn btn-outline">Go Home</a>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

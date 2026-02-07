@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#3b82f6">
+  <title>Lead CRM - Lead Saved!</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    .success-check {
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #f97316, #ea580c);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 24px;
+      animation: scale-in 0.5s ease;
+    }
+
+    .success-check span {
+      font-size: 50px;
+      color: white;
+    }
+
+    @keyframes scale-in {
+      0% { transform: scale(0); }
+      50% { transform: scale(1.2); }
+      100% { transform: scale(1); }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <!-- Main Content -->
+    <main class="main-content" style="padding-bottom: 100px;">
+      <div class="success-screen slide-up">
+        <!-- Success Icon -->
+        <div class="success-check">
+          <span>&#10003;</span>
+        </div>
+
+        <!-- Title -->
+        <h1 class="success-title">LEAD SAVED!</h1>
+        <p class="success-subtitle">Follow up to close this deal</p>
+
+        <!-- Lead Details -->
+        <div class="success-details" id="leadDetails" style="margin-bottom: 24px;">
+          <!-- Will be populated by JS -->
+        </div>
+
+        <!-- WhatsApp Follow-up Card -->
+        <div class="whatsapp-card">
+          <div class="whatsapp-card-header">
+            <span style="font-size: 20px;">&#128172;</span>
+            <span>Send WhatsApp Follow-up</span>
+          </div>
+          <div class="whatsapp-card-message" id="whatsappMessage">
+            "Hi! Thank you for visiting us today. I have a special offer just for you. Let's connect and make this happen!"
+          </div>
+          <a href="#" class="btn btn-whatsapp" id="sendWhatsappBtn" onclick="sendWhatsApp()">
+            <span>&#128172;</span>
+            <span>SEND NOW</span>
+          </a>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="btn-group" style="width: 100%; max-width: 320px;">
+          <a href="new-lead.html" class="btn btn-primary">
+            <span>+</span>
+            <span>ADD ANOTHER LEAD</span>
+          </a>
+          <a href="index.html" class="btn btn-outline">
+            <span>&#127968;</span>
+            <span>GO HOME</span>
+          </a>
+        </div>
+      </div>
+    </main>
+
+    <!-- Bottom Navigation -->
+    <nav class="bottom-nav">
+      <a href="index.html" class="nav-item">
+        <span class="nav-icon">&#127968;</span>
+        <span class="nav-label">Home</span>
+      </a>
+      <a href="new-lead.html" class="nav-item nav-center">
+        <span class="nav-icon">+</span>
+        <span class="nav-label">New Lead</span>
+      </a>
+      <a href="earnings.html" class="nav-item">
+        <span class="nav-icon">&#128176;</span>
+        <span class="nav-label">Earnings</span>
+      </a>
+    </nav>
+  </div>
+
+  <script>
+    let leadData = {};
+
+    // Timeline labels
+    const timelineMap = {
+      'today': 'Today',
+      '3days': 'in 3 days',
+      '1week': 'in 1 week',
+      'later': 'later'
+    };
+
+    // Reason labels
+    const reasonMap = {
+      'family': 'Family decision',
+      'price': 'Price concern',
+      'options': 'Checking options',
+      'looking': 'Just looking'
+    };
+
+    // Category labels
+    const categoryMap = {
+      'bike': 'Bike',
+      'scooter': 'Scooter',
+      'car': 'Car',
+      'ev': 'Electric Vehicle',
+      'accessories': 'Accessories',
+      'service': 'Service'
+    };
+
+    // Load lead data
+    function loadLeadData() {
+      leadData = JSON.parse(sessionStorage.getItem('leadData') || '{}');
+      const leadDetails = document.getElementById('leadDetails');
+      const whatsappMessage = document.getElementById('whatsappMessage');
+
+      if (leadData.name && leadData.price) {
+        const price = parseInt(leadData.price, 10).toLocaleString('en-IN');
+        const category = categoryMap[leadData.category] || leadData.category;
+        const timeline = timelineMap[leadData.timeline] || leadData.timeline;
+        const reason = reasonMap[leadData.reason] || '';
+
+        leadDetails.innerHTML = `
+          <strong>${leadData.name}</strong> &bull; &#8377;${price}<br>
+          <span style="color: var(--gray-500);">
+            ${category} &bull; Will buy ${timeline}
+            ${reason ? `<br>${reason}` : ''}
+          </span>
+        `;
+
+        // Update WhatsApp message
+        whatsappMessage.textContent = `"Hi ${leadData.name.split(' ')[0]}! Thank you for visiting us today. I have a special offer on the ${category} you liked. Let's connect and make this happen!"`;
+      } else {
+        leadDetails.innerHTML = `
+          <strong>Priya Singh</strong> &bull; &#8377;65,000<br>
+          <span style="color: var(--gray-500);">Scooter &bull; Will buy in 3 days<br>Price concern</span>
+        `;
+      }
+    }
+
+    // Send WhatsApp
+    function sendWhatsApp() {
+      const phone = leadData.phone || '9876543210';
+      const name = leadData.name ? leadData.name.split(' ')[0] : 'Customer';
+      const category = categoryMap[leadData.category] || 'vehicle';
+
+      const message = encodeURIComponent(
+        `Hi ${name}! Thank you for visiting us today. I have a special offer on the ${category} you liked. Let's connect and make this happen!`
+      );
+
+      window.open(`https://wa.me/91${phone}?text=${message}`, '_blank');
+    }
+
+    // Initialize
+    window.addEventListener('load', () => {
+      loadLeadData();
+      // Clear session data after a delay
+      setTimeout(() => {
+        sessionStorage.removeItem('leadData');
+      }, 1000);
+    });
+  </script>
+</body>
+</html>

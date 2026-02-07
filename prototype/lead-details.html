@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#3b82f6">
+  <title>Lead CRM - Lead Details</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app">
+    <!-- Header -->
+    <header class="header">
+      <a href="new-lead.html" class="header-back">
+        <span>&larr;</span>
+        <span>Back</span>
+      </a>
+      <span class="header-step">Step 2 of 2</span>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Title Section -->
+      <div class="text-center fade-in" style="margin-bottom: 24px;">
+        <div style="font-size: 48px; margin-bottom: 8px;">&#128203;</div>
+        <h1 style="font-size: 24px; font-weight: 700; color: var(--gray-800);">Lead Details</h1>
+        <p style="color: var(--gray-500); font-size: 14px;">Save this lead for follow-up</p>
+      </div>
+
+      <!-- Form -->
+      <form id="leadForm" class="fade-in" style="animation-delay: 0.1s;">
+        <!-- Category Selection -->
+        <div class="form-group">
+          <div class="section-divider" style="margin-top: 0;">What were they looking at?</div>
+          <div class="category-grid" id="categoryGrid">
+            <div class="category-option" data-category="bike" onclick="selectCategory('bike')">
+              <span class="icon">&#127949;</span>
+              <span class="label">Bike</span>
+            </div>
+            <div class="category-option" data-category="scooter" onclick="selectCategory('scooter')">
+              <span class="icon">&#128757;</span>
+              <span class="label">Scooter</span>
+            </div>
+            <div class="category-option" data-category="car" onclick="selectCategory('car')">
+              <span class="icon">&#128663;</span>
+              <span class="label">Car</span>
+            </div>
+            <div class="category-option" data-category="ev" onclick="selectCategory('ev')">
+              <span class="icon">&#9889;</span>
+              <span class="label">EV</span>
+            </div>
+            <div class="category-option" data-category="accessories" onclick="selectCategory('accessories')">
+              <span class="icon">&#128295;</span>
+              <span class="label">Parts</span>
+            </div>
+            <div class="category-option" data-category="service" onclick="selectCategory('service')">
+              <span class="icon">&#128736;</span>
+              <span class="label">Service</span>
+            </div>
+          </div>
+          <input type="hidden" id="category" name="category" value="">
+        </div>
+
+        <!-- Price Quoted -->
+        <div class="form-group">
+          <div class="section-divider">Price you quoted</div>
+          <div class="form-input-with-prefix">
+            <span class="form-input-prefix">&#8377;</span>
+            <input
+              type="text"
+              class="form-input"
+              placeholder="65,000"
+              id="priceQuoted"
+              inputmode="numeric"
+              required
+              autocomplete="off"
+            >
+          </div>
+        </div>
+
+        <!-- Timeline Selection -->
+        <div class="form-group">
+          <div class="section-divider">When will they buy?</div>
+          <div class="timeline-grid" id="timelineGrid">
+            <div class="timeline-option" data-timeline="today" onclick="selectTimeline('today')">
+              <span class="icon">&#128293;</span>
+              <span class="label">Today</span>
+            </div>
+            <div class="timeline-option" data-timeline="3days" onclick="selectTimeline('3days')">
+              <span class="icon">&#9200;</span>
+              <span class="label">3 Days</span>
+            </div>
+            <div class="timeline-option" data-timeline="1week" onclick="selectTimeline('1week')">
+              <span class="icon">&#128197;</span>
+              <span class="label">1 Week</span>
+            </div>
+            <div class="timeline-option" data-timeline="later" onclick="selectTimeline('later')">
+              <span class="icon">&#10052;&#65039;</span>
+              <span class="label">Later</span>
+            </div>
+          </div>
+          <input type="hidden" id="timeline" name="timeline" value="">
+        </div>
+
+        <!-- Reason Selection (shown only if not "today") -->
+        <div class="form-group" id="reasonSection" style="display: none;">
+          <div class="section-divider">Why not today?</div>
+          <div class="reason-grid" id="reasonGrid">
+            <div class="reason-option" data-reason="family" onclick="selectReason('family')">
+              <span class="icon">&#128106;</span>
+              <span class="label">Family decision</span>
+            </div>
+            <div class="reason-option" data-reason="price" onclick="selectReason('price')">
+              <span class="icon">&#128176;</span>
+              <span class="label">Price too high</span>
+            </div>
+            <div class="reason-option" data-reason="options" onclick="selectReason('options')">
+              <span class="icon">&#128269;</span>
+              <span class="label">Checking options</span>
+            </div>
+            <div class="reason-option" data-reason="looking" onclick="selectReason('looking')">
+              <span class="icon">&#128064;</span>
+              <span class="label">Just looking</span>
+            </div>
+          </div>
+          <input type="hidden" id="reason" name="reason" value="">
+        </div>
+
+        <!-- Rating -->
+        <div class="form-group">
+          <div class="section-divider">How likely to buy?</div>
+          <div class="rating-container" id="ratingContainer">
+            <div class="rating-option" data-rating="5" onclick="selectRating(5)">&#128293;</div>
+            <div class="rating-option" data-rating="4" onclick="selectRating(4)">&#128293;</div>
+            <div class="rating-option" data-rating="3" onclick="selectRating(3)">&#128528;</div>
+            <div class="rating-option" data-rating="2" onclick="selectRating(2)">&#10052;&#65039;</div>
+            <div class="rating-option" data-rating="1" onclick="selectRating(1)">&#10052;&#65039;</div>
+          </div>
+          <div class="rating-labels">
+            <span>Very likely</span>
+            <span>Maybe</span>
+            <span>Not likely</span>
+          </div>
+          <input type="hidden" id="rating" name="rating" value="">
+        </div>
+
+        <!-- Submit Button -->
+        <div style="margin-top: 32px; padding-bottom: 20px;">
+          <button type="submit" class="btn btn-primary" id="submitBtn" disabled>
+            <span>&#128203;</span>
+            <span>SAVE LEAD</span>
+          </button>
+        </div>
+      </form>
+    </main>
+
+    <!-- Bottom Navigation -->
+    <nav class="bottom-nav">
+      <a href="index.html" class="nav-item">
+        <span class="nav-icon">&#127968;</span>
+        <span class="nav-label">Home</span>
+      </a>
+      <a href="new-lead.html" class="nav-item nav-center active">
+        <span class="nav-icon">+</span>
+        <span class="nav-label">New Lead</span>
+      </a>
+      <a href="earnings.html" class="nav-item">
+        <span class="nav-icon">&#128176;</span>
+        <span class="nav-label">Earnings</span>
+      </a>
+    </nav>
+  </div>
+
+  <script>
+    // Form elements
+    const categoryInput = document.getElementById('category');
+    const priceInput = document.getElementById('priceQuoted');
+    const timelineInput = document.getElementById('timeline');
+    const reasonInput = document.getElementById('reason');
+    const ratingInput = document.getElementById('rating');
+    const submitBtn = document.getElementById('submitBtn');
+    const reasonSection = document.getElementById('reasonSection');
+    const form = document.getElementById('leadForm');
+
+    // Validate form
+    function validateForm() {
+      const categoryValid = categoryInput.value !== '';
+      const priceValid = priceInput.value.replace(/[^\d]/g, '').length > 0;
+      const timelineValid = timelineInput.value !== '';
+      const ratingValid = ratingInput.value !== '';
+
+      // Reason is only required if timeline is not "today"
+      let reasonValid = true;
+      if (timelineInput.value && timelineInput.value !== 'today') {
+        reasonValid = reasonInput.value !== '';
+      }
+
+      submitBtn.disabled = !(categoryValid && priceValid && timelineValid && reasonValid && ratingValid);
+    }
+
+    // Category selection
+    function selectCategory(category) {
+      document.querySelectorAll('.category-option').forEach(el => {
+        el.classList.remove('selected');
+      });
+      document.querySelector(`[data-category="${category}"]`).classList.add('selected');
+      categoryInput.value = category;
+      validateForm();
+    }
+
+    // Timeline selection
+    function selectTimeline(timeline) {
+      document.querySelectorAll('.timeline-option').forEach(el => {
+        el.classList.remove('selected');
+      });
+      document.querySelector(`[data-timeline="${timeline}"]`).classList.add('selected');
+      timelineInput.value = timeline;
+
+      // Show/hide reason section
+      if (timeline === 'today') {
+        reasonSection.style.display = 'none';
+        reasonInput.value = '';
+        // Clear reason selection
+        document.querySelectorAll('.reason-option').forEach(el => {
+          el.classList.remove('selected');
+        });
+      } else {
+        reasonSection.style.display = 'block';
+        reasonSection.classList.add('fade-in');
+      }
+
+      validateForm();
+    }
+
+    // Reason selection
+    function selectReason(reason) {
+      document.querySelectorAll('.reason-option').forEach(el => {
+        el.classList.remove('selected');
+      });
+      document.querySelector(`[data-reason="${reason}"]`).classList.add('selected');
+      reasonInput.value = reason;
+      validateForm();
+    }
+
+    // Rating selection
+    function selectRating(rating) {
+      document.querySelectorAll('.rating-option').forEach(el => {
+        el.classList.remove('selected');
+      });
+      document.querySelector(`[data-rating="${rating}"]`).classList.add('selected');
+      ratingInput.value = rating;
+      validateForm();
+    }
+
+    // Price formatting
+    priceInput.addEventListener('input', (e) => {
+      let value = e.target.value.replace(/[^\d]/g, '');
+      if (value.length > 0) {
+        const num = parseInt(value, 10);
+        value = num.toLocaleString('en-IN');
+      }
+      e.target.value = value;
+      validateForm();
+    });
+
+    // Form submission
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+
+      // Get previous data
+      const leadData = JSON.parse(sessionStorage.getItem('leadData') || '{}');
+
+      // Add lead details
+      leadData.category = categoryInput.value;
+      leadData.price = priceInput.value.replace(/[^\d]/g, '');
+      leadData.timeline = timelineInput.value;
+      leadData.reason = reasonInput.value;
+      leadData.rating = ratingInput.value;
+
+      // Save updated data
+      sessionStorage.setItem('leadData', JSON.stringify(leadData));
+
+      // Navigate to success page
+      window.location.href = 'success-lead.html';
+    });
+
+    // Load previous data if exists
+    window.addEventListener('load', () => {
+      const leadData = JSON.parse(sessionStorage.getItem('leadData') || '{}');
+      if (!leadData.status || leadData.status !== 'lost') {
+        // Redirect back if no data or wrong status
+        window.location.href = 'new-lead.html';
+      }
+    });
+  </script>
+</body>
+</html>

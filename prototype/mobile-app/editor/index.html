@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#22c55e">
+  <title>Editor Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../shared/styles.css">
+  <style>
+    :root {
+      --editor-color: #22c55e;
+    }
+    .summary-card.editor {
+      background: linear-gradient(135deg, #22c55e, #16a34a);
+    }
+    .profile-dropdown {
+      position: absolute;
+      top: 60px;
+      right: var(--space-md);
+      background: var(--white);
+      border-radius: var(--radius-md);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+      width: 240px;
+      z-index: 1000;
+      display: none;
+      overflow: hidden;
+    }
+    .profile-dropdown.show { display: block; }
+    .profile-dropdown-header {
+      padding: var(--space-lg);
+      background: linear-gradient(135deg, #22c55e, #16a34a);
+      color: white;
+    }
+    .profile-dropdown-avatar {
+      width: 48px;
+      height: 48px;
+      border-radius: var(--radius-full);
+      background: rgba(255,255,255,0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      font-weight: 600;
+      margin-bottom: var(--space-sm);
+    }
+    .profile-dropdown-name { font-size: 16px; font-weight: 600; }
+    .profile-dropdown-role { font-size: 12px; opacity: 0.9; }
+    .profile-dropdown-email { font-size: 11px; opacity: 0.8; margin-top: 2px; }
+    .profile-dropdown-menu { padding: var(--space-sm) 0; }
+    .profile-dropdown-item {
+      display: flex;
+      align-items: center;
+      gap: var(--space-sm);
+      padding: var(--space-md) var(--space-lg);
+      font-size: 14px;
+      color: var(--gray-700);
+      text-decoration: none;
+      transition: background 0.2s;
+    }
+    .profile-dropdown-item:hover { background: var(--gray-50); }
+    .profile-dropdown-item.logout {
+      color: var(--danger);
+      border-top: 1px solid var(--gray-100);
+    }
+    .profile-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      z-index: 999;
+      display: none;
+    }
+    .profile-overlay.show { display: block; }
+    .user-avatar { cursor: pointer; }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <!-- Header -->
+    <header class="header">
+      <div class="header-content">
+        <div class="header-left">
+          <div>
+            <div class="header-title">Hi, Vikram</div>
+            <div class="header-subtitle">3 videos in your queue</div>
+          </div>
+        </div>
+        <div class="user-avatar" style="background: linear-gradient(135deg, #22c55e, #16a34a);" onclick="toggleProfileDropdown()">VR</div>
+      </div>
+
+      <!-- Profile Dropdown -->
+      <div class="profile-overlay" id="profile-overlay" onclick="toggleProfileDropdown()"></div>
+      <div class="profile-dropdown" id="profile-dropdown">
+        <div class="profile-dropdown-header">
+          <div class="profile-dropdown-avatar">VR</div>
+          <div class="profile-dropdown-name">Vikram Rao</div>
+          <div class="profile-dropdown-role">Video Editor</div>
+          <div class="profile-dropdown-email">vikram.rao@example.com</div>
+        </div>
+        <div class="profile-dropdown-menu">
+          <a href="#" class="profile-dropdown-item">
+            <span>👤</span> My Profile
+          </a>
+          <a href="#" class="profile-dropdown-item">
+            <span>📊</span> My Stats
+          </a>
+          <a href="#" class="profile-dropdown-item">
+            <span>⚙️</span> Settings
+          </a>
+          <a href="../index.html" class="profile-dropdown-item logout">
+            <span>🚪</span> Logout
+          </a>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Summary Card -->
+      <div class="summary-card editor animate-fade">
+        <div class="summary-label">Editing Queue</div>
+        <div class="summary-value">3</div>
+        <div class="summary-stats">
+          <div class="summary-stat">
+            <div class="summary-stat-value">2</div>
+            <div class="summary-stat-label">In Progress</div>
+          </div>
+          <div class="summary-stat">
+            <div class="summary-stat-value">1</div>
+            <div class="summary-stat-label">New</div>
+          </div>
+          <div class="summary-stat">
+            <div class="summary-stat-value">48</div>
+            <div class="summary-stat-label">Completed</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="section animate-slide delay-1">
+        <div class="section-header">
+          <h2 class="section-title">Quick Actions</h2>
+        </div>
+        <div class="quick-actions">
+          <a href="available.html" class="quick-action">
+            <div class="quick-action-icon" style="background: rgba(245, 158, 11, 0.1);">📥</div>
+            <div class="quick-action-label">Pick Project</div>
+            <div class="quick-action-count">4 available</div>
+          </a>
+          <a href="my-projects.html" class="quick-action">
+            <div class="quick-action-icon" style="background: rgba(34, 197, 94, 0.1);">✂️</div>
+            <div class="quick-action-label">My Queue</div>
+            <div class="quick-action-count">3 projects</div>
+          </a>
+          <a href="completed.html" class="quick-action">
+            <div class="quick-action-icon" style="background: rgba(6, 182, 212, 0.1);">✅</div>
+            <div class="quick-action-label">Completed</div>
+            <div class="quick-action-count">48 edits</div>
+          </a>
+        </div>
+      </div>
+
+      <!-- New Assignment -->
+      <div class="section animate-slide delay-2">
+        <div class="section-header">
+          <h2 class="section-title">New Assignment</h2>
+        </div>
+
+        <a href="project-detail.html?new=1" class="card" style="border-left: 3px solid var(--warning); text-decoration: none; display: block;">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Street Food Reaction</div>
+              <div class="card-subtitle">BCH-1038 • Assigned just now</div>
+            </div>
+            <span class="card-badge pending">New</span>
+          </div>
+          <div class="card-meta">
+            <span class="project-tag">🎬 YouTube Shorts</span>
+            <span class="project-tag">📁 8 files</span>
+            <span class="project-tag">⏱️ ~45 min</span>
+          </div>
+        </a>
+      </div>
+
+      <!-- In Progress -->
+      <div class="section animate-slide delay-3">
+        <div class="section-header">
+          <h2 class="section-title">In Progress</h2>
+          <a href="my-projects.html" class="section-link">View all</a>
+        </div>
+
+        <a href="project-detail.html" class="card" style="text-decoration: none; display: block;">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Cooking Hack</div>
+              <div class="card-subtitle">BCH-1032 • Started 1d ago</div>
+            </div>
+            <span class="card-badge" style="background: rgba(99, 102, 241, 0.1); color: #6366f1;">Editing</span>
+          </div>
+          <div class="card-meta">
+            <span class="project-tag">🎬 YouTube Shorts</span>
+            <span class="project-tag">⏱️ 60% done</span>
+          </div>
+          <div style="margin-top: var(--space-sm);">
+            <div style="height: 4px; background: var(--gray-200); border-radius: var(--radius-full); overflow: hidden;">
+              <div style="width: 60%; height: 100%; background: #6366f1; border-radius: var(--radius-full);"></div>
+            </div>
+          </div>
+        </a>
+
+        <a href="project-detail.html" class="card" style="text-decoration: none; display: block;">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Dance Tutorial</div>
+              <div class="card-subtitle">BCH-1035 • Started 2d ago</div>
+            </div>
+            <span class="card-badge" style="background: rgba(99, 102, 241, 0.1); color: #6366f1;">Editing</span>
+          </div>
+          <div class="card-meta">
+            <span class="project-tag">📸 Instagram</span>
+            <span class="project-tag">⏱️ 40% done</span>
+          </div>
+          <div style="margin-top: var(--space-sm);">
+            <div style="height: 4px; background: var(--gray-200); border-radius: var(--radius-full); overflow: hidden;">
+              <div style="width: 40%; height: 100%; background: #6366f1; border-radius: var(--radius-full);"></div>
+            </div>
+          </div>
+        </a>
+      </div>
+    </main>
+
+    <!-- Bottom Navigation -->
+    <nav class="bottom-nav">
+      <a href="index.html" class="nav-item active">
+        <span class="nav-icon">🏠</span>
+        <span class="nav-label">Home</span>
+      </a>
+      <a href="available.html" class="nav-item">
+        <span class="nav-icon">📥</span>
+        <span class="nav-label">Available</span>
+      </a>
+      <a href="my-projects.html" class="nav-item">
+        <span class="nav-icon">✂️</span>
+        <span class="nav-label">Queue</span>
+      </a>
+      <a href="completed.html" class="nav-item">
+        <span class="nav-icon">✅</span>
+        <span class="nav-label">Done</span>
+      </a>
+    </nav>
+  </div>
+
+  <script>
+    function toggleProfileDropdown() {
+      const dropdown = document.getElementById('profile-dropdown');
+      const overlay = document.getElementById('profile-overlay');
+      dropdown.classList.toggle('show');
+      overlay.classList.toggle('show');
+    }
+  </script>
+</body>
+</html>

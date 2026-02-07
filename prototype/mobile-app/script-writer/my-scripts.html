@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#3b82f6">
+  <title>My Scripts</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../shared/styles.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Header -->
+    <header class="header">
+      <div class="header-content">
+        <div class="header-left">
+          <a href="index.html" class="back-btn">←</a>
+          <div>
+            <div class="header-title">My Scripts</div>
+            <div class="header-subtitle">12 total submissions</div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Filter Tabs -->
+      <div class="filter-tabs animate-fade">
+        <button class="filter-tab active">All <span class="count">12</span></button>
+        <button class="filter-tab">Pending <span class="count">2</span></button>
+        <button class="filter-tab">Approved <span class="count">8</span></button>
+        <button class="filter-tab">Rejected <span class="count">2</span></button>
+      </div>
+
+      <!-- Pending Scripts -->
+      <div class="section animate-slide delay-1">
+        <div class="section-header">
+          <h2 class="section-title">⏳ Pending</h2>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Morning Routine Hack</div>
+              <div class="card-subtitle">Submitted 2h ago</div>
+            </div>
+            <span class="card-badge pending">Pending</span>
+          </div>
+          <div class="card-meta">
+            <span class="project-tag">📸 Instagram</span>
+            <span class="project-tag">🏠 Indoor</span>
+            <span class="project-tag">⭐ 8.5</span>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Coffee Shop Vlog</div>
+              <div class="card-subtitle">Submitted 1d ago</div>
+            </div>
+            <span class="card-badge pending">Pending</span>
+          </div>
+          <div class="card-meta">
+            <span class="project-tag">▶️ YouTube</span>
+            <span class="project-tag">🌳 Outdoor</span>
+            <span class="project-tag">⭐ 7.8</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Approved Scripts -->
+      <div class="section animate-slide delay-2">
+        <div class="section-header">
+          <h2 class="section-title">✅ Approved</h2>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Fitness Challenge</div>
+              <div class="card-subtitle">Approved 3d ago</div>
+            </div>
+            <span class="card-badge approved">Shooting</span>
+          </div>
+          <div class="card-meta">
+            <span class="project-tag">📸 Instagram</span>
+            <span class="project-tag">🎥 In Production</span>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Cooking Hack</div>
+              <div class="card-subtitle">Approved 1w ago</div>
+            </div>
+            <span class="card-badge approved">Editing</span>
+          </div>
+          <div class="card-meta">
+            <span class="project-tag">🎬 YouTube Shorts</span>
+            <span class="project-tag">✂️ Being Edited</span>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Dance Challenge</div>
+              <div class="card-subtitle">Approved 2w ago</div>
+            </div>
+            <span class="card-badge" style="background: rgba(6, 182, 212, 0.1); color: #0891b2;">Posted</span>
+          </div>
+          <div class="card-meta">
+            <span class="project-tag">📸 Instagram</span>
+            <span class="project-tag">📤 Live</span>
+            <span class="project-tag">👁 12.5K views</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Rejected Scripts -->
+      <div class="section animate-slide delay-3">
+        <div class="section-header">
+          <h2 class="section-title">❌ Rejected</h2>
+        </div>
+
+        <div class="card" style="border-left: 3px solid var(--danger);">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Street Food Review</div>
+              <div class="card-subtitle">Rejected 5d ago</div>
+            </div>
+            <span class="card-badge rejected">Rejected</span>
+          </div>
+          <div class="card-meta">
+            <span class="project-tag">🎬 YouTube Shorts</span>
+            <span class="project-tag">💬 Has feedback</span>
+          </div>
+          <div class="card-actions">
+            <button class="btn btn-outline btn-sm btn-block">View Feedback & Revise</button>
+          </div>
+        </div>
+
+        <div class="card" style="border-left: 3px solid var(--gray-400);">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Pet Video</div>
+              <div class="card-subtitle">Rejected 2w ago • Dissolved</div>
+            </div>
+            <span class="card-badge" style="background: var(--gray-100); color: var(--gray-500);">Dissolved</span>
+          </div>
+          <div class="card-meta">
+            <span class="project-tag">📸 Instagram</span>
+            <span class="project-tag">🚫 Cannot revise</span>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Bottom Navigation -->
+    <nav class="bottom-nav">
+      <a href="index.html" class="nav-item">
+        <span class="nav-icon">🏠</span>
+        <span class="nav-label">Home</span>
+      </a>
+      <div class="nav-fab">
+        <a href="new-script.html" class="nav-fab-btn">+</a>
+      </div>
+      <a href="my-scripts.html" class="nav-item active">
+        <span class="nav-icon">📋</span>
+        <span class="nav-label">Scripts</span>
+      </a>
+    </nav>
+  </div>
+
+  <script>
+    // Filter tabs
+    document.querySelectorAll('.filter-tab').forEach(tab => {
+      tab.addEventListener('click', function() {
+        document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+        this.classList.add('active');
+      });
+    });
+  </script>
+</body>
+</html>

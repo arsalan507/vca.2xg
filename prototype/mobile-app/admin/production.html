@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#8b5cf6">
+  <title>Production</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../shared/styles.css">
+  <style>
+    .stage-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 11px;
+      padding: 4px 10px;
+      border-radius: var(--radius-full);
+      font-weight: 600;
+    }
+    .stage-badge.shooting {
+      background: rgba(249, 115, 22, 0.1);
+      color: #ea580c;
+    }
+    .stage-badge.editing {
+      background: rgba(99, 102, 241, 0.1);
+      color: #4f46e5;
+    }
+    .stage-badge.ready {
+      background: rgba(34, 197, 94, 0.1);
+      color: #16a34a;
+    }
+    .stage-badge.posted {
+      background: rgba(6, 182, 212, 0.1);
+      color: #0891b2;
+    }
+    .progress-bar {
+      width: 100%;
+      height: 6px;
+      background: var(--gray-200);
+      border-radius: var(--radius-full);
+      overflow: hidden;
+      margin-top: var(--space-sm);
+    }
+    .progress-fill {
+      height: 100%;
+      border-radius: var(--radius-full);
+      transition: width 0.3s;
+    }
+    .progress-fill.shooting { background: #f97316; width: 25%; }
+    .progress-fill.editing { background: #6366f1; width: 50%; }
+    .progress-fill.ready { background: #22c55e; width: 75%; }
+    .progress-fill.posted { background: #06b6d4; width: 100%; }
+    .assignee {
+      display: flex;
+      align-items: center;
+      gap: var(--space-sm);
+      margin-top: var(--space-sm);
+      padding-top: var(--space-sm);
+      border-top: 1px solid var(--gray-100);
+    }
+    .assignee-avatar {
+      width: 24px;
+      height: 24px;
+      border-radius: var(--radius-full);
+      background: var(--gray-300);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      font-weight: 600;
+      color: white;
+    }
+    .assignee-name {
+      font-size: 12px;
+      color: var(--gray-600);
+    }
+    .pipeline-summary {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: var(--space-sm);
+      margin-bottom: var(--space-xl);
+    }
+    .pipeline-item {
+      text-align: center;
+      padding: var(--space-md);
+      background: var(--white);
+      border-radius: var(--radius-md);
+      border: 1px solid var(--gray-100);
+    }
+    .pipeline-count {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--gray-800);
+    }
+    .pipeline-label {
+      font-size: 10px;
+      color: var(--gray-500);
+      text-transform: uppercase;
+    }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <!-- Header -->
+    <header class="header">
+      <div class="header-content">
+        <div class="header-left">
+          <a href="index.html" class="back-btn">←</a>
+          <div>
+            <div class="header-title">Production</div>
+            <div class="header-subtitle">12 projects in pipeline</div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Pipeline Summary -->
+      <div class="pipeline-summary animate-fade">
+        <div class="pipeline-item">
+          <div class="pipeline-count" style="color: #f97316;">4</div>
+          <div class="pipeline-label">Shooting</div>
+        </div>
+        <div class="pipeline-item">
+          <div class="pipeline-count" style="color: #6366f1;">3</div>
+          <div class="pipeline-label">Editing</div>
+        </div>
+        <div class="pipeline-item">
+          <div class="pipeline-count" style="color: #22c55e;">5</div>
+          <div class="pipeline-label">Ready</div>
+        </div>
+        <div class="pipeline-item">
+          <div class="pipeline-count" style="color: #06b6d4;">89</div>
+          <div class="pipeline-label">Posted</div>
+        </div>
+      </div>
+
+      <!-- Filter Tabs -->
+      <div class="filter-tabs animate-fade">
+        <button class="filter-tab active">All <span class="count">12</span></button>
+        <button class="filter-tab">Shooting <span class="count">4</span></button>
+        <button class="filter-tab">Editing <span class="count">3</span></button>
+        <button class="filter-tab">Ready <span class="count">5</span></button>
+      </div>
+
+      <!-- Shooting Section -->
+      <div class="section animate-slide delay-1">
+        <div class="section-header">
+          <h2 class="section-title">🎥 Shooting</h2>
+        </div>
+
+        <a href="project-detail.html" class="card" style="text-decoration: none; display: block;">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Morning Routine Hack</div>
+              <div class="card-subtitle">BCH-1042 • Started 2d ago</div>
+            </div>
+            <span class="stage-badge shooting">Shooting</span>
+          </div>
+          <div class="card-meta">
+            <span class="project-tag">📸 Instagram</span>
+            <span class="project-tag">📁 2 files</span>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-fill shooting"></div>
+          </div>
+          <div class="assignee">
+            <div class="assignee-avatar" style="background: #f97316;">AK</div>
+            <span class="assignee-name">Arun Kumar (Videographer)</span>
+          </div>
+        </a>
+
+        <a href="project-detail.html" class="card" style="text-decoration: none; display: block;">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Street Food Reaction</div>
+              <div class="card-subtitle">BCH-1038 • Started 3d ago</div>
+            </div>
+            <span class="stage-badge shooting">Shooting</span>
+          </div>
+          <div class="card-meta">
+            <span class="project-tag">🎬 YouTube Shorts</span>
+            <span class="project-tag">📁 0 files</span>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-fill shooting"></div>
+          </div>
+          <div class="assignee">
+            <div class="assignee-avatar" style="background: #f97316;">DS</div>
+            <span class="assignee-name">Deepak Singh (Videographer)</span>
+          </div>
+        </a>
+      </div>
+
+      <!-- Editing Section -->
+      <div class="section animate-slide delay-2">
+        <div class="section-header">
+          <h2 class="section-title">✂️ Editing</h2>
+        </div>
+
+        <a href="project-detail.html" class="card" style="text-decoration: none; display: block;">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Cooking Hack</div>
+              <div class="card-subtitle">BCH-1032 • In editing 1d</div>
+            </div>
+            <span class="stage-badge editing">Editing</span>
+          </div>
+          <div class="card-meta">
+            <span class="project-tag">🎬 YouTube Shorts</span>
+            <span class="project-tag">⏱️ 60% done</span>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-fill editing"></div>
+          </div>
+          <div class="assignee">
+            <div class="assignee-avatar" style="background: #22c55e;">VR</div>
+            <span class="assignee-name">Vikram Rao (Editor)</span>
+          </div>
+        </a>
+
+        <a href="project-detail.html" class="card" style="text-decoration: none; display: block;">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Dance Tutorial</div>
+              <div class="card-subtitle">BCH-1035 • In editing 2d</div>
+            </div>
+            <span class="stage-badge editing">Editing</span>
+          </div>
+          <div class="card-meta">
+            <span class="project-tag">📸 Instagram</span>
+            <span class="project-tag">⏱️ 40% done</span>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-fill editing"></div>
+          </div>
+          <div class="assignee">
+            <div class="assignee-avatar" style="background: #22c55e;">SR</div>
+            <span class="assignee-name">Sneha Reddy (Editor)</span>
+          </div>
+        </a>
+      </div>
+
+      <!-- Ready to Post Section -->
+      <div class="section animate-slide delay-3">
+        <div class="section-header">
+          <h2 class="section-title">✅ Ready to Post</h2>
+        </div>
+
+        <a href="project-detail.html" class="card" style="text-decoration: none; display: block;">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Fitness Challenge</div>
+              <div class="card-subtitle">BCH-1028 • Ready 1d ago</div>
+            </div>
+            <span class="stage-badge ready">Ready</span>
+          </div>
+          <div class="card-meta">
+            <span class="project-tag">📸 Instagram</span>
+            <span class="project-tag">📅 Scheduled tomorrow</span>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-fill ready"></div>
+          </div>
+          <div class="assignee">
+            <div class="assignee-avatar" style="background: #06b6d4;">NK</div>
+            <span class="assignee-name">Neha Kapoor (Posting)</span>
+          </div>
+        </a>
+
+        <a href="project-detail.html" class="card" style="text-decoration: none; display: block;">
+          <div class="card-header">
+            <div>
+              <div class="card-title">DIY Home Decor</div>
+              <div class="card-subtitle">BCH-1025 • Ready 2d ago</div>
+            </div>
+            <span class="stage-badge ready">Ready</span>
+          </div>
+          <div class="card-meta">
+            <span class="project-tag">📸 Instagram</span>
+            <span class="project-tag">⏳ Not scheduled</span>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-fill ready"></div>
+          </div>
+          <div class="assignee">
+            <div class="assignee-avatar" style="background: #06b6d4;">RG</div>
+            <span class="assignee-name">Raj Gupta (Posting)</span>
+          </div>
+        </a>
+      </div>
+    </main>
+
+    <!-- Bottom Navigation -->
+    <nav class="bottom-nav">
+      <a href="index.html" class="nav-item">
+        <span class="nav-icon">🏠</span>
+        <span class="nav-label">Home</span>
+      </a>
+      <a href="pending.html" class="nav-item">
+        <span class="nav-icon">📝</span>
+        <span class="nav-label">Pending</span>
+      </a>
+      <a href="team.html" class="nav-item">
+        <span class="nav-icon">👥</span>
+        <span class="nav-label">Team</span>
+      </a>
+    </nav>
+  </div>
+
+  <script>
+    // Filter tabs
+    document.querySelectorAll('.filter-tab').forEach(tab => {
+      tab.addEventListener('click', function() {
+        document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+        this.classList.add('active');
+      });
+    });
+  </script>
+</body>
+</html>

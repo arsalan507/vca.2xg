@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#f97316">
+  <title>Upload Footage</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../shared/styles.css">
+  <style>
+    .upload-progress {
+      height: 4px;
+      background: var(--gray-200);
+      border-radius: var(--radius-full);
+      overflow: hidden;
+      margin-top: var(--space-sm);
+    }
+    .upload-progress-bar {
+      height: 100%;
+      background: var(--primary);
+      transition: width 0.3s;
+    }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <!-- Header -->
+    <header class="header">
+      <div class="header-content">
+        <div class="header-left">
+          <a href="my-projects.html" class="back-btn">←</a>
+          <div>
+            <div class="header-title">Upload Footage</div>
+            <div class="header-subtitle">BCH-1042 • Morning Routine Hack</div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Project Info -->
+      <div class="card animate-fade" style="background: var(--gray-50); border: none;">
+        <div class="project-card-content">
+          <div class="project-thumbnail" style="background: rgba(249, 115, 22, 0.2);">🏠</div>
+          <div class="project-info">
+            <div class="project-title">Morning Routine Hack</div>
+            <div class="project-id">BCH-1042</div>
+            <div class="project-details">
+              <span class="project-tag">📱 Instagram</span>
+              <span class="project-tag">🏠 Indoor</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- File Type Selection -->
+      <div class="section animate-slide delay-1">
+        <div class="section-header">
+          <h2 class="section-title">File Type</h2>
+        </div>
+        <div class="selection-grid">
+          <div class="selection-item selected">
+            <span class="selection-icon">🎬</span>
+            <span class="selection-label">A-Roll</span>
+          </div>
+          <div class="selection-item">
+            <span class="selection-icon">🎞️</span>
+            <span class="selection-label">B-Roll</span>
+          </div>
+          <div class="selection-item">
+            <span class="selection-icon">⚡</span>
+            <span class="selection-label">Hook</span>
+          </div>
+          <div class="selection-item">
+            <span class="selection-icon">📹</span>
+            <span class="selection-label">Body</span>
+          </div>
+          <div class="selection-item">
+            <span class="selection-icon">📢</span>
+            <span class="selection-label">CTA</span>
+          </div>
+          <div class="selection-item">
+            <span class="selection-icon">🎵</span>
+            <span class="selection-label">Audio</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Upload Area -->
+      <div class="section animate-slide delay-2">
+        <div class="section-header">
+          <h2 class="section-title">Upload Files</h2>
+        </div>
+
+        <div class="file-upload" onclick="document.getElementById('file-input').click()">
+          <span class="file-upload-icon">📤</span>
+          <div class="file-upload-title">Tap to upload</div>
+          <div class="file-upload-hint">MP4, MOV up to 1GB</div>
+        </div>
+        <input type="file" id="file-input" hidden accept="video/*" multiple onchange="handleFiles(this.files)">
+      </div>
+
+      <!-- Uploaded Files -->
+      <div class="section animate-slide delay-3" id="uploaded-section" style="display: none;">
+        <div class="section-header">
+          <h2 class="section-title">Uploaded Files</h2>
+        </div>
+
+        <div class="file-list" id="file-list">
+          <!-- Files will be added here -->
+        </div>
+      </div>
+
+      <!-- Previously Uploaded -->
+      <div class="section animate-slide delay-3">
+        <div class="section-header">
+          <h2 class="section-title">Previously Uploaded</h2>
+        </div>
+
+        <div class="file-list">
+          <div class="file-item">
+            <div class="file-icon">🎬</div>
+            <div class="file-info">
+              <div class="file-name">a_roll_take1.mp4</div>
+              <div class="file-size">245 MB • A-Roll</div>
+            </div>
+          </div>
+          <div class="file-item">
+            <div class="file-icon">🎞️</div>
+            <div class="file-info">
+              <div class="file-name">broll_closeup.mp4</div>
+              <div class="file-size">89 MB • B-Roll</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="mt-xl">
+        <button id="complete-btn" class="btn btn-success btn-block mb-md" onclick="markComplete()" disabled style="opacity: 0.5; cursor: not-allowed;">
+          Mark Shoot Complete ✓
+        </button>
+        <div id="upload-warning" class="text-center" style="font-size: 12px; color: var(--warning); margin-bottom: var(--space-md);">
+          Please upload at least one file to mark as complete
+        </div>
+        <a href="my-projects.html" class="btn btn-outline btn-block">
+          Save & Continue Later
+        </a>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    // Track uploaded files count
+    let uploadedFilesCount = 0;
+
+    // Selection items
+    document.querySelectorAll('.selection-grid').forEach(grid => {
+      grid.querySelectorAll('.selection-item').forEach(item => {
+        item.addEventListener('click', function() {
+          grid.querySelectorAll('.selection-item').forEach(i => i.classList.remove('selected'));
+          this.classList.add('selected');
+        });
+      });
+    });
+
+    function enableCompleteButton() {
+      const btn = document.getElementById('complete-btn');
+      const warning = document.getElementById('upload-warning');
+      btn.disabled = false;
+      btn.style.opacity = '1';
+      btn.style.cursor = 'pointer';
+      warning.style.display = 'none';
+    }
+
+    function handleFiles(files) {
+      const section = document.getElementById('uploaded-section');
+      const list = document.getElementById('file-list');
+      section.style.display = 'block';
+
+      for (let file of files) {
+        const item = document.createElement('div');
+        item.className = 'file-item';
+        item.innerHTML = `
+          <div class="file-icon" style="background: var(--warning);">📤</div>
+          <div class="file-info">
+            <div class="file-name">${file.name}</div>
+            <div class="file-size">${(file.size / 1024 / 1024).toFixed(1)} MB • Uploading...</div>
+            <div class="upload-progress">
+              <div class="upload-progress-bar" style="width: 0%"></div>
+            </div>
+          </div>
+        `;
+        list.appendChild(item);
+
+        // Simulate upload
+        let progress = 0;
+        const bar = item.querySelector('.upload-progress-bar');
+        const sizeText = item.querySelector('.file-size');
+        const icon = item.querySelector('.file-icon');
+
+        const interval = setInterval(() => {
+          progress += Math.random() * 15;
+          if (progress >= 100) {
+            progress = 100;
+            clearInterval(interval);
+            sizeText.textContent = `${(file.size / 1024 / 1024).toFixed(1)} MB • Uploaded`;
+            icon.style.background = 'var(--success)';
+            icon.textContent = '✓';
+            item.querySelector('.upload-progress').style.display = 'none';
+
+            // Increment uploaded count and enable button
+            uploadedFilesCount++;
+            enableCompleteButton();
+          }
+          bar.style.width = progress + '%';
+        }, 200);
+      }
+    }
+
+    function markComplete() {
+      if (uploadedFilesCount === 0) {
+        alert('Please upload at least one file before marking complete.');
+        return;
+      }
+      if (confirm('Mark this shoot as complete? Footage will be sent to the editor.')) {
+        window.location.href = 'success.html';
+      }
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#8b5cf6">
+  <title>Analytics</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../shared/styles.css">
+  <style>
+    .stat-card {
+      background: var(--white);
+      border-radius: var(--radius-md);
+      padding: var(--space-lg);
+      border: 1px solid var(--gray-100);
+      margin-bottom: var(--space-md);
+    }
+    .stat-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: var(--space-sm);
+    }
+    .stat-title {
+      font-size: 13px;
+      color: var(--gray-500);
+    }
+    .stat-value {
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--gray-900);
+    }
+    .stat-change {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: var(--radius-full);
+    }
+    .stat-change.up {
+      background: rgba(34, 197, 94, 0.1);
+      color: #16a34a;
+    }
+    .stat-change.down {
+      background: rgba(239, 68, 68, 0.1);
+      color: #dc2626;
+    }
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: var(--space-md);
+      margin-bottom: var(--space-xl);
+    }
+    .stat-grid .stat-card {
+      margin-bottom: 0;
+    }
+    .stat-grid .stat-value {
+      font-size: 24px;
+    }
+    .chart-container {
+      background: var(--white);
+      border-radius: var(--radius-md);
+      padding: var(--space-lg);
+      border: 1px solid var(--gray-100);
+      margin-bottom: var(--space-xl);
+    }
+    .chart-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--gray-800);
+      margin-bottom: var(--space-md);
+    }
+    .bar-chart {
+      display: flex;
+      align-items: flex-end;
+      gap: var(--space-sm);
+      height: 120px;
+      padding-top: var(--space-md);
+    }
+    .bar-item {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--space-xs);
+    }
+    .bar {
+      width: 100%;
+      border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+      background: linear-gradient(180deg, var(--primary), var(--primary-dark));
+      transition: height 0.3s;
+    }
+    .bar-label {
+      font-size: 10px;
+      color: var(--gray-500);
+    }
+    .bar-value {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--gray-700);
+    }
+    .platform-stats {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-md);
+    }
+    .platform-item {
+      display: flex;
+      align-items: center;
+      gap: var(--space-md);
+    }
+    .platform-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+    }
+    .platform-info {
+      flex: 1;
+    }
+    .platform-name {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--gray-800);
+    }
+    .platform-count {
+      font-size: 12px;
+      color: var(--gray-500);
+    }
+    .platform-bar {
+      width: 60px;
+      height: 6px;
+      background: var(--gray-200);
+      border-radius: var(--radius-full);
+      overflow: hidden;
+    }
+    .platform-bar-fill {
+      height: 100%;
+      border-radius: var(--radius-full);
+    }
+    .leaderboard-item {
+      display: flex;
+      align-items: center;
+      gap: var(--space-md);
+      padding: var(--space-md) 0;
+      border-bottom: 1px solid var(--gray-100);
+    }
+    .leaderboard-item:last-child {
+      border-bottom: none;
+    }
+    .rank {
+      width: 24px;
+      height: 24px;
+      border-radius: var(--radius-full);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .rank.gold { background: #fef3c7; color: #d97706; }
+    .rank.silver { background: #f3f4f6; color: #6b7280; }
+    .rank.bronze { background: #fed7aa; color: #c2410c; }
+    .leader-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: var(--radius-full);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: 600;
+      color: white;
+    }
+    .leader-info { flex: 1; }
+    .leader-name { font-size: 14px; font-weight: 600; color: var(--gray-800); }
+    .leader-role { font-size: 12px; color: var(--gray-500); }
+    .leader-score {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--gray-800);
+    }
+    .time-filter {
+      display: flex;
+      gap: var(--space-sm);
+      margin-bottom: var(--space-lg);
+    }
+    .time-btn {
+      padding: var(--space-sm) var(--space-md);
+      border-radius: var(--radius-full);
+      font-size: 12px;
+      font-weight: 500;
+      border: none;
+      background: var(--gray-100);
+      color: var(--gray-600);
+      cursor: pointer;
+    }
+    .time-btn.active {
+      background: var(--admin-color);
+      color: white;
+    }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <!-- Header -->
+    <header class="header">
+      <div class="header-content">
+        <div class="header-left">
+          <a href="index.html" class="back-btn">←</a>
+          <div>
+            <div class="header-title">Analytics</div>
+            <div class="header-subtitle">Content performance overview</div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Time Filter -->
+      <div class="time-filter animate-fade">
+        <button class="time-btn">Today</button>
+        <button class="time-btn active">This Week</button>
+        <button class="time-btn">This Month</button>
+        <button class="time-btn">All Time</button>
+      </div>
+
+      <!-- Main Stats -->
+      <div class="stat-card animate-slide delay-1">
+        <div class="stat-header">
+          <div>
+            <div class="stat-title">Total Views</div>
+            <div class="stat-value">1.2M</div>
+          </div>
+          <span class="stat-change up">↑ 23%</span>
+        </div>
+      </div>
+
+      <div class="stat-grid animate-slide delay-1">
+        <div class="stat-card">
+          <div class="stat-title">Scripts Submitted</div>
+          <div class="stat-value">156</div>
+          <span class="stat-change up">↑ 12%</span>
+        </div>
+        <div class="stat-card">
+          <div class="stat-title">Approval Rate</div>
+          <div class="stat-value">78%</div>
+          <span class="stat-change up">↑ 5%</span>
+        </div>
+        <div class="stat-card">
+          <div class="stat-title">Videos Posted</div>
+          <div class="stat-value">89</div>
+          <span class="stat-change up">↑ 18%</span>
+        </div>
+        <div class="stat-card">
+          <div class="stat-title">Avg. Engagement</div>
+          <div class="stat-value">4.2%</div>
+          <span class="stat-change down">↓ 0.3%</span>
+        </div>
+      </div>
+
+      <!-- Weekly Posts Chart -->
+      <div class="chart-container animate-slide delay-2">
+        <div class="chart-title">Posts This Week</div>
+        <div class="bar-chart">
+          <div class="bar-item">
+            <div class="bar-value">8</div>
+            <div class="bar" style="height: 53%;"></div>
+            <div class="bar-label">Mon</div>
+          </div>
+          <div class="bar-item">
+            <div class="bar-value">12</div>
+            <div class="bar" style="height: 80%;"></div>
+            <div class="bar-label">Tue</div>
+          </div>
+          <div class="bar-item">
+            <div class="bar-value">6</div>
+            <div class="bar" style="height: 40%;"></div>
+            <div class="bar-label">Wed</div>
+          </div>
+          <div class="bar-item">
+            <div class="bar-value">15</div>
+            <div class="bar" style="height: 100%;"></div>
+            <div class="bar-label">Thu</div>
+          </div>
+          <div class="bar-item">
+            <div class="bar-value">10</div>
+            <div class="bar" style="height: 67%;"></div>
+            <div class="bar-label">Fri</div>
+          </div>
+          <div class="bar-item">
+            <div class="bar-value">4</div>
+            <div class="bar" style="height: 27%;"></div>
+            <div class="bar-label">Sat</div>
+          </div>
+          <div class="bar-item">
+            <div class="bar-value">3</div>
+            <div class="bar" style="height: 20%;"></div>
+            <div class="bar-label">Sun</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Platform Breakdown -->
+      <div class="chart-container animate-slide delay-3">
+        <div class="chart-title">By Platform</div>
+        <div class="platform-stats">
+          <div class="platform-item">
+            <div class="platform-icon" style="background: rgba(236, 72, 153, 0.1);">📸</div>
+            <div class="platform-info">
+              <div class="platform-name">Instagram Reels</div>
+              <div class="platform-count">52 videos • 680K views</div>
+            </div>
+            <div class="platform-bar">
+              <div class="platform-bar-fill" style="width: 58%; background: #ec4899;"></div>
+            </div>
+          </div>
+          <div class="platform-item">
+            <div class="platform-icon" style="background: rgba(239, 68, 68, 0.1);">🎬</div>
+            <div class="platform-info">
+              <div class="platform-name">YouTube Shorts</div>
+              <div class="platform-count">28 videos • 420K views</div>
+            </div>
+            <div class="platform-bar">
+              <div class="platform-bar-fill" style="width: 35%; background: #ef4444;"></div>
+            </div>
+          </div>
+          <div class="platform-item">
+            <div class="platform-icon" style="background: rgba(239, 68, 68, 0.1);">▶️</div>
+            <div class="platform-info">
+              <div class="platform-name">YouTube Long</div>
+              <div class="platform-count">9 videos • 100K views</div>
+            </div>
+            <div class="platform-bar">
+              <div class="platform-bar-fill" style="width: 10%; background: #dc2626;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Top Performers -->
+      <div class="chart-container animate-slide delay-4">
+        <div class="chart-title">Top Script Writers</div>
+        <div class="leaderboard-item">
+          <div class="rank gold">1</div>
+          <div class="leader-avatar" style="background: linear-gradient(135deg, #3b82f6, #2563eb);">RS</div>
+          <div class="leader-info">
+            <div class="leader-name">Rahul Sharma</div>
+            <div class="leader-role">45 approved • 92% rate</div>
+          </div>
+          <div class="leader-score">⭐ 9.2</div>
+        </div>
+        <div class="leaderboard-item">
+          <div class="rank silver">2</div>
+          <div class="leader-avatar" style="background: linear-gradient(135deg, #3b82f6, #2563eb);">PP</div>
+          <div class="leader-info">
+            <div class="leader-name">Priya Patel</div>
+            <div class="leader-role">28 approved • 78% rate</div>
+          </div>
+          <div class="leader-score">⭐ 8.5</div>
+        </div>
+        <div class="leaderboard-item">
+          <div class="rank bronze">3</div>
+          <div class="leader-avatar" style="background: linear-gradient(135deg, #3b82f6, #2563eb);">AK</div>
+          <div class="leader-info">
+            <div class="leader-name">Amit Kumar</div>
+            <div class="leader-role">19 approved • 65% rate</div>
+          </div>
+          <div class="leader-score">⭐ 7.8</div>
+        </div>
+      </div>
+
+      <!-- Top Videos -->
+      <div class="section animate-slide delay-4">
+        <div class="section-header">
+          <h2 class="section-title">🔥 Top Performing Videos</h2>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Dance Challenge</div>
+              <div class="card-subtitle">Posted 5d ago • by Rahul Sharma</div>
+            </div>
+          </div>
+          <div class="card-meta">
+            <span class="project-tag">📸 Instagram</span>
+            <span class="project-tag">👁 125K views</span>
+            <span class="project-tag">❤️ 8.2K likes</span>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Cooking Hack</div>
+              <div class="card-subtitle">Posted 1w ago • by Priya Patel</div>
+            </div>
+          </div>
+          <div class="card-meta">
+            <span class="project-tag">🎬 YouTube Shorts</span>
+            <span class="project-tag">👁 98K views</span>
+            <span class="project-tag">❤️ 5.1K likes</span>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Bottom Navigation -->
+    <nav class="bottom-nav">
+      <a href="index.html" class="nav-item">
+        <span class="nav-icon">🏠</span>
+        <span class="nav-label">Home</span>
+      </a>
+      <a href="pending.html" class="nav-item">
+        <span class="nav-icon">📝</span>
+        <span class="nav-label">Pending</span>
+      </a>
+      <a href="team.html" class="nav-item">
+        <span class="nav-icon">👥</span>
+        <span class="nav-label">Team</span>
+      </a>
+    </nav>
+  </div>
+
+  <script>
+    // Time filter
+    document.querySelectorAll('.time-btn').forEach(btn => {
+      btn.addEventListener('click', function() {
+        document.querySelectorAll('.time-btn').forEach(b => b.classList.remove('active'));
+        this.classList.add('active');
+      });
+    });
+  </script>
+</body>
+</html>

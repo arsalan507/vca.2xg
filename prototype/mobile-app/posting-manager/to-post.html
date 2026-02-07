@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#06b6d4">
+  <title>Ready to Post</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../shared/styles.css">
+  <style>
+    .video-preview {
+      width: 60px;
+      height: 80px;
+      border-radius: var(--radius-sm);
+      background: var(--gray-800);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+    /* Profile Filter */
+    .profile-filter {
+      margin-bottom: var(--space-md);
+    }
+    .profile-filter-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--gray-500);
+      margin-bottom: var(--space-sm);
+      display: flex;
+      align-items: center;
+      gap: var(--space-xs);
+    }
+    .profile-chips {
+      display: flex;
+      gap: var(--space-sm);
+      overflow-x: auto;
+      padding-bottom: var(--space-sm);
+      -webkit-overflow-scrolling: touch;
+    }
+    .profile-chips::-webkit-scrollbar { display: none; }
+    .profile-chip {
+      padding: var(--space-sm) var(--space-md);
+      border-radius: var(--radius-full);
+      font-size: 13px;
+      font-weight: 500;
+      border: 2px solid var(--gray-200);
+      background: var(--white);
+      color: var(--gray-600);
+      cursor: pointer;
+      white-space: nowrap;
+      flex-shrink: 0;
+      transition: all 0.2s;
+    }
+    .profile-chip:hover {
+      border-color: var(--posting-color);
+    }
+    .profile-chip.active {
+      background: var(--posting-color);
+      border-color: var(--posting-color);
+      color: white;
+    }
+    .profile-badge {
+      font-size: 11px;
+      color: var(--posting-color);
+      font-weight: 500;
+      margin-top: 2px;
+    }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <!-- Header -->
+    <header class="header">
+      <div class="header-content">
+        <div class="header-left">
+          <a href="index.html" class="back-btn">←</a>
+          <div>
+            <div class="header-title">Ready to Post</div>
+            <div class="header-subtitle">5 videos ready</div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Profile Filter -->
+      <div class="profile-filter animate-fade">
+        <div class="profile-filter-label">
+          <span>📁</span> Filter by Profile
+        </div>
+        <div class="profile-chips">
+          <button class="profile-chip active" onclick="filterProfile(this, 'all')">All Profiles</button>
+          <button class="profile-chip" onclick="filterProfile(this, 'bch')">BaatCheet</button>
+          <button class="profile-chip" onclick="filterProfile(this, 'fit')">Fitness Zone</button>
+          <button class="profile-chip" onclick="filterProfile(this, 'cok')">Cooking Tips</button>
+          <button class="profile-chip" onclick="filterProfile(this, 'com')">Comedy Central</button>
+        </div>
+      </div>
+
+      <!-- Filter Tabs -->
+      <div class="filter-tabs animate-fade">
+        <button class="filter-tab active">All <span class="count">5</span></button>
+        <button class="filter-tab">Instagram <span class="count">3</span></button>
+        <button class="filter-tab">YT Shorts <span class="count">1</span></button>
+        <button class="filter-tab">YT Long <span class="count">1</span></button>
+      </div>
+
+      <!-- Video Cards -->
+      <div class="card animate-slide delay-1" data-profile="com">
+        <div class="project-card-content">
+          <div class="video-preview">▶</div>
+          <div class="project-info">
+            <div class="project-title">Dance Challenge</div>
+            <div class="project-id">COM-1035 • Edited by Vikram</div>
+            <div class="profile-badge">Comedy Central</div>
+            <div class="project-details">
+              <span class="project-tag">📸 Instagram</span>
+              <span class="project-tag">0:32</span>
+            </div>
+          </div>
+        </div>
+        <div class="card-actions">
+          <button class="btn btn-outline btn-sm">Preview</button>
+          <a href="post-details.html" class="btn btn-primary btn-sm" style="flex: 2;">Post Now</a>
+        </div>
+      </div>
+
+      <div class="card animate-slide delay-2" data-profile="bch">
+        <div class="project-card-content">
+          <div class="video-preview">▶</div>
+          <div class="project-info">
+            <div class="project-title">DIY Home Decor</div>
+            <div class="project-id">BCH-1033 • Edited by Sneha</div>
+            <div class="profile-badge">BaatCheet</div>
+            <div class="project-details">
+              <span class="project-tag">📸 Instagram</span>
+              <span class="project-tag">0:45</span>
+            </div>
+          </div>
+        </div>
+        <div class="card-actions">
+          <button class="btn btn-outline btn-sm">Preview</button>
+          <a href="post-details.html" class="btn btn-primary btn-sm" style="flex: 2;">Post Now</a>
+        </div>
+      </div>
+
+      <div class="card animate-slide delay-3" data-profile="cok">
+        <div class="project-card-content">
+          <div class="video-preview">▶</div>
+          <div class="project-info">
+            <div class="project-title">Quick Recipe</div>
+            <div class="project-id">COK-1031 • Edited by Vikram</div>
+            <div class="profile-badge">Cooking Tips</div>
+            <div class="project-details">
+              <span class="project-tag">🎬 YouTube Shorts</span>
+              <span class="project-tag">0:28</span>
+            </div>
+          </div>
+        </div>
+        <div class="card-actions">
+          <button class="btn btn-outline btn-sm">Preview</button>
+          <a href="post-details.html" class="btn btn-primary btn-sm" style="flex: 2;">Post Now</a>
+        </div>
+      </div>
+
+      <div class="card animate-slide delay-4" data-profile="bch">
+        <div class="project-card-content">
+          <div class="video-preview">▶</div>
+          <div class="project-info">
+            <div class="project-title">Pet Tricks</div>
+            <div class="project-id">BCH-1029 • Edited by Sneha</div>
+            <div class="profile-badge">BaatCheet</div>
+            <div class="project-details">
+              <span class="project-tag">📸 Instagram</span>
+              <span class="project-tag">0:38</span>
+            </div>
+          </div>
+        </div>
+        <div class="card-actions">
+          <button class="btn btn-outline btn-sm">Preview</button>
+          <a href="post-details.html" class="btn btn-primary btn-sm" style="flex: 2;">Post Now</a>
+        </div>
+      </div>
+
+      <div class="card" data-profile="fit">
+        <div class="project-card-content">
+          <div class="video-preview">▶</div>
+          <div class="project-info">
+            <div class="project-title">Tech Review</div>
+            <div class="project-id">FIT-1027 • Edited by Vikram</div>
+            <div class="profile-badge">Fitness Zone</div>
+            <div class="project-details">
+              <span class="project-tag">▶️ YouTube Long</span>
+              <span class="project-tag">2:15</span>
+            </div>
+          </div>
+        </div>
+        <div class="card-actions">
+          <button class="btn btn-outline btn-sm">Preview</button>
+          <a href="post-details.html" class="btn btn-primary btn-sm" style="flex: 2;">Post Now</a>
+        </div>
+      </div>
+    </main>
+
+    <!-- Bottom Navigation -->
+    <nav class="bottom-nav">
+      <a href="index.html" class="nav-item">
+        <span class="nav-icon">🏠</span>
+        <span class="nav-label">Home</span>
+      </a>
+      <a href="to-post.html" class="nav-item active">
+        <span class="nav-icon">📤</span>
+        <span class="nav-label">To Post</span>
+      </a>
+      <a href="calendar.html" class="nav-item">
+        <span class="nav-icon">📅</span>
+        <span class="nav-label">Calendar</span>
+      </a>
+    </nav>
+  </div>
+
+  <script>
+    // Platform filter tabs
+    document.querySelectorAll('.filter-tab').forEach(tab => {
+      tab.addEventListener('click', function() {
+        document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+        this.classList.add('active');
+      });
+    });
+
+    // Profile filter
+    function filterProfile(chip, profile) {
+      // Update active chip
+      document.querySelectorAll('.profile-chip').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+
+      // Filter cards
+      document.querySelectorAll('.card[data-profile]').forEach(card => {
+        if (profile === 'all' || card.dataset.profile === profile) {
+          card.style.display = 'block';
+        } else {
+          card.style.display = 'none';
+        }
+      });
+
+      // Update header subtitle
+      const visible = document.querySelectorAll('.card[data-profile]:not([style*="display: none"])').length;
+      document.querySelector('.header-subtitle').textContent = visible + ' videos ready';
+    }
+  </script>
+</body>
+</html>

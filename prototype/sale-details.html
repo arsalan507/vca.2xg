@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#22c55e">
+  <title>Lead CRM - Sale Details</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app">
+    <!-- Header -->
+    <header class="header">
+      <a href="new-lead.html" class="header-back">
+        <span>&larr;</span>
+        <span>Back</span>
+      </a>
+      <span class="header-step">Step 2 of 2</span>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Title Section -->
+      <div class="text-center fade-in" style="margin-bottom: 32px;">
+        <div style="font-size: 48px; margin-bottom: 8px;">&#127881;</div>
+        <h1 style="font-size: 24px; font-weight: 700; color: var(--gray-800);">Sale Details</h1>
+        <p style="color: var(--gray-500); font-size: 14px;">Great job! Enter sale info</p>
+      </div>
+
+      <!-- Form -->
+      <form id="saleForm" class="fade-in" style="animation-delay: 0.1s;">
+        <!-- Category Selection -->
+        <div class="form-group">
+          <div class="section-divider" style="margin-top: 0;">What did they buy?</div>
+          <div class="category-grid" id="categoryGrid">
+            <div class="category-option" data-category="bike" onclick="selectCategory('bike')">
+              <span class="icon">&#127949;</span>
+              <span class="label">Bike</span>
+            </div>
+            <div class="category-option" data-category="scooter" onclick="selectCategory('scooter')">
+              <span class="icon">&#128757;</span>
+              <span class="label">Scooter</span>
+            </div>
+            <div class="category-option" data-category="car" onclick="selectCategory('car')">
+              <span class="icon">&#128663;</span>
+              <span class="label">Car</span>
+            </div>
+            <div class="category-option" data-category="ev" onclick="selectCategory('ev')">
+              <span class="icon">&#9889;</span>
+              <span class="label">EV</span>
+            </div>
+            <div class="category-option" data-category="accessories" onclick="selectCategory('accessories')">
+              <span class="icon">&#128295;</span>
+              <span class="label">Parts</span>
+            </div>
+            <div class="category-option" data-category="service" onclick="selectCategory('service')">
+              <span class="icon">&#128736;</span>
+              <span class="label">Service</span>
+            </div>
+          </div>
+          <input type="hidden" id="category" name="category" value="">
+        </div>
+
+        <!-- Sale Amount -->
+        <div class="form-group">
+          <div class="section-divider">Sale Amount</div>
+          <div class="form-input-with-prefix">
+            <span class="form-input-prefix">&#8377;</span>
+            <input
+              type="text"
+              class="form-input"
+              placeholder="75,000"
+              id="saleAmount"
+              inputmode="numeric"
+              required
+              autocomplete="off"
+            >
+          </div>
+          <div class="form-hint">Enter the total sale amount</div>
+        </div>
+
+        <!-- Invoice Number -->
+        <div class="form-group">
+          <div class="section-divider">Invoice Number</div>
+          <input
+            type="text"
+            class="form-input"
+            placeholder="e.g. INV-2024-001"
+            id="invoiceNumber"
+            required
+            autocomplete="off"
+            style="text-transform: uppercase;"
+          >
+          <div class="form-hint">Alphanumeric only (e.g., BH001, INV123)</div>
+        </div>
+
+        <!-- Submit Button -->
+        <div style="margin-top: 32px;">
+          <button type="submit" class="btn btn-success" id="submitBtn" disabled>
+            <span>&#9989;</span>
+            <span>SAVE SALE</span>
+          </button>
+        </div>
+      </form>
+    </main>
+
+    <!-- Bottom Navigation -->
+    <nav class="bottom-nav">
+      <a href="index.html" class="nav-item">
+        <span class="nav-icon">&#127968;</span>
+        <span class="nav-label">Home</span>
+      </a>
+      <a href="new-lead.html" class="nav-item nav-center active">
+        <span class="nav-icon">+</span>
+        <span class="nav-label">New Lead</span>
+      </a>
+      <a href="earnings.html" class="nav-item">
+        <span class="nav-icon">&#128176;</span>
+        <span class="nav-label">Earnings</span>
+      </a>
+    </nav>
+  </div>
+
+  <script>
+    // Form elements
+    const categoryInput = document.getElementById('category');
+    const amountInput = document.getElementById('saleAmount');
+    const invoiceInput = document.getElementById('invoiceNumber');
+    const submitBtn = document.getElementById('submitBtn');
+    const form = document.getElementById('saleForm');
+
+    // Validate form
+    function validateForm() {
+      const categoryValid = categoryInput.value !== '';
+      const amountValid = amountInput.value.replace(/[^\d]/g, '').length > 0;
+      const invoiceValid = invoiceInput.value.trim().length >= 3;
+
+      submitBtn.disabled = !(categoryValid && amountValid && invoiceValid);
+    }
+
+    // Category selection
+    function selectCategory(category) {
+      // Remove selected from all
+      document.querySelectorAll('.category-option').forEach(el => {
+        el.classList.remove('selected');
+      });
+
+      // Add selected to clicked
+      const selectedOption = document.querySelector(`[data-category="${category}"]`);
+      selectedOption.classList.add('selected');
+
+      // Update hidden input
+      categoryInput.value = category;
+
+      validateForm();
+    }
+
+    // Amount formatting
+    amountInput.addEventListener('input', (e) => {
+      // Remove non-digits
+      let value = e.target.value.replace(/[^\d]/g, '');
+
+      // Format with commas (Indian style)
+      if (value.length > 0) {
+        const num = parseInt(value, 10);
+        value = num.toLocaleString('en-IN');
+      }
+
+      e.target.value = value;
+      validateForm();
+    });
+
+    // Invoice uppercase
+    invoiceInput.addEventListener('input', (e) => {
+      e.target.value = e.target.value.toUpperCase();
+      validateForm();
+    });
+
+    // Form submission
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+
+      // Get previous data
+      const leadData = JSON.parse(sessionStorage.getItem('leadData') || '{}');
+
+      // Add sale details
+      leadData.category = categoryInput.value;
+      leadData.amount = amountInput.value.replace(/[^\d]/g, '');
+      leadData.invoice = invoiceInput.value.trim();
+
+      // Save updated data
+      sessionStorage.setItem('leadData', JSON.stringify(leadData));
+
+      // Navigate to success page
+      window.location.href = 'success-sale.html';
+    });
+
+    // Load previous data if exists
+    window.addEventListener('load', () => {
+      const leadData = JSON.parse(sessionStorage.getItem('leadData') || '{}');
+      if (!leadData.status || leadData.status !== 'win') {
+        // Redirect back if no data or wrong status
+        window.location.href = 'new-lead.html';
+      }
+    });
+  </script>
+</body>
+</html>

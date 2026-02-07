@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#6366f1">
+  <title>Viral Content - Select Role</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="shared/styles.css">
+  <style>
+    .role-selector {
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      padding: var(--space-xl);
+    }
+    .logo-section {
+      text-align: center;
+      padding: var(--space-3xl) 0;
+    }
+    .logo {
+      width: 80px;
+      height: 80px;
+      border-radius: var(--radius-xl);
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 40px;
+      margin: 0 auto var(--space-lg);
+    }
+    .app-name {
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--gray-900);
+    }
+    .app-tagline {
+      font-size: 14px;
+      color: var(--gray-500);
+      margin-top: var(--space-xs);
+    }
+    .role-cards {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-md);
+    }
+    .role-card {
+      display: flex;
+      align-items: center;
+      gap: var(--space-lg);
+      padding: var(--space-xl);
+      background: var(--white);
+      border-radius: var(--radius-lg);
+      border: 2px solid var(--gray-100);
+      text-decoration: none;
+      color: inherit;
+      transition: all 0.2s;
+    }
+    .role-card:active {
+      transform: scale(0.98);
+      border-color: var(--primary);
+    }
+    .role-icon {
+      width: 56px;
+      height: 56px;
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+      flex-shrink: 0;
+    }
+    .role-icon.admin { background: rgba(139, 92, 246, 0.1); }
+    .role-icon.writer { background: rgba(59, 130, 246, 0.1); }
+    .role-icon.videographer { background: rgba(249, 115, 22, 0.1); }
+    .role-icon.editor { background: rgba(34, 197, 94, 0.1); }
+    .role-icon.posting { background: rgba(6, 182, 212, 0.1); }
+    .role-info { flex: 1; }
+    .role-name {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--gray-900);
+    }
+    .role-desc {
+      font-size: 13px;
+      color: var(--gray-500);
+      margin-top: 2px;
+    }
+    .role-arrow {
+      font-size: 20px;
+      color: var(--gray-400);
+    }
+    .demo-note {
+      text-align: center;
+      padding: var(--space-lg);
+      font-size: 12px;
+      color: var(--gray-400);
+    }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <div class="role-selector">
+      <!-- Logo Section -->
+      <div class="logo-section animate-fade">
+        <div class="logo">🎬</div>
+        <h1 class="app-name">Viral Content</h1>
+        <p class="app-tagline">Create. Track. Post. Go Viral.</p>
+      </div>
+
+      <!-- Role Selection -->
+      <div class="role-cards">
+        <a href="admin/index.html" class="role-card animate-slide delay-1">
+          <div class="role-icon admin">👑</div>
+          <div class="role-info">
+            <div class="role-name">Admin</div>
+            <div class="role-desc">Review scripts & manage team</div>
+          </div>
+          <span class="role-arrow">→</span>
+        </a>
+
+        <a href="script-writer/index.html" class="role-card animate-slide delay-2">
+          <div class="role-icon writer">✍️</div>
+          <div class="role-info">
+            <div class="role-name">Script Writer</div>
+            <div class="role-desc">Submit & track your scripts</div>
+          </div>
+          <span class="role-arrow">→</span>
+        </a>
+
+        <a href="videographer/index.html" class="role-card animate-slide delay-3">
+          <div class="role-icon videographer">🎥</div>
+          <div class="role-info">
+            <div class="role-name">Videographer</div>
+            <div class="role-desc">Pick projects & upload footage</div>
+          </div>
+          <span class="role-arrow">→</span>
+        </a>
+
+        <a href="editor/index.html" class="role-card animate-slide delay-4">
+          <div class="role-icon editor">✂️</div>
+          <div class="role-info">
+            <div class="role-name">Editor</div>
+            <div class="role-desc">Edit videos & submit finals</div>
+          </div>
+          <span class="role-arrow">→</span>
+        </a>
+
+        <a href="posting-manager/index.html" class="role-card animate-slide delay-4">
+          <div class="role-icon posting">📱</div>
+          <div class="role-info">
+            <div class="role-name">Posting Manager</div>
+            <div class="role-desc">Schedule & post content</div>
+          </div>
+          <span class="role-arrow">→</span>
+        </a>
+      </div>
+
+      <div class="demo-note">
+        Prototype Demo • Tap a role to explore
+      </div>
+    </div>
+  </div>
+</body>
+</html>

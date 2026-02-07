@@ -520,10 +520,8 @@ class PostgRESTQueryBuilder {
       headers['apikey'] = SUPABASE_ANON_KEY;
     }
 
-    // Use authenticated user's token if available, otherwise anon key
-    const token = _accessToken || SUPABASE_ANON_KEY;
-
-    headers['Authorization'] = `Bearer ${token}`;
+    // PostgREST uses the Supabase service key (Authentik tokens are not Supabase JWTs)
+    headers['Authorization'] = `Bearer ${SUPABASE_ANON_KEY}`;
 
     if (this._isSingle) {
       headers['Accept'] = 'application/vnd.pgrst.object+json';
@@ -647,10 +645,8 @@ async function _rpc(fnName: string, params?: Record<string, unknown>): Promise<{
     headers['apikey'] = SUPABASE_ANON_KEY;
   }
 
-  // Use authenticated user's token if available
-  const token = _accessToken || SUPABASE_ANON_KEY;
-
-  headers['Authorization'] = `Bearer ${token}`;
+  // PostgREST uses the Supabase service key (Authentik tokens are not Supabase JWTs)
+  headers['Authorization'] = `Bearer ${SUPABASE_ANON_KEY}`;
 
   try {
     const res = await fetch(`${POSTGREST_URL}/rpc/${fnName}`, {

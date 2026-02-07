@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#f97316">
+  <title>My Shoots</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../shared/styles.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Header -->
+    <header class="header">
+      <div class="header-content">
+        <div class="header-left">
+          <a href="index.html" class="back-btn">←</a>
+          <div>
+            <div class="header-title">My Shoots</div>
+            <div class="header-subtitle">3 active, 28 completed</div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Filter Tabs -->
+      <div class="filter-tabs animate-fade">
+        <button class="filter-tab active">Active <span class="count">3</span></button>
+        <button class="filter-tab">Completed <span class="count">28</span></button>
+      </div>
+
+      <!-- Active Shoots -->
+      <div class="section animate-slide delay-1">
+        <div class="card">
+          <div class="project-card-content">
+            <div class="project-thumbnail" style="background: rgba(249, 115, 22, 0.1);">🏠</div>
+            <div class="project-info">
+              <div class="project-title">Morning Routine Hack</div>
+              <div class="project-id">BCH-1042</div>
+              <div class="project-details">
+                <span class="project-tag">📸 Instagram</span>
+                <span class="project-tag">🏠 Indoor</span>
+                <span class="project-tag">📁 2 files</span>
+              </div>
+            </div>
+            <span class="card-badge shooting">Shooting</span>
+          </div>
+          <div class="card-actions">
+            <a href="upload.html" class="btn btn-primary btn-sm" style="flex: 2;">Upload Footage</a>
+            <button class="btn btn-success btn-sm" onclick="markComplete()">✓ Done</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="project-card-content">
+            <div class="project-thumbnail" style="background: rgba(34, 197, 94, 0.1);">🌳</div>
+            <div class="project-info">
+              <div class="project-title">Street Food Reaction</div>
+              <div class="project-id">BCH-1038</div>
+              <div class="project-details">
+                <span class="project-tag">🎬 YouTube Shorts</span>
+                <span class="project-tag">🌳 Outdoor</span>
+                <span class="project-tag">📁 0 files</span>
+              </div>
+            </div>
+            <span class="card-badge shooting">Shooting</span>
+          </div>
+          <div class="card-actions">
+            <a href="upload.html" class="btn btn-primary btn-sm btn-block">Upload Footage</a>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="project-card-content">
+            <div class="project-thumbnail" style="background: rgba(99, 102, 241, 0.1);">💃</div>
+            <div class="project-info">
+              <div class="project-title">Dance Tutorial</div>
+              <div class="project-id">BCH-1035</div>
+              <div class="project-details">
+                <span class="project-tag">📸 Instagram</span>
+                <span class="project-tag">🏠 Studio</span>
+                <span class="project-tag">📁 5 files</span>
+              </div>
+            </div>
+            <span class="card-badge shooting">Shooting</span>
+          </div>
+          <div class="card-actions">
+            <a href="upload.html" class="btn btn-outline btn-sm">Add More</a>
+            <button class="btn btn-success btn-sm" style="flex: 2;" onclick="markComplete()">Mark Complete ✓</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recently Completed -->
+      <div class="section animate-slide delay-2">
+        <div class="section-header">
+          <h2 class="section-title">✅ Recently Completed</h2>
+        </div>
+
+        <div class="card" style="opacity: 0.8;">
+          <div class="project-card-content">
+            <div class="project-thumbnail" style="background: rgba(34, 197, 94, 0.1);">🍳</div>
+            <div class="project-info">
+              <div class="project-title">Cooking Hack</div>
+              <div class="project-id">BCH-1032 • Completed 2d ago</div>
+              <div class="project-details">
+                <span class="project-tag">🎬 YouTube Shorts</span>
+                <span class="project-tag">✂️ Editing</span>
+              </div>
+            </div>
+            <span class="card-badge" style="background: rgba(34, 197, 94, 0.1); color: var(--success);">Done</span>
+          </div>
+        </div>
+
+        <div class="card" style="opacity: 0.8;">
+          <div class="project-card-content">
+            <div class="project-thumbnail" style="background: rgba(6, 182, 212, 0.1);">🎤</div>
+            <div class="project-info">
+              <div class="project-title">Karaoke Challenge</div>
+              <div class="project-id">BCH-1028 • Completed 5d ago</div>
+              <div class="project-details">
+                <span class="project-tag">📸 Instagram</span>
+                <span class="project-tag">📤 Posted</span>
+              </div>
+            </div>
+            <span class="card-badge" style="background: rgba(34, 197, 94, 0.1); color: var(--success);">Done</span>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Bottom Navigation -->
+    <nav class="bottom-nav">
+      <div class="nav-section">
+        <a href="index.html" class="nav-item">
+          <span class="nav-icon">🏠</span>
+          <span class="nav-label">Home</span>
+        </a>
+      </div>
+      <div class="nav-fab">
+        <a href="new-script.html" class="nav-fab-btn">+</a>
+      </div>
+      <div class="nav-spacer"></div>
+      <div class="nav-section">
+        <a href="available.html" class="nav-item">
+          <span class="nav-icon">📋</span>
+          <span class="nav-label">Available</span>
+        </a>
+        <a href="my-projects.html" class="nav-item active">
+          <span class="nav-icon">📹</span>
+          <span class="nav-label">Shoots</span>
+        </a>
+      </div>
+    </nav>
+  </div>
+
+  <script>
+    function markComplete() {
+      if (confirm('Mark this shoot as complete? Footage will be sent to the editor.')) {
+        window.location.href = 'success.html';
+      }
+    }
+
+    // Filter tabs
+    document.querySelectorAll('.filter-tab').forEach(tab => {
+      tab.addEventListener('click', function() {
+        document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+        this.classList.add('active');
+      });
+    });
+  </script>
+</body>
+</html>

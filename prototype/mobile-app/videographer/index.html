@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#f97316">
+  <title>Videographer Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../shared/styles.css">
+  <style>
+    .profile-dropdown {
+      position: absolute;
+      top: 60px;
+      right: var(--space-md);
+      background: var(--white);
+      border-radius: var(--radius-md);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+      width: 240px;
+      z-index: 1000;
+      display: none;
+      overflow: hidden;
+    }
+    .profile-dropdown.show { display: block; }
+    .profile-dropdown-header {
+      padding: var(--space-lg);
+      background: linear-gradient(135deg, #f97316, #ea580c);
+      color: white;
+    }
+    .profile-dropdown-avatar {
+      width: 48px;
+      height: 48px;
+      border-radius: var(--radius-full);
+      background: rgba(255,255,255,0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      font-weight: 600;
+      margin-bottom: var(--space-sm);
+    }
+    .profile-dropdown-name { font-size: 16px; font-weight: 600; }
+    .profile-dropdown-role { font-size: 12px; opacity: 0.9; }
+    .profile-dropdown-email { font-size: 11px; opacity: 0.8; margin-top: 2px; }
+    .profile-dropdown-menu { padding: var(--space-sm) 0; }
+    .profile-dropdown-item {
+      display: flex;
+      align-items: center;
+      gap: var(--space-sm);
+      padding: var(--space-md) var(--space-lg);
+      font-size: 14px;
+      color: var(--gray-700);
+      text-decoration: none;
+      transition: background 0.2s;
+    }
+    .profile-dropdown-item:hover { background: var(--gray-50); }
+    .profile-dropdown-item.logout {
+      color: var(--danger);
+      border-top: 1px solid var(--gray-100);
+    }
+    .profile-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      z-index: 999;
+      display: none;
+    }
+    .profile-overlay.show { display: block; }
+    .user-avatar { cursor: pointer; }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <!-- Header -->
+    <header class="header">
+      <div class="header-content">
+        <div class="header-left">
+          <div>
+            <div class="header-title">Hi, Arun 👋</div>
+            <div class="header-subtitle">Let's shoot some content!</div>
+          </div>
+        </div>
+        <div class="user-avatar" style="background: linear-gradient(135deg, #f97316, #ea580c);" onclick="toggleProfileDropdown()">A</div>
+      </div>
+
+      <!-- Profile Dropdown -->
+      <div class="profile-overlay" id="profile-overlay" onclick="toggleProfileDropdown()"></div>
+      <div class="profile-dropdown" id="profile-dropdown">
+        <div class="profile-dropdown-header">
+          <div class="profile-dropdown-avatar">A</div>
+          <div class="profile-dropdown-name">Arun Kumar</div>
+          <div class="profile-dropdown-role">Trusted Videographer</div>
+          <div class="profile-dropdown-email">arun.kumar@example.com</div>
+        </div>
+        <div class="profile-dropdown-menu">
+          <a href="#" class="profile-dropdown-item">
+            <span>👤</span> My Profile
+          </a>
+          <a href="#" class="profile-dropdown-item">
+            <span>📊</span> My Stats
+          </a>
+          <a href="#" class="profile-dropdown-item">
+            <span>⚙️</span> Settings
+          </a>
+          <a href="../index.html" class="profile-dropdown-item logout">
+            <span>🚪</span> Logout
+          </a>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Summary Card -->
+      <div class="summary-card videographer animate-fade">
+        <div class="summary-label">Active Shoots</div>
+        <div class="summary-value">3</div>
+        <div class="summary-stats">
+          <div class="summary-stat">
+            <div class="summary-stat-value">32</div>
+            <div class="summary-stat-label">Total Shoots</div>
+          </div>
+          <div class="summary-stat">
+            <div class="summary-stat-value">5</div>
+            <div class="summary-stat-label">Scripts</div>
+          </div>
+          <div class="summary-stat">
+            <div class="summary-stat-value">28</div>
+            <div class="summary-stat-label">Completed</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="section animate-slide delay-1">
+        <div class="quick-actions">
+          <a href="new-script.html" class="quick-action" style="background: var(--videographer-color); color: white; border-color: var(--videographer-color);">
+            <div class="quick-action-icon" style="background: rgba(255,255,255,0.2);">✍️</div>
+            <div class="quick-action-label">Add Script</div>
+            <div class="quick-action-count" style="color: rgba(255,255,255,0.8);">Submit idea</div>
+          </a>
+          <a href="available.html" class="quick-action">
+            <div class="quick-action-icon" style="background: rgba(249, 115, 22, 0.1);">🎬</div>
+            <div class="quick-action-label">Pick Project</div>
+            <div class="quick-action-count">5 available</div>
+          </a>
+          <a href="my-projects.html" class="quick-action">
+            <div class="quick-action-icon" style="background: rgba(249, 115, 22, 0.1);">📹</div>
+            <div class="quick-action-label">My Shoots</div>
+            <div class="quick-action-count">3 active</div>
+          </a>
+          <a href="my-scripts.html" class="quick-action">
+            <div class="quick-action-icon" style="background: rgba(249, 115, 22, 0.1);">📋</div>
+            <div class="quick-action-label">My Scripts</div>
+            <div class="quick-action-count">5 submitted</div>
+          </a>
+        </div>
+      </div>
+
+      <!-- Active Shoots -->
+      <div class="section animate-slide delay-2">
+        <div class="section-header">
+          <h2 class="section-title">🎥 Active Shoots</h2>
+          <a href="my-projects.html" class="section-link">View all →</a>
+        </div>
+
+        <div class="card">
+          <div class="project-card-content">
+            <div class="project-thumbnail" style="background: rgba(249, 115, 22, 0.1);">🏠</div>
+            <div class="project-info">
+              <div class="project-title">Morning Routine Hack</div>
+              <div class="project-id">BCH-1042</div>
+              <div class="project-details">
+                <span class="project-tag">📸 Instagram</span>
+                <span class="project-tag">🏠 Indoor</span>
+              </div>
+            </div>
+            <span class="card-badge shooting">Shooting</span>
+          </div>
+          <div class="card-actions">
+            <a href="upload.html" class="btn btn-primary btn-sm btn-block">Upload Footage</a>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="project-card-content">
+            <div class="project-thumbnail" style="background: rgba(34, 197, 94, 0.1);">🌳</div>
+            <div class="project-info">
+              <div class="project-title">Street Food Reaction</div>
+              <div class="project-id">BCH-1038</div>
+              <div class="project-details">
+                <span class="project-tag">🎬 YouTube Shorts</span>
+                <span class="project-tag">🌳 Outdoor</span>
+              </div>
+            </div>
+            <span class="card-badge shooting">Shooting</span>
+          </div>
+          <div class="card-actions">
+            <a href="upload.html" class="btn btn-primary btn-sm btn-block">Upload Footage</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- My Scripts (Pending) -->
+      <div class="section animate-slide delay-3">
+        <div class="section-header">
+          <h2 class="section-title">✍️ My Scripts</h2>
+          <a href="my-scripts.html" class="section-link">View all →</a>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Gym Transformation</div>
+              <div class="card-subtitle">Submitted 2h ago</div>
+            </div>
+            <span class="card-badge pending">Pending</span>
+          </div>
+          <div class="card-meta">
+            <span class="project-tag">📸 Instagram</span>
+            <span class="project-tag">🏋️ Gym</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Available Projects -->
+      <div class="section animate-slide delay-4">
+        <div class="section-header">
+          <h2 class="section-title">📋 Available Projects</h2>
+          <a href="available.html" class="section-link">View all →</a>
+        </div>
+
+        <div class="card">
+          <div class="project-card-content">
+            <div class="project-thumbnail" style="background: rgba(99, 102, 241, 0.1);">🏋️</div>
+            <div class="project-info">
+              <div class="project-title">Fitness Challenge</div>
+              <div class="project-id">BCH-1045</div>
+              <div class="project-details">
+                <span class="project-tag">📸 Instagram</span>
+                <span class="project-tag">🏋️ Gym</span>
+                <span class="project-tag">🔥 High</span>
+              </div>
+            </div>
+          </div>
+          <div class="card-actions">
+            <a href="pick-project.html" class="btn btn-outline btn-sm btn-block">Pick This Project</a>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Bottom Navigation -->
+    <nav class="bottom-nav">
+      <div class="nav-section">
+        <a href="index.html" class="nav-item active">
+          <span class="nav-icon">🏠</span>
+          <span class="nav-label">Home</span>
+        </a>
+      </div>
+      <div class="nav-fab">
+        <a href="new-script.html" class="nav-fab-btn">+</a>
+      </div>
+      <div class="nav-spacer"></div>
+      <div class="nav-section">
+        <a href="available.html" class="nav-item">
+          <span class="nav-icon">📋</span>
+          <span class="nav-label">Available</span>
+        </a>
+        <a href="my-projects.html" class="nav-item">
+          <span class="nav-icon">📹</span>
+          <span class="nav-label">Shoots</span>
+        </a>
+      </div>
+    </nav>
+  </div>
+
+  <script>
+    function toggleProfileDropdown() {
+      const dropdown = document.getElementById('profile-dropdown');
+      const overlay = document.getElementById('profile-overlay');
+      dropdown.classList.toggle('show');
+      overlay.classList.toggle('show');
+    }
+  </script>
+</body>
+</html>

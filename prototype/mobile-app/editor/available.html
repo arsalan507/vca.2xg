@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#22c55e">
+  <title>Available to Edit</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../shared/styles.css">
+  <style>
+    :root {
+      --editor-color: #22c55e;
+    }
+    .footage-count {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 12px;
+      color: var(--gray-600);
+      background: var(--gray-100);
+      padding: 4px 8px;
+      border-radius: var(--radius-full);
+    }
+    .footage-count.ready {
+      background: rgba(34, 197, 94, 0.1);
+      color: var(--editor-color);
+    }
+    .project-card {
+      background: var(--white);
+      border-radius: var(--radius-md);
+      border: 1px solid var(--gray-100);
+      margin-bottom: var(--space-md);
+      overflow: hidden;
+    }
+    .project-card-body {
+      padding: var(--space-md);
+    }
+    .project-card-footer {
+      display: flex;
+      gap: var(--space-sm);
+      padding: var(--space-sm) var(--space-md) var(--space-md);
+    }
+    .videographer-info {
+      display: flex;
+      align-items: center;
+      gap: var(--space-sm);
+      margin-top: var(--space-sm);
+      padding-top: var(--space-sm);
+      border-top: 1px solid var(--gray-100);
+    }
+    .videographer-avatar {
+      width: 24px;
+      height: 24px;
+      border-radius: var(--radius-full);
+      background: linear-gradient(135deg, #f97316, #ea580c);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      font-weight: 600;
+      color: white;
+    }
+    .videographer-name {
+      font-size: 12px;
+      color: var(--gray-600);
+    }
+    .profile-badge {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: var(--radius-full);
+      background: rgba(34, 197, 94, 0.1);
+      color: var(--editor-color);
+      font-weight: 500;
+    }
+    .reference-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 11px;
+      color: var(--primary);
+      text-decoration: none;
+      margin-left: auto;
+    }
+    .reference-link:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <!-- Header -->
+    <header class="header">
+      <div class="header-content">
+        <div class="header-left">
+          <a href="index.html" class="back-btn">←</a>
+          <div>
+            <div class="header-title">Available to Edit</div>
+            <div class="header-subtitle">4 projects with footage ready</div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Filter Tabs -->
+      <div class="filter-tabs animate-fade">
+        <button class="filter-tab active">All <span class="count">4</span></button>
+        <button class="filter-tab">Instagram <span class="count">2</span></button>
+        <button class="filter-tab">YT Shorts <span class="count">1</span></button>
+        <button class="filter-tab">YT Long <span class="count">1</span></button>
+      </div>
+
+      <!-- Project Cards -->
+      <div class="project-card animate-slide delay-1">
+        <div class="project-card-body">
+          <div class="card-header" style="margin-bottom: var(--space-sm);">
+            <div>
+              <div class="card-title">Street Food Reaction</div>
+              <div class="card-subtitle">BCH-1038 • Footage uploaded 2h ago</div>
+            </div>
+            <span class="footage-count ready">📁 8 files</span>
+          </div>
+          <div class="card-meta">
+            <span class="project-tag">🎬 YouTube Shorts</span>
+            <span class="project-tag">🌳 Outdoor</span>
+            <span class="profile-badge">BaatCheet</span>
+          </div>
+          <div class="videographer-info">
+            <div class="videographer-avatar">AK</div>
+            <span class="videographer-name">Shot by Arun Kumar</span>
+            <a href="https://youtube.com/shorts/example1" target="_blank" class="reference-link">View Reference ↗</a>
+          </div>
+        </div>
+        <div class="project-card-footer">
+          <button class="btn btn-outline btn-sm">Preview</button>
+          <a href="pick-project.html" class="btn btn-success btn-sm" style="flex: 2;">Pick to Edit</a>
+        </div>
+      </div>
+
+      <div class="project-card animate-slide delay-2">
+        <div class="project-card-body">
+          <div class="card-header" style="margin-bottom: var(--space-sm);">
+            <div>
+              <div class="card-title">Fitness Transformation</div>
+              <div class="card-subtitle">FIT-1036 • Footage uploaded 5h ago</div>
+            </div>
+            <span class="footage-count ready">📁 6 files</span>
+          </div>
+          <div class="card-meta">
+            <span class="project-tag">📸 Instagram</span>
+            <span class="project-tag">🏋️ Gym</span>
+            <span class="profile-badge">Fitness Zone</span>
+          </div>
+          <div class="videographer-info">
+            <div class="videographer-avatar">DS</div>
+            <span class="videographer-name">Shot by Deepak Singh</span>
+            <a href="https://instagram.com/reel/example2" target="_blank" class="reference-link">View Reference ↗</a>
+          </div>
+        </div>
+        <div class="project-card-footer">
+          <button class="btn btn-outline btn-sm">Preview</button>
+          <a href="pick-project.html" class="btn btn-success btn-sm" style="flex: 2;">Pick to Edit</a>
+        </div>
+      </div>
+
+      <div class="project-card animate-slide delay-3">
+        <div class="project-card-body">
+          <div class="card-header" style="margin-bottom: var(--space-sm);">
+            <div>
+              <div class="card-title">Quick Pasta Recipe</div>
+              <div class="card-subtitle">COK-1034 • Footage uploaded 1d ago</div>
+            </div>
+            <span class="footage-count ready">📁 5 files</span>
+          </div>
+          <div class="card-meta">
+            <span class="project-tag">📸 Instagram</span>
+            <span class="project-tag">🏠 Kitchen</span>
+            <span class="profile-badge">Cooking Tips</span>
+          </div>
+          <div class="videographer-info">
+            <div class="videographer-avatar">MJ</div>
+            <span class="videographer-name">Shot by Meera Joshi</span>
+            <a href="https://instagram.com/reel/example3" target="_blank" class="reference-link">View Reference ↗</a>
+          </div>
+        </div>
+        <div class="project-card-footer">
+          <button class="btn btn-outline btn-sm">Preview</button>
+          <a href="pick-project.html" class="btn btn-success btn-sm" style="flex: 2;">Pick to Edit</a>
+        </div>
+      </div>
+
+      <div class="project-card animate-slide delay-4">
+        <div class="project-card-body">
+          <div class="card-header" style="margin-bottom: var(--space-sm);">
+            <div>
+              <div class="card-title">Travel Vlog - Goa</div>
+              <div class="card-subtitle">TRV-1030 • Footage uploaded 2d ago</div>
+            </div>
+            <span class="footage-count ready">📁 12 files</span>
+          </div>
+          <div class="card-meta">
+            <span class="project-tag">▶️ YouTube Long</span>
+            <span class="project-tag">🌳 Outdoor</span>
+            <span class="profile-badge">Travel Vibes</span>
+          </div>
+          <div class="videographer-info">
+            <div class="videographer-avatar">AK</div>
+            <span class="videographer-name">Shot by Arun Kumar</span>
+            <a href="https://youtube.com/watch?v=example4" target="_blank" class="reference-link">View Reference ↗</a>
+          </div>
+        </div>
+        <div class="project-card-footer">
+          <button class="btn btn-outline btn-sm">Preview</button>
+          <a href="pick-project.html" class="btn btn-success btn-sm" style="flex: 2;">Pick to Edit</a>
+        </div>
+      </div>
+    </main>
+
+    <!-- Bottom Navigation -->
+    <nav class="bottom-nav">
+      <a href="index.html" class="nav-item">
+        <span class="nav-icon">🏠</span>
+        <span class="nav-label">Home</span>
+      </a>
+      <a href="available.html" class="nav-item active">
+        <span class="nav-icon">📋</span>
+        <span class="nav-label">Available</span>
+      </a>
+      <a href="my-projects.html" class="nav-item">
+        <span class="nav-icon">✂️</span>
+        <span class="nav-label">Queue</span>
+      </a>
+      <a href="completed.html" class="nav-item">
+        <span class="nav-icon">✅</span>
+        <span class="nav-label">Done</span>
+      </a>
+    </nav>
+  </div>
+
+  <script>
+    // Filter tabs
+    document.querySelectorAll('.filter-tab').forEach(tab => {
+      tab.addEventListener('click', function() {
+        document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+        this.classList.add('active');
+      });
+    });
+  </script>
+</body>
+</html>

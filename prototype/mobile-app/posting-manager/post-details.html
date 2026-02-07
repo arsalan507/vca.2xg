@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#06b6d4">
+  <title>Post Details</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../shared/styles.css">
+  <style>
+    .video-preview-large {
+      width: 100%;
+      aspect-ratio: 9/16;
+      max-height: 200px;
+      border-radius: var(--radius-md);
+      background: var(--gray-800);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 48px;
+      margin-bottom: var(--space-lg);
+    }
+    .platform-option {
+      display: flex;
+      align-items: center;
+      gap: var(--space-md);
+      padding: var(--space-md);
+      border: 2px solid var(--gray-200);
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .platform-option.selected {
+      border-color: var(--primary);
+      background: rgba(99, 102, 241, 0.05);
+    }
+    .platform-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+    }
+    .platform-info { flex: 1; }
+    .platform-name { font-size: 14px; font-weight: 600; }
+    .platform-type { font-size: 12px; color: var(--gray-500); }
+    .hashtag-input {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-sm);
+      padding: var(--space-md);
+      border: 2px solid var(--gray-200);
+      border-radius: var(--radius-md);
+      min-height: 52px;
+    }
+    .hashtag {
+      display: flex;
+      align-items: center;
+      gap: var(--space-xs);
+      padding: var(--space-xs) var(--space-sm);
+      background: var(--primary);
+      color: white;
+      border-radius: var(--radius-full);
+      font-size: 13px;
+    }
+    .hashtag-remove {
+      cursor: pointer;
+      opacity: 0.8;
+    }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <!-- Header -->
+    <header class="header">
+      <div class="header-content">
+        <div class="header-left">
+          <a href="to-post.html" class="back-btn">←</a>
+          <div>
+            <div class="header-title">Post Details</div>
+            <div class="header-subtitle">BCH-1035 • Dance Challenge</div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Video Preview -->
+      <div class="video-preview-large animate-fade">▶</div>
+
+      <!-- Reference Link -->
+      <a href="https://instagram.com/reel/example" target="_blank" class="reference-link animate-fade" style="display: flex; align-items: center; gap: var(--space-md); padding: var(--space-md); background: var(--white); border: 1px solid var(--gray-200); border-radius: var(--radius-md); text-decoration: none; margin-bottom: var(--space-lg);">
+        <div style="width: 48px; height: 48px; border-radius: var(--radius-md); background: rgba(236, 72, 153, 0.1); display: flex; align-items: center; justify-content: center; font-size: 24px; flex-shrink: 0;">📸</div>
+        <div style="flex: 1;">
+          <div style="font-size: 11px; color: var(--gray-500); text-transform: uppercase;">Reference Video</div>
+          <div style="font-size: 14px; font-weight: 500; color: var(--gray-800);">Original Dance Challenge Reel</div>
+        </div>
+        <span style="color: var(--gray-400); font-size: 18px;">↗</span>
+      </a>
+
+      <!-- Platform Selection -->
+      <div class="section animate-slide delay-1">
+        <div class="section-header">
+          <h2 class="section-title">Platform</h2>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: var(--space-sm);">
+          <div class="platform-option selected" onclick="selectPlatform(this)">
+            <div class="platform-icon" style="background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888);">📸</div>
+            <div class="platform-info">
+              <div class="platform-name">Instagram</div>
+              <div class="platform-type">Reel</div>
+            </div>
+            <span style="color: var(--primary);">✓</span>
+          </div>
+
+          <div class="platform-option" onclick="selectPlatform(this)">
+            <div class="platform-icon" style="background: #FF0000;">🎬</div>
+            <div class="platform-info">
+              <div class="platform-name">YouTube Shorts</div>
+              <div class="platform-type">Short form video</div>
+            </div>
+          </div>
+
+          <div class="platform-option" onclick="selectPlatform(this)">
+            <div class="platform-icon" style="background: #FF0000;">▶️</div>
+            <div class="platform-info">
+              <div class="platform-name">YouTube Long</div>
+              <div class="platform-type">Full video</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Caption -->
+      <div class="section animate-slide delay-2">
+        <div class="section-header">
+          <h2 class="section-title">Caption</h2>
+        </div>
+
+        <div class="form-group">
+          <textarea class="form-input form-textarea" placeholder="Write an engaging caption..." style="height: 100px;">Try this dance challenge! Can you do it? 💃🔥
+
+Drop a comment if you nailed it! 👇</textarea>
+        </div>
+      </div>
+
+      <!-- Hashtags -->
+      <div class="section animate-slide delay-3">
+        <div class="section-header">
+          <h2 class="section-title">Hashtags</h2>
+        </div>
+
+        <div class="hashtag-input" onclick="document.getElementById('hashtag-field').focus()">
+          <span class="hashtag">#dancechallenge <span class="hashtag-remove">×</span></span>
+          <span class="hashtag">#viral <span class="hashtag-remove">×</span></span>
+          <span class="hashtag">#trending <span class="hashtag-remove">×</span></span>
+          <span class="hashtag">#reels <span class="hashtag-remove">×</span></span>
+          <input type="text" id="hashtag-field" placeholder="Add hashtag..." style="border: none; outline: none; flex: 1; min-width: 100px; font-size: 14px;">
+        </div>
+        <div class="form-hint">Tap to add more hashtags</div>
+      </div>
+
+      <!-- Schedule -->
+      <div class="section animate-slide delay-4">
+        <div class="section-header">
+          <h2 class="section-title">Schedule</h2>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Post Time</label>
+          <input type="datetime-local" class="form-input" value="2024-01-15T14:00">
+          <div class="form-hint">Best time for engagement: 2PM - 4PM</div>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="mt-xl">
+        <button class="btn btn-success btn-block mb-md" onclick="schedulePost()">
+          Schedule Post 📅
+        </button>
+        <button class="btn btn-primary btn-block mb-md" onclick="postNow()">
+          Post Now 📤
+        </button>
+        <a href="to-post.html" class="btn btn-outline btn-block">
+          Cancel
+        </a>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    function selectPlatform(el) {
+      document.querySelectorAll('.platform-option').forEach(p => {
+        p.classList.remove('selected');
+        p.querySelector('span:last-child')?.remove();
+      });
+      el.classList.add('selected');
+      el.innerHTML += '<span style="color: var(--primary);">✓</span>';
+    }
+
+    function schedulePost() {
+      window.location.href = 'success.html?type=scheduled';
+    }
+
+    function postNow() {
+      // Show URL input modal
+      const url = prompt('Enter the live post URL:');
+      if (url) {
+        window.location.href = 'success.html?type=posted';
+      }
+    }
+
+    // Hashtag input
+    document.getElementById('hashtag-field').addEventListener('keypress', function(e) {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        const value = this.value.trim();
+        if (value) {
+          const tag = document.createElement('span');
+          tag.className = 'hashtag';
+          tag.innerHTML = `#${value.replace('#', '')} <span class="hashtag-remove">×</span>`;
+          this.parentElement.insertBefore(tag, this);
+          this.value = '';
+        }
+      }
+    });
+
+    // Remove hashtags
+    document.querySelector('.hashtag-input').addEventListener('click', function(e) {
+      if (e.target.classList.contains('hashtag-remove')) {
+        e.target.parentElement.remove();
+      }
+    });
+  </script>
+</body>
+</html>

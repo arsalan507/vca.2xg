@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#22c55e">
+  <title>Completed Edits</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../shared/styles.css">
+  <style>
+    :root {
+      --editor-color: #22c55e;
+    }
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: var(--space-md);
+      margin-bottom: var(--space-xl);
+    }
+    .stat-box {
+      background: var(--white);
+      border: 1px solid var(--gray-100);
+      border-radius: var(--radius-md);
+      padding: var(--space-md);
+      text-align: center;
+    }
+    .stat-box-value {
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--gray-800);
+    }
+    .stat-box-label {
+      font-size: 11px;
+      color: var(--gray-500);
+      text-transform: uppercase;
+    }
+    .performance-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 11px;
+      padding: 4px 8px;
+      border-radius: var(--radius-full);
+      font-weight: 600;
+    }
+    .performance-badge.excellent {
+      background: rgba(34, 197, 94, 0.1);
+      color: #16a34a;
+    }
+    .performance-badge.good {
+      background: rgba(59, 130, 246, 0.1);
+      color: #2563eb;
+    }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <!-- Header -->
+    <header class="header">
+      <div class="header-content">
+        <div class="header-left">
+          <a href="index.html" class="back-btn">←</a>
+          <div>
+            <div class="header-title">Completed Edits</div>
+            <div class="header-subtitle">Your editing history</div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Stats -->
+      <div class="stats-row animate-fade">
+        <div class="stat-box">
+          <div class="stat-box-value">48</div>
+          <div class="stat-box-label">Total Edits</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-box-value">1.2M</div>
+          <div class="stat-box-label">Total Views</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-box-value" style="color: var(--editor-color);">4.8</div>
+          <div class="stat-box-label">Avg Rating</div>
+        </div>
+      </div>
+
+      <!-- Filter Tabs -->
+      <div class="filter-tabs animate-fade">
+        <button class="filter-tab active">All <span class="count">48</span></button>
+        <button class="filter-tab">This Week <span class="count">5</span></button>
+        <button class="filter-tab">This Month <span class="count">18</span></button>
+      </div>
+
+      <!-- Recent Completions -->
+      <div class="section animate-slide delay-1">
+        <div class="section-header">
+          <h2 class="section-title">This Week</h2>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Fitness Challenge</div>
+              <div class="card-subtitle">BCH-1028 • Completed 1d ago</div>
+            </div>
+            <span class="performance-badge excellent">Top Performer</span>
+          </div>
+          <div class="card-meta">
+            <span class="project-tag">📸 Instagram</span>
+            <span class="project-tag">👁 125K views</span>
+            <span class="project-tag">⭐ 5.0</span>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Morning Motivation</div>
+              <div class="card-subtitle">BCH-1025 • Completed 2d ago</div>
+            </div>
+            <span class="performance-badge good">Good</span>
+          </div>
+          <div class="card-meta">
+            <span class="project-tag">📸 Instagram</span>
+            <span class="project-tag">👁 45K views</span>
+            <span class="project-tag">⭐ 4.5</span>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Tech Review</div>
+              <div class="card-subtitle">BCH-1022 • Completed 3d ago</div>
+            </div>
+            <span class="performance-badge excellent">Top Performer</span>
+          </div>
+          <div class="card-meta">
+            <span class="project-tag">🎬 YouTube Shorts</span>
+            <span class="project-tag">👁 89K views</span>
+            <span class="project-tag">⭐ 4.8</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Earlier -->
+      <div class="section animate-slide delay-2">
+        <div class="section-header">
+          <h2 class="section-title">Earlier This Month</h2>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Travel Vlog Intro</div>
+              <div class="card-subtitle">BCH-1018 • Completed 1w ago</div>
+            </div>
+          </div>
+          <div class="card-meta">
+            <span class="project-tag">▶️ YouTube Long</span>
+            <span class="project-tag">👁 32K views</span>
+            <span class="project-tag">⭐ 4.6</span>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Product Unboxing</div>
+              <div class="card-subtitle">BCH-1015 • Completed 1w ago</div>
+            </div>
+          </div>
+          <div class="card-meta">
+            <span class="project-tag">🎬 YouTube Shorts</span>
+            <span class="project-tag">👁 67K views</span>
+            <span class="project-tag">⭐ 4.7</span>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Recipe Tutorial</div>
+              <div class="card-subtitle">BCH-1012 • Completed 2w ago</div>
+            </div>
+          </div>
+          <div class="card-meta">
+            <span class="project-tag">📸 Instagram</span>
+            <span class="project-tag">👁 98K views</span>
+            <span class="project-tag">⭐ 4.9</span>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Bottom Navigation -->
+    <nav class="bottom-nav">
+      <a href="index.html" class="nav-item">
+        <span class="nav-icon">🏠</span>
+        <span class="nav-label">Home</span>
+      </a>
+      <a href="my-projects.html" class="nav-item">
+        <span class="nav-icon">✂️</span>
+        <span class="nav-label">Queue</span>
+      </a>
+      <a href="completed.html" class="nav-item active">
+        <span class="nav-icon">✅</span>
+        <span class="nav-label">Done</span>
+      </a>
+    </nav>
+  </div>
+
+  <script>
+    // Filter tabs
+    document.querySelectorAll('.filter-tab').forEach(tab => {
+      tab.addEventListener('click', function() {
+        document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+        this.classList.add('active');
+      });
+    });
+  </script>
+</body>
+</html>

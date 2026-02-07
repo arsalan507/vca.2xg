@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#22c55e">
+  <title>Pick Project</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../shared/styles.css">
+  <style>
+    :root {
+      --editor-color: #22c55e;
+    }
+    .script-content {
+      background: var(--gray-50);
+      border-radius: var(--radius-md);
+      padding: var(--space-lg);
+      font-size: 14px;
+      line-height: 1.6;
+      color: var(--gray-700);
+    }
+    .script-section {
+      margin-bottom: var(--space-md);
+    }
+    .script-section:last-child {
+      margin-bottom: 0;
+    }
+    .script-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--gray-500);
+      text-transform: uppercase;
+      margin-bottom: var(--space-xs);
+    }
+    .footage-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: var(--space-sm);
+    }
+    .footage-item {
+      background: var(--gray-50);
+      border-radius: var(--radius-sm);
+      padding: var(--space-sm);
+      text-align: center;
+    }
+    .footage-icon { font-size: 24px; }
+    .footage-name { font-size: 10px; color: var(--gray-600); margin-top: 2px; }
+    .footage-type { font-size: 9px; color: var(--gray-400); }
+    .reference-link {
+      display: flex;
+      align-items: center;
+      gap: var(--space-md);
+      padding: var(--space-md);
+      background: var(--gray-50);
+      border-radius: var(--radius-md);
+      text-decoration: none;
+      margin-top: var(--space-md);
+    }
+    .reference-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+    .reference-info { flex: 1; }
+    .reference-label { font-size: 11px; color: var(--gray-500); }
+    .reference-title { font-size: 13px; font-weight: 500; color: var(--gray-800); }
+    .voice-note {
+      display: flex;
+      align-items: center;
+      gap: var(--space-md);
+      padding: var(--space-md);
+      background: var(--gray-100);
+      border-radius: var(--radius-md);
+      margin-top: var(--space-sm);
+    }
+    .voice-play {
+      width: 40px;
+      height: 40px;
+      border-radius: var(--radius-full);
+      background: var(--editor-color);
+      border: none;
+      color: white;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    .voice-info { flex: 1; }
+    .voice-label { font-size: 13px; font-weight: 500; }
+    .voice-duration { font-size: 11px; color: var(--gray-500); }
+    .profile-badge {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: var(--radius-full);
+      background: rgba(34, 197, 94, 0.1);
+      color: var(--editor-color);
+      font-weight: 500;
+    }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <!-- Header -->
+    <header class="header">
+      <div class="header-content">
+        <div class="header-left">
+          <a href="available.html" class="back-btn">←</a>
+          <div>
+            <div class="header-title">Pick Project</div>
+            <div class="header-subtitle">BCH-1038</div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Project Preview -->
+      <div class="card animate-fade" style="background: var(--gray-50); border: none;">
+        <div class="project-card-content">
+          <div class="project-thumbnail" style="background: rgba(34, 197, 94, 0.1);">🍜</div>
+          <div class="project-info">
+            <div class="project-title">Street Food Reaction</div>
+            <div class="project-id">BCH-1038 • Shot by Arun Kumar</div>
+            <div class="project-details">
+              <span class="project-tag">🎬 YouTube Shorts</span>
+              <span class="project-tag">📁 8 files</span>
+              <span class="profile-badge">BaatCheet</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Reference Link -->
+      <a href="https://youtube.com/shorts/example" target="_blank" class="reference-link animate-slide delay-1">
+        <div class="reference-icon" style="background: rgba(239, 68, 68, 0.1);">▶️</div>
+        <div class="reference-info">
+          <div class="reference-label">Reference Video</div>
+          <div class="reference-title">Street Food Compilation Style</div>
+        </div>
+        <span style="color: var(--gray-400);">↗</span>
+      </a>
+
+      <!-- Script Details -->
+      <div class="section animate-slide delay-1">
+        <div class="section-header">
+          <h2 class="section-title">Script Details</h2>
+        </div>
+
+        <div class="script-content">
+          <div class="script-section">
+            <div class="script-label">Why It's Viral</div>
+            <div>Street food content always gets high engagement. The reaction format creates emotional connection and the quick cuts keep viewers hooked.</div>
+          </div>
+          <div class="script-section">
+            <div class="script-label">How to Edit</div>
+            <div>
+              1. Fast-paced cuts between food shots<br>
+              2. Zoom on reactions (surprise, delight)<br>
+              3. Add text overlays for food names<br>
+              4. Upbeat background music<br>
+              5. End with rating/recommendation
+            </div>
+          </div>
+        </div>
+
+        <div class="voice-note">
+          <button class="voice-play">▶</button>
+          <div class="voice-info">
+            <div class="voice-label">Edit Instructions</div>
+            <div class="voice-duration">1:45</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Footage Preview -->
+      <div class="section animate-slide delay-2">
+        <div class="section-header">
+          <h2 class="section-title">Uploaded Footage</h2>
+        </div>
+
+        <div class="footage-grid">
+          <div class="footage-item">
+            <div class="footage-icon">🎬</div>
+            <div class="footage-name">intro_shot</div>
+            <div class="footage-type">A-Roll</div>
+          </div>
+          <div class="footage-item">
+            <div class="footage-icon">🎬</div>
+            <div class="footage-name">food_1</div>
+            <div class="footage-type">A-Roll</div>
+          </div>
+          <div class="footage-item">
+            <div class="footage-icon">🎬</div>
+            <div class="footage-name">food_2</div>
+            <div class="footage-type">A-Roll</div>
+          </div>
+          <div class="footage-item">
+            <div class="footage-icon">🎬</div>
+            <div class="footage-name">reaction_1</div>
+            <div class="footage-type">A-Roll</div>
+          </div>
+          <div class="footage-item">
+            <div class="footage-icon">🎞️</div>
+            <div class="footage-name">broll_street</div>
+            <div class="footage-type">B-Roll</div>
+          </div>
+          <div class="footage-item">
+            <div class="footage-icon">🎞️</div>
+            <div class="footage-name">broll_crowd</div>
+            <div class="footage-type">B-Roll</div>
+          </div>
+          <div class="footage-item">
+            <div class="footage-icon">📢</div>
+            <div class="footage-name">cta_ending</div>
+            <div class="footage-type">CTA</div>
+          </div>
+          <div class="footage-item">
+            <div class="footage-icon">🎵</div>
+            <div class="footage-name">ambient</div>
+            <div class="footage-type">Audio</div>
+          </div>
+        </div>
+
+        <div style="margin-top: var(--space-md); font-size: 12px; color: var(--gray-500); text-align: center;">
+          8 files • 1.2 GB total
+        </div>
+      </div>
+
+      <!-- Deadline Setting -->
+      <div class="section animate-slide delay-3">
+        <div class="section-header">
+          <h2 class="section-title">Your Deadline</h2>
+        </div>
+
+        <div class="form-group">
+          <input type="date" class="form-input">
+          <div class="form-hint">When can you complete this edit?</div>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="mt-xl">
+        <button class="btn btn-success btn-block mb-md" onclick="pickProject()">
+          Pick This Project ✓
+        </button>
+        <a href="available.html" class="btn btn-outline btn-block">
+          Cancel
+        </a>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    function pickProject() {
+      window.location.href = 'success-pick.html';
+    }
+  </script>
+</body>
+</html>
