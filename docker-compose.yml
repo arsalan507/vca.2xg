@@ -149,7 +149,7 @@ services:
       args:
         VITE_BACKEND_URL: https://vca-api.2xg.in
         VITE_SUPABASE_URL: https://ckfbjsphyasborpnwbyy.supabase.co
-        VITE_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNrZmJqc3BoeWFzYm9ycG53Ynl5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc3NzI4MzAsImV4cCI6MjA4MzM0ODgzMH0.Y3rQfHqDYLqF8eRAqGvfZyOa9fqGTcJG_LqEPYqZ0uA
+        VITE_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNrZmJqc3BoeWFzYm9ycG53Ynl5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc3NzI4MzAsImV4cCI6MjA4MzM0ODgzMH0.2oCMXo3bJofLacTE_f-9Y1qgBLapr3gkCRTzH2vNa0g
         VITE_GOOGLE_CLIENT_ID: 635771661878-3srrbi7vmf0ebgac1c3u6s79ino12lav.apps.googleusercontent.com
         VITE_GOOGLE_API_KEY: ${VITE_GOOGLE_API_KEY:-your_api_key_here}
     container_name: vca-frontend-v2
@@ -165,11 +165,6 @@ services:
       resources:
         limits:
           memory: 32m
-    healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/health"]
-      interval: 30s
-      timeout: 3s
-      retries: 3
     networks:
       - coolify
 
