@@ -67,10 +67,7 @@ services:
     container_name: vca-backend
     environment:
       PORT: 3001
-      # Use Supabase for profile/user data (commented out local postgres)
-      # DATABASE_URL: postgres://postgres:${DB_PASSWORD}@vca-postgres:5432/viral_content_analyzer
-      SUPABASE_URL: https://ckfbjsphyasborpnwbyy.supabase.co
-      SUPABASE_SERVICE_ROLE_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNrZmJqc3BoeWFzYm9ycG53Ynl5Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2Nzc3MjgzMCwiZXhwIjoyMDgzMzQ4ODMwfQ.sM87Al3CXlv-W-sMZonNnmN52saxIYTp0HRzusA2ylw
+      DATABASE_URL: postgres://postgres:${DB_PASSWORD}@vca-postgres:5432/viral_content_analyzer
       FRONTEND_URL: ${FRONTEND_URL}
       AUTHENTIK_URL: ${AUTHENTIK_URL}
       AUTHENTIK_INTERNAL_URL: ${AUTHENTIK_URL}
@@ -148,8 +145,8 @@ services:
       dockerfile: Dockerfile
       args:
         VITE_BACKEND_URL: https://vca-api.2xg.in
-        VITE_SUPABASE_URL: https://ckfbjsphyasborpnwbyy.supabase.co
-        VITE_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNrZmJqc3BoeWFzYm9ycG53Ynl5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc3NzI4MzAsImV4cCI6MjA4MzM0ODgzMH0.2oCMXo3bJofLacTE_f-9Y1qgBLapr3gkCRTzH2vNa0g
+        VITE_POSTGREST_URL: https://vca-api.2xg.in/postgrest
+        VITE_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InNlbGYtaG9zdGVkIiwiaWF0IjoxNzcwNjIyOTY2LCJleHAiOjIwODYxOTg5NjZ9.MlToNcTzEBR0k9NLH3f0dU7RPHvkA_CCMgMwv9pEVxY
         VITE_GOOGLE_CLIENT_ID: 635771661878-3srrbi7vmf0ebgac1c3u6s79ino12lav.apps.googleusercontent.com
         VITE_GOOGLE_API_KEY: ${VITE_GOOGLE_API_KEY:-your_api_key_here}
     container_name: vca-frontend-v2

@@ -7,17 +7,12 @@
  * - Storage via Express backend (local disk for voice notes)
  */
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const POSTGREST_URL = import.meta.env.VITE_POSTGREST_URL;
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-  console.warn('Missing VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY');
-}
-
-if (!POSTGREST_URL || !BACKEND_URL) {
-  console.warn('Missing VITE_POSTGREST_URL or VITE_BACKEND_URL');
+if (!POSTGREST_URL || !BACKEND_URL || !SUPABASE_ANON_KEY) {
+  console.warn('Missing VITE_POSTGREST_URL, VITE_BACKEND_URL, or VITE_SUPABASE_ANON_KEY');
 }
 
 // ─── Auth Types ──────────────────────────────────────────────────────────────────

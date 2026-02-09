@@ -9,7 +9,6 @@ afterEach(() => {
 
 // ─── Mock environment variables ──────────────────────────────────────────────
 // These are needed because api.ts reads import.meta.env at module load time
-vi.stubEnv('VITE_SUPABASE_URL', 'http://localhost:54321');
 vi.stubEnv('VITE_SUPABASE_ANON_KEY', 'test-anon-key');
 vi.stubEnv('VITE_POSTGREST_URL', 'http://localhost:3000');
 vi.stubEnv('VITE_BACKEND_URL', 'http://localhost:4000');
