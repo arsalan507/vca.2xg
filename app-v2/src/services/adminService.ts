@@ -594,6 +594,58 @@ export const adminService = {
   },
 
   /**
+   * Create a new team member (Admin only)
+   */
+  async createUser(email: string, fullName: string, role: string): Promise<{ success: boolean; user: any }> {
+    const token = auth.getAccessToken();
+    if (!token) {
+      throw new Error('Not authenticated');
+    }
+
+    const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
+    const res = await fetch(`${BACKEND_URL}/api/admin/users`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify({ email, fullName, role: role.toUpperCase() }),
+    });
+
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.error || 'Failed to create user');
+    }
+
+    return res.json();
+  },
+
+  /**
+   * Delete a team member (Admin only)
+   */
+  async deleteUser(userId: string): Promise<{ success: boolean }> {
+    const token = auth.getAccessToken();
+    if (!token) {
+      throw new Error('Not authenticated');
+    }
+
+    const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
+    const res = await fetch(`${BACKEND_URL}/api/admin/users/${userId}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.error || 'Failed to delete user');
+    }
+
+    return { success: true };
+  },
+
+  /**
    * Reset a user's PIN (Admin only)
    */
   async resetUserPin(userId: string): Promise<{ success: boolean }> {

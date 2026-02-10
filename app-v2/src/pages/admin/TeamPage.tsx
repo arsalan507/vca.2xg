@@ -41,6 +41,7 @@ const ROLE_OPTIONS = [
   { id: 'videographer', icon: '🎥', label: 'Videographer' },
   { id: 'editor', icon: '✂️', label: 'Editor' },
   { id: 'posting_manager', icon: '📱', label: 'Posting Manager' },
+  { id: 'admin', icon: '🛡️', label: 'Admin' },
 ];
 
 export default function TeamPage() {
@@ -171,17 +172,12 @@ export default function TeamPage() {
 
     setIsSubmitting(true);
     try {
-      // TODO: Implement API call to save member
-      if (editingMember) {
-        toast.success(`${modalData.name} updated successfully!`);
-      } else {
-        toast.success(`${modalData.name} added as ${ROLE_OPTIONS.find(r => r.id === modalData.role)?.label}!`);
-      }
+      await adminService.createUser(modalData.email.trim(), modalData.name.trim(), modalData.role);
+      toast.success(`${modalData.name} added as ${ROLE_OPTIONS.find(r => r.id === modalData.role)?.label}!`);
       closeModal();
-      // Reload data
       loadData(true);
-    } catch (error) {
-      toast.error('Failed to save member');
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to save member');
     } finally {
       setIsSubmitting(false);
     }
@@ -195,12 +191,12 @@ export default function TeamPage() {
     if (!deletingMember) return;
 
     try {
-      // TODO: Implement API call to delete member
+      await adminService.deleteUser(deletingMember.id);
       toast.success(`${deletingMember.full_name || 'Member'} removed from team`);
       setTeamMembers(prev => prev.filter(m => m.id !== deletingMember.id));
       setDeletingMember(null);
-    } catch (error) {
-      toast.error('Failed to delete member');
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to delete member');
     }
   };
 
