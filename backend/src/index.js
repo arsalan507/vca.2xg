@@ -77,18 +77,23 @@ app.post('/api/admin/users', verifyAdmin, async (req, res) => {
       return res.status(500).json({ error: 'Database not configured' });
     }
 
+    // Check if user already exists
+    const existing = await pool.query('SELECT id FROM profiles WHERE email = $1', [email]);
+    if (existing.rows[0]) {
+      return res.status(409).json({ error: 'A user with this email already exists' });
+    }
+
     const userId = crypto.randomUUID();
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
       await client.query(
-        'INSERT INTO users (id, email, created_at) VALUES ($1, $2, NOW())',
+        'INSERT INTO users (id, email, created_at) VALUES ($1, $2, NOW()) ON CONFLICT (email) DO NOTHING',
         [userId, email]
       );
       await client.query(
         `INSERT INTO profiles (id, email, full_name, role, created_at, updated_at)
-         VALUES ($1, $2, $3, $4, NOW(), NOW())
-         ON CONFLICT (id) DO UPDATE SET full_name = $3, role = $4, updated_at = NOW()`,
+         VALUES ($1, $2, $3, $4, NOW(), NOW())`,
         [userId, email, fullName, role]
       );
       await client.query('COMMIT');
@@ -118,8 +123,24 @@ app.delete('/api/admin/users/:userId', verifyAdmin, async (req, res) => {
       return res.status(400).json({ error: 'User ID is required' });
     }
 
-    await pool.query('DELETE FROM profiles WHERE id = $1', [userId]);
-    await pool.query('DELETE FROM users WHERE id = $1', [userId]);
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      // Delete related records that reference this user
+      await client.query('DELETE FROM project_assignments WHERE user_id = $1 OR assigned_by = $1', [userId]);
+      await client.query('DELETE FROM project_skips WHERE user_id = $1', [userId]);
+      await client.query('DELETE FROM production_files WHERE uploaded_by = $1', [userId]);
+      await client.query('UPDATE viral_analyses SET reviewed_by = NULL WHERE reviewed_by = $1', [userId]);
+      await client.query('UPDATE viral_analyses SET user_id = NULL WHERE user_id = $1', [userId]);
+      await client.query('DELETE FROM profiles WHERE id = $1', [userId]);
+      await client.query('DELETE FROM users WHERE id = $1', [userId]);
+      await client.query('COMMIT');
+    } catch (dbError) {
+      await client.query('ROLLBACK');
+      throw dbError;
+    } finally {
+      client.release();
+    }
 
     res.json({ success: true });
   } catch (error) {
