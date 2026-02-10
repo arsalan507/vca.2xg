@@ -181,7 +181,7 @@ export default function LoginPage() {
     }
   };
 
-  const PinInput = () => (
+  const pinInputs = (
     <div className="flex gap-3 justify-center" onPaste={handlePinPaste}>
       {pin.map((digit, i) => (
         <input
@@ -289,7 +289,7 @@ export default function LoginPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-3">PIN</label>
-                  <PinInput />
+                  {pinInputs}
                 </div>
 
                 {error && (
@@ -316,7 +316,7 @@ export default function LoginPage() {
               </p>
 
               <form onSubmit={handleSetPin} className="space-y-5">
-                <PinInput />
+                {pinInputs}
 
                 {error && (
                   <div className="p-3 bg-danger/10 border border-danger/20 rounded-xl text-sm text-danger">
