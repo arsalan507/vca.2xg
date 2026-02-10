@@ -445,7 +445,7 @@ export default function TeamPage() {
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="fixed inset-x-4 top-1/2 -translate-y-1/2 bg-white rounded-2xl z-50 max-w-md mx-auto overflow-hidden"
+              className="fixed inset-x-4 top-4 bottom-4 bg-white rounded-2xl z-50 max-w-md mx-auto overflow-y-auto my-auto max-h-fit"
             >
               {/* Header */}
               <div className="flex items-center justify-between p-4 border-b border-gray-100">
