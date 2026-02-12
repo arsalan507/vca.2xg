@@ -106,35 +106,7 @@ services:
       - vca-internal
       - coolify
 
-  # ─── Frontend (Nginx serving React build - OLD SYSTEM) ───────────────────
-  vca-frontend-old:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-      args:
-        VITE_POSTGREST_URL: https://vca-api.2xg.in/postgrest
-        VITE_BACKEND_URL: https://vca-api.2xg.in
-        VITE_AUTH_URL: https://vca-auth.2xg.in
-        VITE_GOOGLE_CLIENT_ID: ${VITE_GOOGLE_CLIENT_ID}
-        VITE_GOOGLE_API_KEY: ${VITE_GOOGLE_API_KEY}
-        VITE_ADMIN_GOOGLE_EMAIL: ${VITE_ADMIN_GOOGLE_EMAIL}
-    container_name: vca-frontend-old
-    restart: unless-stopped
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.vca-frontend-old.rule=Host(`vca-old.2xg.in`)"
-      - "traefik.http.routers.vca-frontend-old.entrypoints=http,https"
-      - "traefik.http.routers.vca-frontend-old.tls=true"
-      - "traefik.http.routers.vca-frontend-old.tls.certresolver=letsencrypt"
-      - "traefik.http.services.vca-frontend-old.loadbalancer.server.port=80"
-    deploy:
-      resources:
-        limits:
-          memory: 32m
-    networks:
-      - coolify
-
-  # ─── Frontend V2 (Mobile-First React App - NEW PRODUCTION) ───────────────
+  # ─── Frontend (Mobile-First React App) ───────────────────────────────────
   vca-frontend-v2:
     build:
       context: ./app-v2
