@@ -41,7 +41,7 @@ const ROLE_OPTIONS = [
   { id: 'videographer', icon: '🎥', label: 'Videographer' },
   { id: 'editor', icon: '✂️', label: 'Editor' },
   { id: 'posting_manager', icon: '📱', label: 'Posting Manager' },
-  { id: 'admin', icon: '🛡️', label: 'Admin' },
+  { id: 'super_admin', icon: '🛡️', label: 'Admin' },
 ];
 
 export default function TeamPage() {

@@ -181,7 +181,7 @@ app.patch('/api/admin/users/:userId/role', verifyAdmin, async (req, res) => {
       return res.status(400).json({ error: 'User ID and role are required' });
     }
 
-    const validRoles = ['SUPER_ADMIN', 'CREATOR', 'SCRIPT_WRITER', 'VIDEOGRAPHER', 'EDITOR', 'POSTING_MANAGER', 'ADMIN'];
+    const validRoles = ['SUPER_ADMIN', 'CREATOR', 'SCRIPT_WRITER', 'VIDEOGRAPHER', 'EDITOR', 'POSTING_MANAGER'];
     if (!validRoles.includes(role.toUpperCase())) {
       return res.status(400).json({ error: `Invalid role. Must be one of: ${validRoles.join(', ')}` });
     }
