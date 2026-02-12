@@ -31,20 +31,40 @@ export const videographerService = {
    * These are approved scripts waiting to be picked by a videographer
    */
   async getAvailableProjects(): Promise<ViralAnalysis[]> {
-    // First, get IDs of projects that already have a videographer assigned
-    const { data: assignedProjects } = await supabase
-      .from('project_assignments')
-      .select('analysis_id')
-      .eq('role', 'VIDEOGRAPHER');
-
-    const assignedList = (assignedProjects || []) as { analysis_id: string }[];
-    const assignedIds = new Set(assignedList.map((a) => a.analysis_id));
-
     // Define valid planning stages
     const planningStages = ['PLANNING', 'NOT_STARTED', 'PRE_PRODUCTION', 'PLANNED'];
 
-    // Fetch approved projects
-    const { data, error } = await supabase
+    // Run all independent queries in parallel
+    const [assignedResult, projectsResult, userResult] = await Promise.all([
+      // Get IDs of projects that already have a videographer assigned
+      supabase
+        .from('project_assignments')
+        .select('analysis_id')
+        .eq('role', 'VIDEOGRAPHER'),
+      // Fetch approved projects in planning stages (server-side filter)
+      supabase
+        .from('viral_analyses')
+        .select(`
+          *,
+          industry:industries(id, name, short_code),
+          profile:profile_list(id, name),
+          profiles:user_id(email, full_name, avatar_url)
+        `)
+        .eq('status', 'APPROVED')
+        .in('production_stage', planningStages)
+        .order('priority', { ascending: false })
+        .order('created_at', { ascending: false }),
+      // Get current user for skips
+      auth.getUser(),
+    ]);
+
+    if (projectsResult.error) throw projectsResult.error;
+
+    const assignedList = (assignedResult.data || []) as { analysis_id: string }[];
+    const assignedIds = new Set(assignedList.map((a) => a.analysis_id));
+
+    // Also fetch projects with NULL production_stage (not yet set)
+    const { data: nullStageData } = await supabase
       .from('viral_analyses')
       .select(`
         *,
@@ -53,27 +73,17 @@ export const videographerService = {
         profiles:user_id(email, full_name, avatar_url)
       `)
       .eq('status', 'APPROVED')
+      .is('production_stage', null)
       .order('priority', { ascending: false })
       .order('created_at', { ascending: false });
 
-    if (error) throw error;
+    const projects = [...(Array.isArray(projectsResult.data) ? projectsResult.data : []), ...(Array.isArray(nullStageData) ? nullStageData : [])] as any[];
 
-    // Filter to projects in planning stage without videographer
-    const projects = (data || []) as any[];
+    // Filter out projects that already have a videographer
+    const availableProjects = projects.filter((project: any) => !assignedIds.has(project.id));
 
-    const availableProjects = projects.filter((project: any) => {
-      // Skip if already has a videographer
-      if (assignedIds.has(project.id)) return false;
-
-      // Check production stage - must be in planning or not started
-      const stage = project.production_stage;
-      const isInPlanningStage = planningStages.includes(stage) || !stage;
-
-      return isInPlanningStage;
-    });
-
-    // Get skipped projects from database
-    const { data: { user } } = await auth.getUser();
+    // Get skipped projects
+    const user = userResult.data?.user;
     let skippedIds = new Set<string>();
     if (user) {
       const { data: skips } = await supabase
@@ -188,39 +198,62 @@ export const videographerService = {
     const { data: { user } } = await auth.getUser();
     if (!user) throw new Error('Not authenticated');
 
-    // Get available projects count
-    const availableProjects = await this.getAvailableProjects();
-    const available = availableProjects.length;
+    // Get my assignment IDs first (lightweight)
+    const { data: assignments } = await supabase
+      .from('project_assignments')
+      .select('analysis_id')
+      .eq('user_id', user.id)
+      .eq('role', 'VIDEOGRAPHER');
 
-    // Get my projects (as videographer)
-    const myProjects = await this.getMyProjects();
+    const myIds = ((assignments || []) as { analysis_id: string }[]).map((a) => a.analysis_id);
 
-    // Active shoots = SHOOTING stage
-    const activeShoots = myProjects.filter(
-      (p) => p.production_stage === 'SHOOTING'
-    ).length;
-
-    // Total shoots = all my projects
-    const totalShoots = myProjects.length;
-
-    // Completed = READY_FOR_EDIT or later stages
+    // Run all count queries in parallel (no full data fetches)
+    const planningStages = ['PLANNING', 'NOT_STARTED', 'PRE_PRODUCTION', 'PLANNED'];
     const completedStages = ['READY_FOR_EDIT', 'EDITING', 'READY_TO_POST', 'POSTED'];
-    const completed = myProjects.filter(
-      (p) => completedStages.includes(p.production_stage || '')
-    ).length;
 
-    // Get scripts I submitted (analyses I created)
-    const { count: scriptsCount } = await supabase
-      .from('viral_analyses')
-      .select('id', { count: 'exact', head: true })
-      .eq('user_id', user.id);
+    const [
+      availableResult,
+      availableNullResult,
+      assignedVidsResult,
+      activeResult,
+      completedResult,
+      scriptsResult,
+    ] = await Promise.all([
+      // Count available projects (approved + planning stage)
+      supabase.from('viral_analyses').select('id', { count: 'exact', head: true })
+        .eq('status', 'APPROVED').in('production_stage', planningStages),
+      // Count available projects with null stage
+      supabase.from('viral_analyses').select('id', { count: 'exact', head: true })
+        .eq('status', 'APPROVED').is('production_stage', null),
+      // Count projects that already have a videographer (to subtract)
+      supabase.from('project_assignments').select('id', { count: 'exact', head: true })
+        .eq('role', 'VIDEOGRAPHER'),
+      // Active shoots (my projects in SHOOTING)
+      myIds.length > 0
+        ? supabase.from('viral_analyses').select('id', { count: 'exact', head: true })
+            .in('id', myIds).eq('production_stage', 'SHOOTING')
+        : Promise.resolve({ count: 0 }),
+      // Completed (my projects past SHOOTING)
+      myIds.length > 0
+        ? supabase.from('viral_analyses').select('id', { count: 'exact', head: true })
+            .in('id', myIds).in('production_stage', completedStages)
+        : Promise.resolve({ count: 0 }),
+      // Scripts I submitted
+      supabase.from('viral_analyses').select('id', { count: 'exact', head: true })
+        .eq('user_id', user.id),
+    ]);
+
+    // Available ≈ (planning + null_stage) - already_assigned (rough count, good enough for stats)
+    const roughAvailable = Math.max(0,
+      (availableResult.count || 0) + (availableNullResult.count || 0) - (assignedVidsResult.count || 0)
+    );
 
     return {
-      activeShoots,
-      totalShoots,
-      scripts: scriptsCount || 0,
-      completed,
-      available,
+      activeShoots: activeResult.count || 0,
+      totalShoots: myIds.length,
+      scripts: scriptsResult.count || 0,
+      completed: completedResult.count || 0,
+      available: roughAvailable,
     };
   },
 

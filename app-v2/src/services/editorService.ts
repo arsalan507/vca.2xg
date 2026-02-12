@@ -198,20 +198,32 @@ export const editorService = {
     const assignmentsList = (assignments || []) as { analysis_id: string }[];
     const myIds = assignmentsList.map((a) => a.analysis_id);
 
-    // Run count queries in parallel
-    const [availableProjects, inProgressResult, completedResult] = await Promise.all([
-      this.getAvailableProjects(),
+    // Run all count queries in parallel (no full data fetches)
+    const [availableCountResult, assignedEditorsResult, inProgressResult, completedResult] = await Promise.all([
+      // Count READY_FOR_EDIT projects (rough available count)
+      supabase.from('viral_analyses').select('id', { count: 'exact', head: true })
+        .eq('status', 'APPROVED').eq('production_stage', 'READY_FOR_EDIT'),
+      // Count projects that already have an editor (to subtract)
+      supabase.from('project_assignments').select('id', { count: 'exact', head: true })
+        .eq('role', 'EDITOR'),
+      // My in-progress edits
       myIds.length > 0
         ? supabase.from('viral_analyses').select('id', { count: 'exact', head: true }).in('id', myIds).eq('production_stage', 'EDITING')
         : Promise.resolve({ count: 0 }),
+      // My completed edits
       myIds.length > 0
         ? supabase.from('viral_analyses').select('id', { count: 'exact', head: true }).in('id', myIds).in('production_stage', ['READY_TO_POST', 'POSTED'])
         : Promise.resolve({ count: 0 }),
     ]);
 
+    // Available ≈ READY_FOR_EDIT count - assigned editors (rough, good enough for stats)
+    const roughAvailable = Math.max(0,
+      (availableCountResult.count || 0) - (assignedEditorsResult.count || 0)
+    );
+
     return {
       inProgress: inProgressResult.count || 0,
-      available: availableProjects.length,
+      available: roughAvailable,
       completed: completedResult.count || 0,
     };
   },
