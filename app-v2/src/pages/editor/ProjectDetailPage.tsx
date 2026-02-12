@@ -141,6 +141,7 @@ export default function EditorProjectDetailPage() {
   const getStageLabel = (stage?: string) => {
     switch (stage) {
       case 'EDITING': return { label: 'Editing', color: 'bg-green-100 text-green-700' };
+      case 'EDIT_REVIEW': return { label: 'Under Review', color: 'bg-amber-100 text-amber-700' };
       case 'READY_TO_POST': return { label: 'Ready to Post', color: 'bg-blue-100 text-blue-700' };
       case 'POSTED': return { label: 'Posted', color: 'bg-emerald-100 text-emerald-700' };
       default: return { label: stage || 'Unknown', color: 'bg-gray-100 text-gray-700' };
@@ -502,6 +503,25 @@ export default function EditorProjectDetailPage() {
           </div>
         )}
       </div>
+
+      {/* Edit Review Status Banner */}
+      {project.production_stage === 'EDIT_REVIEW' && (
+        <div className="fixed bottom-20 left-0 right-0 px-4 pb-4 bg-gradient-to-t from-white via-white to-transparent pt-4 max-w-mobile mx-auto">
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-center">
+            <Clock className="w-6 h-6 text-amber-500 mx-auto mb-2" />
+            <p className="font-medium text-amber-700">Under Admin Review</p>
+            <p className="text-sm text-amber-600 mt-1">Your edit is being reviewed. You'll be notified of the result.</p>
+          </div>
+        </div>
+      )}
+
+      {/* Rejection Feedback Banner */}
+      {project.production_stage === 'EDITING' && project.disapproval_reason && (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4 mx-4 mb-4">
+          <p className="text-sm font-medium text-red-700 mb-1">Edit Rejected - Please Revise</p>
+          <p className="text-sm text-red-600">{project.disapproval_reason}</p>
+        </div>
+      )}
 
       {/* Fixed Bottom Button */}
       {project.production_stage === 'EDITING' && (

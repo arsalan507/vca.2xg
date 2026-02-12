@@ -35,11 +35,18 @@ interface SkipEntry {
 
 type TabType = 'details' | 'files' | 'team';
 
+interface EditReviewState {
+  showRejectModal: boolean;
+  rejectReason: string;
+  submitting: boolean;
+}
+
 const PRODUCTION_STAGES = [
   { id: 'PLANNING', label: 'Planning', color: 'bg-blue-500' },
   { id: 'SHOOTING', label: 'Shooting', color: 'bg-orange-500' },
   { id: 'READY_FOR_EDIT', label: 'Ready for Edit', color: 'bg-purple-500' },
   { id: 'EDITING', label: 'Editing', color: 'bg-pink-500' },
+  { id: 'EDIT_REVIEW', label: 'Edit Review', color: 'bg-amber-500' },
   { id: 'READY_TO_POST', label: 'Ready to Post', color: 'bg-green-500' },
   { id: 'POSTED', label: 'Posted', color: 'bg-emerald-500' },
 ];
@@ -54,6 +61,11 @@ export default function ProjectDetailPage() {
   const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);
   const [skips, setSkips] = useState<SkipEntry[]>([]);
   const [removingSkip, setRemovingSkip] = useState<string | null>(null);
+  const [editReview, setEditReview] = useState<EditReviewState>({
+    showRejectModal: false,
+    rejectReason: '',
+    submitting: false,
+  });
 
   useEffect(() => {
     if (id) {
@@ -104,6 +116,39 @@ export default function ProjectDetailPage() {
       toast.error('Failed to remove skip');
     } finally {
       setRemovingSkip(null);
+    }
+  };
+
+  const handleApproveEdit = async () => {
+    try {
+      setEditReview((prev) => ({ ...prev, submitting: true }));
+      await adminService.approveEditedVideo(id!);
+      toast.success('Edit approved! Project moved to Ready to Post.');
+      loadProject();
+    } catch (error) {
+      console.error('Failed to approve edit:', error);
+      toast.error('Failed to approve edit');
+    } finally {
+      setEditReview((prev) => ({ ...prev, submitting: false }));
+    }
+  };
+
+  const handleRejectEdit = async () => {
+    if (!editReview.rejectReason.trim()) {
+      toast.error('Please provide a reason for rejection');
+      return;
+    }
+    try {
+      setEditReview((prev) => ({ ...prev, submitting: true }));
+      await adminService.rejectEditedVideo(id!, editReview.rejectReason.trim());
+      toast.success('Edit rejected. Project sent back to editor.');
+      setEditReview({ showRejectModal: false, rejectReason: '', submitting: false });
+      loadProject();
+    } catch (error) {
+      console.error('Failed to reject edit:', error);
+      toast.error('Failed to reject edit');
+    } finally {
+      setEditReview((prev) => ({ ...prev, submitting: false }));
     }
   };
 
@@ -168,12 +213,11 @@ export default function ProjectDetailPage() {
 
   const getCurrentStageIndex = () => {
     if (!project?.production_stage) return 0;
-    const stages = ['PLANNING', 'SHOOTING', 'READY_FOR_EDIT', 'EDITING', 'READY_TO_POST', 'POSTED'];
-    // Handle various stage names
+    const stages = ['PLANNING', 'SHOOTING', 'READY_FOR_EDIT', 'EDITING', 'EDIT_REVIEW', 'READY_TO_POST', 'POSTED'];
     const stage = project.production_stage.toUpperCase().replace(/-/g, '_');
     if (['NOT_STARTED', 'PRE_PRODUCTION', 'PLANNED'].includes(stage)) return 0;
     if (['SHOOT_REVIEW'].includes(stage)) return 2;
-    if (['EDIT_REVIEW', 'FINAL_REVIEW'].includes(stage)) return 4;
+    if (['FINAL_REVIEW'].includes(stage)) return 5;
     return stages.indexOf(stage);
   };
 
@@ -699,6 +743,66 @@ export default function ProjectDetailPage() {
         >
           Review This Script
         </Link>
+      )}
+
+      {/* Edit Review Actions */}
+      {project.production_stage === 'EDIT_REVIEW' && (
+        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-[448px] flex gap-3">
+          <button
+            onClick={() => setEditReview((prev) => ({ ...prev, showRejectModal: true }))}
+            disabled={editReview.submitting}
+            className="flex-1 py-3 bg-red-500 text-white text-center rounded-xl font-medium shadow-lg disabled:opacity-50"
+          >
+            Reject Edit
+          </button>
+          <button
+            onClick={handleApproveEdit}
+            disabled={editReview.submitting}
+            className="flex-1 py-3 bg-green-500 text-white text-center rounded-xl font-medium shadow-lg disabled:opacity-50 flex items-center justify-center gap-2"
+          >
+            {editReview.submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
+            Approve Edit
+          </button>
+        </div>
+      )}
+
+      {/* Edit Reject Modal */}
+      {editReview.showRejectModal && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-4">
+          <motion.div
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="w-full max-w-[448px] bg-white rounded-2xl p-6 mb-4"
+          >
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Reject Edit</h3>
+            <p className="text-sm text-gray-500 mb-4">
+              The editor will see this feedback and can re-edit the video.
+            </p>
+            <textarea
+              value={editReview.rejectReason}
+              onChange={(e) => setEditReview((prev) => ({ ...prev, rejectReason: e.target.value }))}
+              placeholder="What needs to change? Be specific..."
+              rows={4}
+              className="w-full border border-gray-200 rounded-xl p-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-red-300"
+            />
+            <div className="flex gap-3 mt-4">
+              <button
+                onClick={() => setEditReview({ showRejectModal: false, rejectReason: '', submitting: false })}
+                className="flex-1 py-3 bg-gray-100 text-gray-700 rounded-xl font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleRejectEdit}
+                disabled={editReview.submitting || !editReview.rejectReason.trim()}
+                className="flex-1 py-3 bg-red-500 text-white rounded-xl font-medium disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {editReview.submitting && <Loader2 className="w-4 h-4 animate-spin" />}
+                Reject
+              </button>
+            </div>
+          </motion.div>
+        </div>
       )}
     </div>
   );

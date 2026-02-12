@@ -7,8 +7,6 @@ const jwt = require('jsonwebtoken');
 const { Pool } = require('pg');
 
 const POSTGREST_JWT_SECRET = process.env.JWT_SECRET;
-const SUPABASE_URL = process.env.SUPABASE_URL;
-const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 const pool = process.env.DATABASE_URL ? new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -49,27 +47,14 @@ const verifyAdmin = async (req, res, next) => {
     if (!req.user) return;
 
     try {
-      let result;
-      if (pool) {
-        result = await pool.query(
-          'SELECT id, role FROM profiles WHERE email = $1',
-          [req.user.email]
-        );
-      } else if (SUPABASE_URL && SUPABASE_SERVICE_KEY) {
-        const res2 = await fetch(
-          `${SUPABASE_URL}/rest/v1/profiles?email=eq.${encodeURIComponent(req.user.email)}&select=id,role`,
-          {
-            headers: {
-              'apikey': SUPABASE_SERVICE_KEY,
-              'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`,
-            },
-          }
-        );
-        const rows = res2.ok ? await res2.json() : [];
-        result = { rows };
-      } else {
-        return res.status(500).json({ error: 'No database connection configured' });
+      if (!pool) {
+        return res.status(500).json({ error: 'Database not configured' });
       }
+
+      const result = await pool.query(
+        'SELECT id, role FROM profiles WHERE email = $1',
+        [req.user.email]
+      );
 
       if (!result.rows[0] || !['SUPER_ADMIN', 'CREATOR'].includes(result.rows[0].role)) {
         return res.status(403).json({ error: 'Unauthorized - Admin access required' });

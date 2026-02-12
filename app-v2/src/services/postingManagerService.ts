@@ -46,7 +46,7 @@ export const postingManagerService = {
       .select(`
         *,
         industry:industries(id, name, short_code),
-        profile:profile_list(id, name),
+        profile:profile_list(id, name, platform),
         profiles:user_id(email, full_name, avatar_url),
         assignments:project_assignments(
           id, role,
@@ -102,7 +102,7 @@ export const postingManagerService = {
       .select(`
         *,
         industry:industries(id, name, short_code),
-        profile:profile_list(id, name),
+        profile:profile_list(id, name, platform),
         profiles:user_id(email, full_name, avatar_url),
         assignments:project_assignments(
           id, role,
@@ -145,7 +145,7 @@ export const postingManagerService = {
       .select(`
         *,
         industry:industries(id, name, short_code),
-        profile:profile_list(id, name),
+        profile:profile_list(id, name, platform),
         profiles:user_id(email, full_name, avatar_url),
         assignments:project_assignments(
           id, role,
@@ -229,7 +229,7 @@ export const postingManagerService = {
         .select(`
           *,
           industry:industries(id, name, short_code),
-          profile:profile_list(id, name),
+          profile:profile_list(id, name, platform),
           profiles:user_id(email, full_name, avatar_url),
           assignments:project_assignments(
             id, role,

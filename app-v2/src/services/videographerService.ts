@@ -47,7 +47,7 @@ export const videographerService = {
         .select(`
           *,
           industry:industries(id, name, short_code),
-          profile:profile_list(id, name),
+          profile:profile_list(id, name, platform),
           profiles:user_id(email, full_name, avatar_url)
         `)
         .eq('status', 'APPROVED')
@@ -69,7 +69,7 @@ export const videographerService = {
       .select(`
         *,
         industry:industries(id, name, short_code),
-        profile:profile_list(id, name),
+        profile:profile_list(id, name, platform),
         profiles:user_id(email, full_name, avatar_url)
       `)
       .eq('status', 'APPROVED')
@@ -132,7 +132,7 @@ export const videographerService = {
         .select(`
           *,
           industry:industries(id, name, short_code),
-          profile:profile_list(id, name),
+          profile:profile_list(id, name, platform),
           profiles:user_id(email, full_name, avatar_url),
           assignments:project_assignments(
             id, role,
@@ -182,7 +182,7 @@ export const videographerService = {
       .select(`
         *,
         industry:industries(id, name, short_code),
-        profile:profile_list(id, name)
+        profile:profile_list(id, name, platform)
       `)
       .eq('user_id', user.id)
       .order('created_at', { ascending: false });
@@ -209,7 +209,7 @@ export const videographerService = {
 
     // Run all count queries in parallel (no full data fetches)
     const planningStages = ['PLANNING', 'NOT_STARTED', 'PRE_PRODUCTION', 'PLANNED'];
-    const completedStages = ['READY_FOR_EDIT', 'EDITING', 'READY_TO_POST', 'POSTED'];
+    const completedStages = ['READY_FOR_EDIT', 'EDITING', 'EDIT_REVIEW', 'READY_TO_POST', 'POSTED'];
 
     const [
       availableResult,
@@ -269,7 +269,7 @@ export const videographerService = {
         .select(`
           *,
           industry:industries(id, name, short_code),
-          profile:profile_list(id, name),
+          profile:profile_list(id, name, platform),
           profiles:user_id(email, full_name, avatar_url),
           assignments:project_assignments(
             id, role,
@@ -436,7 +436,7 @@ export const videographerService = {
   /**
    * Get content profiles list
    */
-  async getProfiles(): Promise<{ id: string; name: string; is_active?: boolean }[]> {
+  async getProfiles(): Promise<{ id: string; name: string; platform?: string; is_active?: boolean }[]> {
     const { data, error } = await supabase
       .from('profile_list')
       .select('*')
@@ -444,21 +444,21 @@ export const videographerService = {
       .order('name');
 
     if (error) throw error;
-    return (data || []) as { id: string; name: string; is_active?: boolean }[];
+    return (data || []) as { id: string; name: string; platform?: string; is_active?: boolean }[];
   },
 
   /**
    * Create a new content profile
    */
-  async createProfile(name: string): Promise<{ id: string; name: string }> {
+  async createProfile(name: string, platform: string = 'INSTAGRAM'): Promise<{ id: string; name: string; platform?: string }> {
     const { data, error } = await supabase
       .from('profile_list')
-      .insert({ name })
+      .insert({ name, platform })
       .select()
       .single();
 
     if (error) throw error;
-    return data as { id: string; name: string };
+    return data as { id: string; name: string; platform?: string };
   },
 
   /**

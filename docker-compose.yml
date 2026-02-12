@@ -114,7 +114,7 @@ services:
       args:
         VITE_BACKEND_URL: https://vca-api.2xg.in
         VITE_POSTGREST_URL: https://vca-api.2xg.in/postgrest
-        VITE_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InNlbGYtaG9zdGVkIiwiaWF0IjoxNzcwNjIyOTY2LCJleHAiOjIwODYxOTg5NjZ9.MlToNcTzEBR0k9NLH3f0dU7RPHvkA_CCMgMwv9pEVxY
+        VITE_POSTGREST_JWT: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InNlbGYtaG9zdGVkIiwiaWF0IjoxNzcwNjIyOTY2LCJleHAiOjIwODYxOTg5NjZ9.MlToNcTzEBR0k9NLH3f0dU7RPHvkA_CCMgMwv9pEVxY
         VITE_GOOGLE_CLIENT_ID: 635771661878-goov8fvgqmh595pikf858p5tdn0ppl2h.apps.googleusercontent.com
         VITE_GOOGLE_API_KEY: ${VITE_GOOGLE_API_KEY:-your_api_key_here}
     container_name: vca-frontend-v2

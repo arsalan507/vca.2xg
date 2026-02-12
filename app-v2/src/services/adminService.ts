@@ -36,6 +36,7 @@ export interface QueueStats {
   shooting: number;
   readyForEdit: number;
   editing: number;
+  editReview: number;
   readyToPost: number;
   posted: number;
   totalActive: number;
@@ -73,7 +74,8 @@ export const adminService = {
         ),
         profile:profile_list (
           id,
-          name
+          name,
+          platform
         )
       `)
       .order('created_at', { ascending: false });
@@ -113,7 +115,7 @@ export const adminService = {
           avatar_url
         ),
         industry:industries (id, name, short_code),
-        profile:profile_list (id, name)
+        profile:profile_list (id, name, platform)
       `)
       .eq('status', 'PENDING')
       .order('created_at', { ascending: false });
@@ -145,7 +147,7 @@ export const adminService = {
             avatar_url
           ),
           industry:industries (id, name, short_code),
-          profile:profile_list (id, name),
+          profile:profile_list (id, name, platform),
           assignments:project_assignments (
             id,
             role,
@@ -315,6 +317,7 @@ export const adminService = {
       shootingResult,
       readyForEditResult,
       editingResult,
+      editReviewResult,
       readyToPostResult,
       postedResult,
     ] = await Promise.all([
@@ -324,7 +327,8 @@ export const adminService = {
       approvedBase().eq('production_stage', 'SHOOTING'),
       approvedBase().in('production_stage', ['READY_FOR_EDIT', 'SHOOT_REVIEW']),
       approvedBase().eq('production_stage', 'EDITING'),
-      approvedBase().in('production_stage', ['READY_TO_POST', 'EDIT_REVIEW', 'FINAL_REVIEW']),
+      approvedBase().eq('production_stage', 'EDIT_REVIEW'),
+      approvedBase().in('production_stage', ['READY_TO_POST', 'FINAL_REVIEW']),
       approvedBase().eq('production_stage', 'POSTED'),
     ]);
 
@@ -333,11 +337,12 @@ export const adminService = {
     const shooting = shootingResult.count || 0;
     const readyForEdit = readyForEditResult.count || 0;
     const editing = editingResult.count || 0;
+    const editReview = editReviewResult.count || 0;
     const readyToPost = readyToPostResult.count || 0;
     const posted = postedResult.count || 0;
-    const totalActive = planning + shooting + readyForEdit + editing + readyToPost;
+    const totalActive = planning + shooting + readyForEdit + editing + editReview + readyToPost;
 
-    return { pending, planning, shooting, readyForEdit, editing, readyToPost, posted, totalActive };
+    return { pending, planning, shooting, readyForEdit, editing, editReview, readyToPost, posted, totalActive };
   },
 
   /**
@@ -521,8 +526,11 @@ export const adminService = {
       case 'editing':
         stageFilter = ['EDITING'];
         break;
+      case 'edit_review':
+        stageFilter = ['EDIT_REVIEW'];
+        break;
       case 'ready_to_post':
-        stageFilter = ['READY_TO_POST', 'EDIT_REVIEW', 'FINAL_REVIEW'];
+        stageFilter = ['READY_TO_POST', 'FINAL_REVIEW'];
         break;
       case 'posted':
         stageFilter = ['POSTED'];
@@ -536,7 +544,7 @@ export const adminService = {
       .select(`
         *,
         profiles:user_id (email, full_name, avatar_url),
-        profile:profile_list (id, name),
+        profile:profile_list (id, name, platform),
         assignments:project_assignments (
           id, role,
           user:profiles!project_assignments_user_id_fkey (id, email, full_name)
@@ -557,6 +565,68 @@ export const adminService = {
       videographer: analysis.assignments?.find((a: any) => a.role === 'VIDEOGRAPHER')?.user,
       editor: analysis.assignments?.find((a: any) => a.role === 'EDITOR')?.user,
     })) as ViralAnalysis[];
+  },
+
+  /**
+   * Approve edited video - move from EDIT_REVIEW to READY_TO_POST
+   */
+  async approveEditedVideo(analysisId: string, notes?: string): Promise<void> {
+    const updateData: Record<string, unknown> = {
+      production_stage: 'READY_TO_POST',
+    };
+
+    if (notes) {
+      const { data: currentProject } = await supabase
+        .from('viral_analyses')
+        .select('production_notes')
+        .eq('id', analysisId)
+        .single();
+
+      const projectInfo = currentProject as { production_notes?: string } | null;
+      const existingNotes = projectInfo?.production_notes || '';
+      updateData.production_notes = existingNotes
+        ? `${existingNotes}\n\n[Admin Edit Approval]\n${notes}`
+        : `[Admin Edit Approval]\n${notes}`;
+    }
+
+    const { error } = await supabase
+      .from('viral_analyses')
+      .update(updateData)
+      .eq('id', analysisId);
+
+    if (error) throw error;
+  },
+
+  /**
+   * Reject edited video - move from EDIT_REVIEW back to EDITING
+   */
+  async rejectEditedVideo(analysisId: string, reason: string): Promise<void> {
+    if (!reason) throw new Error('Rejection reason is required');
+
+    const { data: currentProject } = await supabase
+      .from('viral_analyses')
+      .select('production_notes, disapproval_count')
+      .eq('id', analysisId)
+      .single();
+
+    const projectInfo = currentProject as { production_notes?: string; disapproval_count?: number } | null;
+    const existingNotes = projectInfo?.production_notes || '';
+    const newNotes = existingNotes
+      ? `${existingNotes}\n\n[Edit Rejected]\n${reason}`
+      : `[Edit Rejected]\n${reason}`;
+
+    const { error } = await supabase
+      .from('viral_analyses')
+      .update({
+        production_stage: 'EDITING',
+        production_notes: newNotes,
+        disapproval_count: (projectInfo?.disapproval_count || 0) + 1,
+        last_disapproved_at: new Date().toISOString(),
+        disapproval_reason: reason,
+      })
+      .eq('id', analysisId);
+
+    if (error) throw error;
   },
 
   /**

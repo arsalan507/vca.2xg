@@ -6,7 +6,7 @@ import { adminService, type QueueStats } from '@/services/adminService';
 import type { ViralAnalysis } from '@/types';
 import toast from 'react-hot-toast';
 
-type FilterType = 'all' | 'shooting' | 'editing' | 'ready';
+type FilterType = 'all' | 'shooting' | 'editing' | 'edit_review' | 'ready';
 
 interface StageSection {
   id: string;
@@ -38,13 +38,22 @@ const STAGE_SECTIONS: StageSection[] = [
     stages: ['READY_FOR_EDIT', 'SHOOT_REVIEW', 'EDITING'],
   },
   {
+    id: 'edit_review',
+    emoji: '🔍',
+    label: 'Edit Review',
+    color: 'bg-amber-500',
+    bgColor: 'bg-amber-50',
+    textColor: 'text-amber-600',
+    stages: ['EDIT_REVIEW'],
+  },
+  {
     id: 'ready',
     emoji: '✅',
     label: 'Ready to Post',
     color: 'bg-green-500',
     bgColor: 'bg-green-50',
     textColor: 'text-green-600',
-    stages: ['READY_TO_POST', 'EDIT_REVIEW', 'FINAL_REVIEW'],
+    stages: ['READY_TO_POST', 'FINAL_REVIEW'],
   },
 ];
 
@@ -61,15 +70,16 @@ export default function ProductionPage() {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [statsData, shootingProjects, editingProjects, readyForEditProjects, readyToPostProjects] = await Promise.all([
+      const [statsData, shootingProjects, editingProjects, readyForEditProjects, editReviewProjects, readyToPostProjects] = await Promise.all([
         adminService.getQueueStats(),
         adminService.getAnalysesByStage('shooting'),
         adminService.getAnalysesByStage('editing'),
         adminService.getAnalysesByStage('ready_for_edit'),
+        adminService.getAnalysesByStage('edit_review'),
         adminService.getAnalysesByStage('ready_to_post'),
       ]);
       setStats(statsData);
-      setAllProjects([...shootingProjects, ...readyForEditProjects, ...editingProjects, ...readyToPostProjects]);
+      setAllProjects([...shootingProjects, ...readyForEditProjects, ...editingProjects, ...editReviewProjects, ...readyToPostProjects]);
     } catch (error) {
       console.error('Failed to load data:', error);
       toast.error('Failed to load production data');
@@ -117,18 +127,18 @@ export default function ProductionPage() {
 
   const getStageProgress = (stage?: string) => {
     switch (stage) {
-      case 'SHOOTING': return 25;
+      case 'SHOOTING': return 20;
       case 'READY_FOR_EDIT':
-      case 'SHOOT_REVIEW': return 50;
-      case 'EDITING': return 65;
+      case 'SHOOT_REVIEW': return 40;
+      case 'EDITING': return 55;
+      case 'EDIT_REVIEW': return 75;
       case 'READY_TO_POST':
-      case 'EDIT_REVIEW':
       case 'FINAL_REVIEW': return 90;
       default: return 10;
     }
   };
 
-  const totalPipeline = (stats?.shooting || 0) + (stats?.readyForEdit || 0) + (stats?.editing || 0) + (stats?.readyToPost || 0);
+  const totalPipeline = (stats?.shooting || 0) + (stats?.readyForEdit || 0) + (stats?.editing || 0) + (stats?.editReview || 0) + (stats?.readyToPost || 0);
 
   if (loading) {
     return (
@@ -163,7 +173,7 @@ export default function ProductionPage() {
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.05 }}
-        className="grid grid-cols-4 gap-2 mb-4"
+        className="grid grid-cols-5 gap-2 mb-4"
       >
         <div className="bg-white rounded-xl p-3 border border-gray-100 text-center">
           <div className="text-xl font-bold text-orange-500">{stats?.shooting || 0}</div>
@@ -172,6 +182,10 @@ export default function ProductionPage() {
         <div className="bg-white rounded-xl p-3 border border-gray-100 text-center">
           <div className="text-xl font-bold text-pink-500">{(stats?.readyForEdit || 0) + (stats?.editing || 0)}</div>
           <div className="text-[10px] text-gray-500 uppercase">Editing</div>
+        </div>
+        <div className="bg-white rounded-xl p-3 border border-gray-100 text-center">
+          <div className="text-xl font-bold text-amber-500">{stats?.editReview || 0}</div>
+          <div className="text-[10px] text-gray-500 uppercase">Review</div>
         </div>
         <div className="bg-white rounded-xl p-3 border border-gray-100 text-center">
           <div className="text-xl font-bold text-green-500">{stats?.readyToPost || 0}</div>
@@ -227,6 +241,19 @@ export default function ProductionPage() {
           Editing
           <span className={`px-1.5 py-0.5 rounded-full text-xs ${filter === 'editing' ? 'bg-white/20' : 'bg-gray-200'}`}>
             {(stats?.readyForEdit || 0) + (stats?.editing || 0)}
+          </span>
+        </button>
+        <button
+          onClick={() => setFilter('edit_review')}
+          className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
+            filter === 'edit_review'
+              ? 'bg-amber-500 text-white'
+              : 'bg-gray-100 text-gray-600'
+          }`}
+        >
+          Review
+          <span className={`px-1.5 py-0.5 rounded-full text-xs ${filter === 'edit_review' ? 'bg-white/20' : 'bg-gray-200'}`}>
+            {stats?.editReview || 0}
           </span>
         </button>
         <button

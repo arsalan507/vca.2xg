@@ -44,6 +44,7 @@ export type ProductionStageV2 =
   | 'SHOOTING'
   | 'READY_FOR_EDIT'
   | 'EDITING'
+  | 'EDIT_REVIEW'
   | 'READY_TO_POST'
   | 'POSTED';
 
@@ -67,6 +68,7 @@ export const ProductionStageColors: Record<string, string> = {
   SHOOTING: 'bg-yellow-100 text-yellow-800',
   READY_FOR_EDIT: 'bg-purple-100 text-purple-800',
   EDITING: 'bg-orange-100 text-orange-800',
+  EDIT_REVIEW: 'bg-amber-100 text-amber-800',
   READY_TO_POST: 'bg-green-100 text-green-800',
   POSTED: 'bg-gray-100 text-gray-800',
 };
@@ -100,11 +102,32 @@ export const PostingPlatformLabels: Record<PostingPlatform, string> = {
 // PROFILE & INDUSTRY
 // ============================================
 
+export type ProfilePlatform = 'INSTAGRAM' | 'YOUTUBE' | 'TIKTOK' | 'FACEBOOK' | 'TWITTER' | 'OTHER';
+
+export const ProfilePlatformLabels: Record<ProfilePlatform, string> = {
+  INSTAGRAM: 'Instagram',
+  YOUTUBE: 'YouTube',
+  TIKTOK: 'TikTok',
+  FACEBOOK: 'Facebook',
+  TWITTER: 'Twitter/X',
+  OTHER: 'Other',
+};
+
+export const ProfilePlatformIcons: Record<ProfilePlatform, string> = {
+  INSTAGRAM: '📸',
+  YOUTUBE: '▶️',
+  TIKTOK: '🎵',
+  FACEBOOK: '📘',
+  TWITTER: '🐦',
+  OTHER: '🌐',
+};
+
 export interface Profile {
   id: string;
   code: string;
   name: string;
   description?: string;
+  platform?: ProfilePlatform;
   is_active: boolean;
 }
 

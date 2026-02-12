@@ -9,10 +9,11 @@
 
 const POSTGREST_URL = import.meta.env.VITE_POSTGREST_URL;
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+// Support both new and legacy env var names for the PostgREST JWT
+const POSTGREST_JWT = import.meta.env.VITE_POSTGREST_JWT || import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-if (!POSTGREST_URL || !BACKEND_URL || !SUPABASE_ANON_KEY) {
-  console.warn('Missing VITE_POSTGREST_URL, VITE_BACKEND_URL, or VITE_SUPABASE_ANON_KEY');
+if (!POSTGREST_URL || !BACKEND_URL || !POSTGREST_JWT) {
+  console.warn('Missing VITE_POSTGREST_URL, VITE_BACKEND_URL, or VITE_POSTGREST_JWT');
 }
 
 // ─── Auth Types ──────────────────────────────────────────────────────────────────
@@ -467,7 +468,7 @@ class PostgRESTQueryBuilder {
     };
 
     // PostgREST auth: anon JWT for authorization
-    headers['Authorization'] = `Bearer ${SUPABASE_ANON_KEY}`;
+    headers['Authorization'] = `Bearer ${POSTGREST_JWT}`;
 
     if (this._isSingle) {
       headers['Accept'] = 'application/vnd.pgrst.object+json';
@@ -587,7 +588,7 @@ async function _rpc(fnName: string, params?: Record<string, unknown>): Promise<{
   };
 
   // PostgREST auth: anon JWT for authorization
-  headers['Authorization'] = `Bearer ${SUPABASE_ANON_KEY}`;
+  headers['Authorization'] = `Bearer ${POSTGREST_JWT}`;
 
   try {
     const res = await fetch(`${POSTGREST_URL}/rpc/${fnName}`, {

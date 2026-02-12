@@ -32,7 +32,7 @@ export const analysesService = {
       .select(`
         *,
         industry:industries(id, name, short_code),
-        profile:profile_list(id, name)
+        profile:profile_list(id, name, platform)
       `)
       .eq('user_id', user.id)
       .order('created_at', { ascending: false });
@@ -78,7 +78,7 @@ export const analysesService = {
       .select(`
         *,
         industry:industries(id, name, short_code),
-        profile:profile_list(id, name),
+        profile:profile_list(id, name, platform),
         hook_tags:analysis_hook_tags(hook_tag:hook_tags(id, name)),
         character_tags:analysis_character_tags(character_tag:character_tags(id, name))
       `)
@@ -105,7 +105,7 @@ export const analysesService = {
 
     const { data, error } = await supabase
       .from('viral_analyses')
-      .select('*, industry:industries(id, name, short_code), profile:profile_list(id, name)')
+      .select('*, industry:industries(id, name, short_code), profile:profile_list(id, name, platform)')
       .eq('user_id', user.id)
       .eq('status', 'PENDING')
       .order('created_at', { ascending: false });
@@ -123,7 +123,7 @@ export const analysesService = {
 
     const { data, error } = await supabase
       .from('viral_analyses')
-      .select('*, industry:industries(id, name, short_code), profile:profile_list(id, name)')
+      .select('*, industry:industries(id, name, short_code), profile:profile_list(id, name, platform)')
       .eq('user_id', user.id)
       .eq('status', 'APPROVED')
       .order('created_at', { ascending: false });
@@ -141,7 +141,7 @@ export const analysesService = {
 
     const { data, error } = await supabase
       .from('viral_analyses')
-      .select('*, industry:industries(id, name, short_code), profile:profile_list(id, name)')
+      .select('*, industry:industries(id, name, short_code), profile:profile_list(id, name, platform)')
       .eq('user_id', user.id)
       .eq('status', 'REJECTED')
       .eq('is_dissolved', false)

@@ -29,7 +29,7 @@ export default function VideographerHomePage() {
   // Profile selection modal state
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [profileModalProjectId, setProfileModalProjectId] = useState<string | null>(null);
-  const [profiles, setProfiles] = useState<{ id: string; name: string; is_active?: boolean }[]>([]);
+  const [profiles, setProfiles] = useState<{ id: string; name: string; platform?: string; is_active?: boolean }[]>([]);
   const [profilesLoading, setProfilesLoading] = useState(false);
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
 
@@ -583,11 +583,16 @@ export default function VideographerHomePage() {
                       profile.name.charAt(0).toUpperCase()
                     )}
                   </div>
-                  <span className={`font-medium text-sm ${
-                    selectedProfileId === profile.id ? 'text-orange-700' : 'text-gray-800'
-                  }`}>
-                    {profile.name}
-                  </span>
+                  <div className="flex-1 min-w-0">
+                    <span className={`font-medium text-sm ${
+                      selectedProfileId === profile.id ? 'text-orange-700' : 'text-gray-800'
+                    }`}>
+                      {profile.name}
+                    </span>
+                    {profile.platform && (
+                      <span className="ml-2 text-xs text-gray-400">{profile.platform}</span>
+                    )}
+                  </div>
                 </button>
               ))
             )}

@@ -43,7 +43,7 @@ export const editorService = {
       .select(`
         *,
         industry:industries(id, name, short_code),
-        profile:profile_list(id, name),
+        profile:profile_list(id, name, platform),
         profiles:user_id(email, full_name, avatar_url),
         assignments:project_assignments(
           id, role,
@@ -142,7 +142,7 @@ export const editorService = {
         .select(`
           *,
           industry:industries(id, name, short_code),
-          profile:profile_list(id, name),
+          profile:profile_list(id, name, platform),
           profiles:user_id(email, full_name, avatar_url),
           assignments:project_assignments(
             id, role,
@@ -212,7 +212,7 @@ export const editorService = {
         : Promise.resolve({ count: 0 }),
       // My completed edits
       myIds.length > 0
-        ? supabase.from('viral_analyses').select('id', { count: 'exact', head: true }).in('id', myIds).in('production_stage', ['READY_TO_POST', 'POSTED'])
+        ? supabase.from('viral_analyses').select('id', { count: 'exact', head: true }).in('id', myIds).in('production_stage', ['EDIT_REVIEW', 'READY_TO_POST', 'POSTED'])
         : Promise.resolve({ count: 0 }),
     ]);
 
@@ -238,7 +238,7 @@ export const editorService = {
         .select(`
           *,
           industry:industries(id, name, short_code),
-          profile:profile_list(id, name),
+          profile:profile_list(id, name, platform),
           profiles:user_id(email, full_name, avatar_url),
           assignments:project_assignments(
             id, role,
@@ -349,7 +349,7 @@ export const editorService = {
   },
 
   /**
-   * Mark editing as complete - move to READY_TO_POST
+   * Mark editing as complete - move to EDIT_REVIEW for admin approval
    */
   async markEditingComplete(data: MarkEditingCompleteData): Promise<ViralAnalysis> {
     const { data: { user } } = await auth.getUser();
@@ -368,9 +368,9 @@ export const editorService = {
       throw new Error('Please upload at least one edited video before marking as complete');
     }
 
-    // Update the analysis
+    // Update the analysis - send to admin for edit review
     const updateData: Record<string, unknown> = {
-      production_stage: 'READY_TO_POST',
+      production_stage: 'EDIT_REVIEW',
     };
 
     if (data.productionNotes) {

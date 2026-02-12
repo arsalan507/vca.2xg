@@ -5,6 +5,7 @@ import Header from '@/components/Header';
 import { postingManagerService } from '@/services/postingManagerService';
 import { videographerService } from '@/services/videographerService';
 import type { ViralAnalysis } from '@/types';
+import { ProfilePlatformIcons } from '@/types';
 import toast from 'react-hot-toast';
 
 type PlatformFilter = 'all' | 'instagram' | 'youtube_shorts' | 'youtube_long';
@@ -12,6 +13,7 @@ type PlatformFilter = 'all' | 'instagram' | 'youtube_shorts' | 'youtube_long';
 interface Profile {
   id: string;
   name: string;
+  platform?: string;
 }
 
 export default function ToPostPage() {
@@ -149,7 +151,7 @@ export default function ToPostPage() {
                       : 'bg-white border-gray-200 text-gray-600 hover:border-cyan-300'
                   }`}
                 >
-                  {profile.name}
+                  {ProfilePlatformIcons[profile.platform as keyof typeof ProfilePlatformIcons] || '📁'} {profile.name}
                 </button>
               ))}
             </div>

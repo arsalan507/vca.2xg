@@ -37,7 +37,7 @@ export default function ReviewPage() {
   const [replicationClarity, setReplicationClarity] = useState(8);
   const [feedback, setFeedback] = useState('');
   const [feedbackVoiceNote, setFeedbackVoiceNote] = useState<Blob | null>(null);
-  const [profiles, setProfiles] = useState<{ id: string; name: string }[]>([]);
+  const [profiles, setProfiles] = useState<{ id: string; name: string; platform?: string }[]>([]);
   const [selectedProfileId, setSelectedProfileId] = useState<string>('');
 
   useEffect(() => {
@@ -55,7 +55,7 @@ export default function ReviewPage() {
         .eq('is_active', true)
         .order('name');
       if (error) throw error;
-      setProfiles((data as { id: string; name: string }[]) || []);
+      setProfiles((data as { id: string; name: string; platform?: string }[]) || []);
     } catch (error) {
       console.error('Failed to load profiles:', error);
     }
@@ -340,7 +340,7 @@ export default function ReviewPage() {
               <option value="">Select later</option>
               {profiles.map((profile) => (
                 <option key={profile.id} value={profile.id}>
-                  {profile.name}
+                  {profile.name}{profile.platform ? ` (${profile.platform})` : ''}
                 </option>
               ))}
             </select>
