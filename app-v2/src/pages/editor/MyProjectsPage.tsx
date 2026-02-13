@@ -77,8 +77,12 @@ export default function EditorMyProjectsPage() {
     );
   };
 
-  const readyToUploadProjects = editingProjects.filter((p) => !hasEditedFiles(p));
-  const inEditingProjects = editingProjects.filter((p) => hasEditedFiles(p));
+  // Rejected projects (have disapproval_reason) need special treatment
+  const rejectedProjects = editingProjects.filter((p) => !!(p as any).disapproval_reason);
+  const nonRejectedEditing = editingProjects.filter((p) => !(p as any).disapproval_reason);
+
+  const readyToUploadProjects = nonRejectedEditing.filter((p) => !hasEditedFiles(p));
+  const inEditingProjects = nonRejectedEditing.filter((p) => hasEditedFiles(p));
 
   const activeCount = editingProjects.length + reviewProjects.length;
   const completedCount = completedProjects.length;
@@ -132,6 +136,69 @@ export default function EditorMyProjectsPage() {
 
         {activeTab === 'active' && (
           <div className="space-y-6">
+            {/* Rejected by Admin - Needs Re-edit */}
+            {rejectedProjects.length > 0 && (
+              <section className="animate-fade-in">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                  <h2 className="text-sm font-semibold text-red-600 uppercase tracking-wide">
+                    Rejected - Needs Re-edit ({rejectedProjects.length})
+                  </h2>
+                </div>
+
+                <div className="space-y-3">
+                  {rejectedProjects.map((project) => {
+                    const progress = getEditingProgress(project);
+
+                    return (
+                      <Link
+                        key={project.id}
+                        to={`/editor/project/${project.id}`}
+                        className="block bg-red-50 rounded-xl p-4 border-2 border-red-300 card-press"
+                      >
+                        <div className="flex items-start justify-between mb-2">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <h3 className="font-semibold text-gray-900">{project.title || 'Untitled'}</h3>
+                              <span className="px-2 py-0.5 bg-red-500 text-white text-[10px] font-bold rounded-full">
+                                REJECTED
+                              </span>
+                            </div>
+                            <p className="text-sm text-gray-500 font-mono">{project.content_id || 'No ID'}</p>
+                          </div>
+                          <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
+                            <AlertTriangle className="w-5 h-5 text-red-600" />
+                          </div>
+                        </div>
+
+                        {/* Rejection reason preview */}
+                        <p className="text-xs text-red-700 bg-red-100 rounded-lg px-3 py-2 mb-3 line-clamp-2">
+                          {(project as any).disapproval_reason}
+                        </p>
+
+                        {/* Progress Bar */}
+                        <div className="h-1.5 bg-red-100 rounded-full overflow-hidden mb-3">
+                          <div
+                            className="h-full bg-red-400 rounded-full transition-all"
+                            style={{ width: `${progress}%` }}
+                          />
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs px-2 py-1 bg-white rounded text-gray-600">
+                            {project.profile?.name || 'No profile'}
+                          </span>
+                          <span className="text-xs px-2 py-1 bg-white rounded text-gray-600">
+                            {getFileCount(project)} files
+                          </span>
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
+              </section>
+            )}
+
             {/* Ready to Upload (no edited files yet) */}
             {readyToUploadProjects.length > 0 && (
               <section className="animate-fade-in">
