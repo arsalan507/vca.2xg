@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Calendar, Send, CheckCircle, Loader2, Clock, ChevronRight, User, BarChart3, Settings, LogOut } from 'lucide-react';
+import { Calendar, Send, CheckCircle, Loader2, Clock, ChevronRight, Settings, LogOut } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Header from '@/components/Header';
 import { useAuth } from '@/hooks/useAuth';
@@ -158,22 +158,6 @@ export default function PostingHomePage() {
 
                   {/* Menu Items */}
                   <div className="py-2">
-                    <Link
-                      to="/posting/settings"
-                      onClick={() => setShowProfileDropdown(false)}
-                      className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 text-gray-700"
-                    >
-                      <User className="w-4 h-4" />
-                      <span className="text-sm">My Profile</span>
-                    </Link>
-                    <Link
-                      to="/posting/stats"
-                      onClick={() => setShowProfileDropdown(false)}
-                      className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 text-gray-700"
-                    >
-                      <BarChart3 className="w-4 h-4" />
-                      <span className="text-sm">My Stats</span>
-                    </Link>
                     <Link
                       to="/posting/settings"
                       onClick={() => setShowProfileDropdown(false)}

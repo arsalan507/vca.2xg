@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { PenLine, User, Settings, HelpCircle, LogOut } from 'lucide-react';
+import { PenLine, Settings, LogOut } from 'lucide-react';
 import { analysesService, type AnalysisStats } from '@/services/analysesService';
 import { useAuth } from '@/hooks/useAuth';
 import type { ViralAnalysis } from '@/types';
@@ -171,25 +171,8 @@ export default function WriterHomePage() {
                     }}
                     className="w-full flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-50 transition-colors text-left"
                   >
-                    <User className="w-4 h-4 text-gray-400" />
-                    <span className="text-sm">My Profile</span>
-                  </button>
-                  <button
-                    onClick={() => {
-                      setShowProfileDropdown(false);
-                      navigate('/writer/settings');
-                    }}
-                    className="w-full flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-50 transition-colors text-left"
-                  >
                     <Settings className="w-4 h-4 text-gray-400" />
                     <span className="text-sm">Settings</span>
-                  </button>
-                  <button
-                    onClick={() => setShowProfileDropdown(false)}
-                    className="w-full flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-50 transition-colors text-left"
-                  >
-                    <HelpCircle className="w-4 h-4 text-gray-400" />
-                    <span className="text-sm">Help & Support</span>
                   </button>
                   <div className="border-t border-gray-100 mt-1 pt-1">
                     <button

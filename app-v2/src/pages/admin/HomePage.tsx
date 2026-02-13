@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { TrendingUp, Users, Settings, LogOut, User, UsersRound, ChevronRight } from 'lucide-react';
+import { TrendingUp, Users, Settings, LogOut, UsersRound, ChevronRight } from 'lucide-react';
 import { adminService, type DashboardStats, type QueueStats } from '@/services/adminService';
 import { useAuth } from '@/hooks/useAuth';
 import toast from 'react-hot-toast';
@@ -225,14 +225,6 @@ export default function AdminHomePage() {
 
                 {/* Menu Items */}
                 <div className="py-2">
-                  <Link
-                    to="/admin/settings"
-                    onClick={() => setShowProfileMenu(false)}
-                    className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-50 transition-colors"
-                  >
-                    <User className="w-5 h-5 text-gray-500" />
-                    <span className="text-sm">My Profile</span>
-                  </Link>
                   <Link
                     to="/admin/team"
                     onClick={() => setShowProfileMenu(false)}

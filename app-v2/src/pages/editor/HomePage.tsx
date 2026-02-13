@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { FolderOpen, Clock, CheckCircle, Scissors, Loader2, Sparkles, User, BarChart3, Settings, LogOut } from 'lucide-react';
+import { FolderOpen, Clock, CheckCircle, Scissors, Loader2, Sparkles, Settings, LogOut } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { editorService, type EditorStats } from '@/services/editorService';
 import { useAuth } from '@/hooks/useAuth';
@@ -155,23 +155,6 @@ export default function EditorHomePage() {
 
                 {/* Dropdown Menu */}
                 <div className="py-2">
-                  <button
-                    onClick={() => {
-                      setShowProfileDropdown(false);
-                      navigate('/editor/settings');
-                    }}
-                    className="w-full flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-50 transition-colors text-left"
-                  >
-                    <User className="w-4 h-4 text-gray-400" />
-                    <span className="text-sm">My Profile</span>
-                  </button>
-                  <button
-                    onClick={() => setShowProfileDropdown(false)}
-                    className="w-full flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-50 transition-colors text-left"
-                  >
-                    <BarChart3 className="w-4 h-4 text-gray-400" />
-                    <span className="text-sm">My Stats</span>
-                  </button>
                   <button
                     onClick={() => {
                       setShowProfileDropdown(false);

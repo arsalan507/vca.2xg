@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, useNavigate } from 'react-router-dom';
-import { Loader2, Video, User, BarChart3, Settings, LogOut, X, Check } from 'lucide-react';
+import { Loader2, Video, Settings, LogOut, X, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { videographerService, type VideographerStats } from '@/services/videographerService';
 import type { ViralAnalysis } from '@/types';
@@ -230,26 +230,6 @@ export default function VideographerHomePage() {
 
                 {/* Dropdown Menu */}
                 <div className="py-2">
-                  <button
-                    onClick={() => {
-                      setShowProfileDropdown(false);
-                      navigate('/videographer/settings');
-                    }}
-                    className="w-full flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-50 transition-colors text-left"
-                  >
-                    <User className="w-4 h-4 text-gray-400" />
-                    <span className="text-sm">My Profile</span>
-                  </button>
-                  <button
-                    onClick={() => {
-                      setShowProfileDropdown(false);
-                      // Could navigate to stats page if exists
-                    }}
-                    className="w-full flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-50 transition-colors text-left"
-                  >
-                    <BarChart3 className="w-4 h-4 text-gray-400" />
-                    <span className="text-sm">My Stats</span>
-                  </button>
                   <button
                     onClick={() => {
                       setShowProfileDropdown(false);
