@@ -357,7 +357,22 @@ export default function EditorProjectDetailPage() {
 
                   {/* Download All Button */}
                   <button
-                    onClick={() => toast.success('Opening download page...')}
+                    onClick={() => {
+                      const rawFiles = getRawFiles();
+                      if (rawFiles.length === 0) {
+                        toast.error('No files to download');
+                        return;
+                      }
+                      rawFiles.forEach((f: any, i: number) => {
+                        const fileId = f.file_id;
+                        if (!fileId) return;
+                        // Stagger opens to avoid popup blockers
+                        setTimeout(() => {
+                          window.open(`https://drive.google.com/uc?id=${fileId}&export=download`, '_blank');
+                        }, i * 500);
+                      });
+                      toast.success(`Opening ${rawFiles.length} file(s) for download`);
+                    }}
                     className="w-full mt-4 flex items-center justify-center gap-2 p-4 bg-editor/10 rounded-xl text-editor font-semibold"
                   >
                     <Download className="w-5 h-5" />

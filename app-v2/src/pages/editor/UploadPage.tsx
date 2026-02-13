@@ -321,8 +321,8 @@ export default function EditorUploadPage() {
         </div>
       </div>
 
-      {/* Fixed Bottom Button - positioned above bottom nav */}
-      <div className="fixed bottom-[72px] left-0 right-0 px-4 py-4 bg-white border-t border-gray-100 max-w-mobile mx-auto z-40">
+      {/* Fixed Bottom Button - positioned above bottom nav with safe area */}
+      <div className="fixed left-0 right-0 px-4 py-4 bg-white border-t border-gray-100 max-w-mobile mx-auto z-40" style={{ bottom: 'calc(72px + env(safe-area-inset-bottom))' }}>
         <Button
           fullWidth
           size="lg"
