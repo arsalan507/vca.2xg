@@ -357,6 +357,13 @@ export const postingManagerService = {
       throw new Error('Posted URL is required');
     }
 
+    // Auto-prepend https:// if no protocol
+    let url = data.postedUrl.trim();
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      url = 'https://' + url;
+    }
+    data.postedUrl = url;
+
     // Basic URL validation
     try {
       new URL(data.postedUrl);

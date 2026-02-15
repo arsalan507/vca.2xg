@@ -660,11 +660,11 @@ export default function PostDetailPage() {
 
       {/* Post Modal */}
       {showPostModal && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-end justify-center">
+        <div className="fixed inset-0 bg-black/50 z-[60] flex items-end justify-center">
           <motion.div
             initial={{ y: '100%' }}
             animate={{ y: 0 }}
-            className="bg-white rounded-t-3xl w-full max-w-mobile p-6"
+            className="bg-white rounded-t-3xl w-full max-w-mobile p-6 pb-24"
           >
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Mark as Posted</h3>
 
