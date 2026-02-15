@@ -51,16 +51,11 @@ export default function VideographerHomePage() {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [statsData, projectsData, scriptsData, availableData] = await Promise.all([
-        videographerService.getMyStats(),
-        videographerService.getMyProjects(),
-        videographerService.getMyScripts(),
-        videographerService.getAvailableProjects(),
-      ]);
+      const { stats: statsData, projects, scripts, available } = await videographerService.getHomepageData();
       setStats(statsData);
-      setMyProjects(projectsData);
-      setMyScripts(scriptsData);
-      setAvailableProjects(availableData);
+      setMyProjects(projects);
+      setMyScripts(scripts);
+      setAvailableProjects(available);
     } catch (error) {
       console.error('Failed to load data:', error);
       toast.error('Failed to load data');

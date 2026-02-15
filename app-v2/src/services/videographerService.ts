@@ -258,6 +258,135 @@ export const videographerService = {
   },
 
   /**
+   * Get homepage data in a single optimized call (stats + projects + scripts + available)
+   * Avoids duplicate project_assignments and auth.getUser() queries
+   */
+  async getHomepageData(): Promise<{
+    stats: VideographerStats;
+    projects: ViralAnalysis[];
+    scripts: ViralAnalysis[];
+    available: ViralAnalysis[];
+  }> {
+    const planningStages = ['PLANNING', 'NOT_STARTED', 'PRE_PRODUCTION', 'PLANNED'];
+    const completedStages = ['READY_FOR_EDIT', 'EDITING', 'EDIT_REVIEW', 'READY_TO_POST', 'POSTED'];
+
+    // 1. Single auth call + single assignments fetch
+    const { data: { user } } = await auth.getUser();
+    if (!user) throw new Error('Not authenticated');
+
+    const [myAssignments, allVidAssignments] = await Promise.all([
+      supabase.from('project_assignments').select('analysis_id')
+        .eq('user_id', user.id).eq('role', 'VIDEOGRAPHER'),
+      supabase.from('project_assignments').select('analysis_id')
+        .eq('role', 'VIDEOGRAPHER'),
+    ]);
+
+    const myIds = ((myAssignments.data || []) as { analysis_id: string }[]).map(a => a.analysis_id);
+    const allAssignedIds = new Set(((allVidAssignments.data || []) as { analysis_id: string }[]).map(a => a.analysis_id));
+
+    // 2. Run all data fetches in parallel
+    const [
+      myProjectsResult, myFilesResult, myScriptsResult,
+      availableResult, availableNullResult, skipsResult,
+      availableCountResult, availableNullCountResult, scriptsCountResult,
+    ] = await Promise.all([
+      // My projects (full data)
+      myIds.length > 0
+        ? supabase.from('viral_analyses').select(`
+            *, industry:industries(id, name, short_code),
+            profile:profile_list(id, name, platform),
+            profiles:user_id(email, full_name, avatar_url),
+            assignments:project_assignments(id, role, user:profiles!project_assignments_user_id_fkey(id, email, full_name, avatar_url))
+          `).in('id', myIds).order('priority', { ascending: false }).order('created_at', { ascending: false })
+        : Promise.resolve({ data: [], error: null }),
+      // Files for my projects
+      myIds.length > 0
+        ? supabase.from('production_files').select('*').in('analysis_id', myIds)
+        : Promise.resolve({ data: [], error: null }),
+      // My scripts
+      supabase.from('viral_analyses').select(`
+        *, industry:industries(id, name, short_code), profile:profile_list(id, name, platform)
+      `).eq('user_id', user.id).order('created_at', { ascending: false }),
+      // Available projects (planning stages)
+      supabase.from('viral_analyses').select(`
+        *, industry:industries(id, name, short_code), profile:profile_list(id, name, platform),
+        profiles:user_id(email, full_name, avatar_url)
+      `).eq('status', 'APPROVED').in('production_stage', planningStages)
+        .order('priority', { ascending: false }).order('created_at', { ascending: false }),
+      // Available projects (null stage)
+      supabase.from('viral_analyses').select(`
+        *, industry:industries(id, name, short_code), profile:profile_list(id, name, platform),
+        profiles:user_id(email, full_name, avatar_url)
+      `).eq('status', 'APPROVED').is('production_stage', null)
+        .order('priority', { ascending: false }).order('created_at', { ascending: false }),
+      // Skipped projects
+      supabase.from('project_skips').select('analysis_id')
+        .eq('user_id', user.id).eq('role', 'VIDEOGRAPHER'),
+      // Stats: available counts (HEAD only)
+      supabase.from('viral_analyses').select('id', { count: 'exact', head: true })
+        .eq('status', 'APPROVED').in('production_stage', planningStages),
+      supabase.from('viral_analyses').select('id', { count: 'exact', head: true })
+        .eq('status', 'APPROVED').is('production_stage', null),
+      // Scripts count
+      supabase.from('viral_analyses').select('id', { count: 'exact', head: true })
+        .eq('user_id', user.id),
+    ]);
+
+    // Build my projects with files
+    const filesByAnalysis = new Map<string, any[]>();
+    for (const file of (myFilesResult.data || []) as any[]) {
+      const existing = filesByAnalysis.get(file.analysis_id) || [];
+      existing.push(file);
+      filesByAnalysis.set(file.analysis_id, existing);
+    }
+
+    const projects = ((myProjectsResult.data || []) as any[]).map((project: any) => ({
+      ...project,
+      email: project.profiles?.email,
+      full_name: project.profiles?.full_name,
+      avatar_url: project.profiles?.avatar_url,
+      videographer: project.assignments?.find((a: any) => a.role === 'VIDEOGRAPHER')?.user,
+      editor: project.assignments?.find((a: any) => a.role === 'EDITOR')?.user,
+      production_files: filesByAnalysis.get(project.id) || [],
+    })) as ViralAnalysis[];
+
+    // Build available projects (filter out assigned + skipped)
+    const skippedIds = new Set(((skipsResult.data || []) as any[]).map((s: any) => s.analysis_id));
+    const allAvailable = [
+      ...((availableResult.data || []) as any[]),
+      ...((availableNullResult.data || []) as any[]),
+    ];
+    const available = allAvailable
+      .filter((p: any) => !allAssignedIds.has(p.id) && !skippedIds.has(p.id))
+      .map((project: any) => ({
+        ...project,
+        email: project.profiles?.email,
+        full_name: project.profiles?.full_name,
+        avatar_url: project.profiles?.avatar_url,
+      })) as ViralAnalysis[];
+
+    // Calculate stats from fetched data
+    const activeShoots = projects.filter(p => p.production_stage === 'SHOOTING').length;
+    const completed = projects.filter(p => completedStages.includes(p.production_stage || '')).length;
+    const roughAvailable = Math.max(0,
+      (availableCountResult.count || 0) + (availableNullCountResult.count || 0) - allAssignedIds.size
+    );
+
+    return {
+      stats: {
+        activeShoots,
+        totalShoots: myIds.length,
+        scripts: scriptsCountResult.count || 0,
+        completed,
+        available: roughAvailable,
+      },
+      projects,
+      scripts: ((myScriptsResult.data || []) as ViralAnalysis[]),
+      available,
+    };
+  },
+
+  /**
    * Get a single project by ID with full details
    */
   async getProjectById(analysisId: string): Promise<ViralAnalysis> {

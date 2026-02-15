@@ -61,10 +61,7 @@ export default function EditorHomePage() {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [statsData, projectsData] = await Promise.all([
-        editorService.getMyStats(),
-        editorService.getMyProjects(),
-      ]);
+      const { stats: statsData, projects: projectsData } = await editorService.getHomepageData();
       setStats(statsData);
       setMyProjects(projectsData);
     } catch (error) {

@@ -542,11 +542,15 @@ class PostgRESTQueryBuilder {
         return { data: null, error: null, count };
       }
 
-      if (this._method === 'DELETE' && !this._selectColumns) {
+      if (this._method === 'DELETE') {
         return { data: null, error: null, count };
       }
 
-      const data = await res.json();
+      const text = await res.text();
+      if (!text) {
+        return { data: null, error: null, count };
+      }
+      const data = JSON.parse(text);
 
       // Handle maybeSingle - returns null if no rows, first element if 1 row
       if (this._isMaybeSingle && Array.isArray(data)) {

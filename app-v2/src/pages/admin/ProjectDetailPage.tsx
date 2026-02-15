@@ -160,7 +160,7 @@ export default function ProjectDetailPage() {
       setDeleting(true);
       await adminService.deleteProject(id!);
       toast.success('Project deleted');
-      navigate(-1);
+      navigate('/admin/production');
     } catch (error) {
       console.error('Failed to delete project:', error);
       toast.error('Failed to delete project');

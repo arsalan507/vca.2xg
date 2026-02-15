@@ -1,13 +1,10 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Video, Clock, ExternalLink, Loader2, MapPin, Download, Search, X } from 'lucide-react';
+import { Video, Clock, ExternalLink, Loader2, MapPin, Search, X } from 'lucide-react';
 import Header from '@/components/Header';
 import { editorService } from '@/services/editorService';
-import { fetchWithAuth } from '@/lib/api';
 import type { ViralAnalysis } from '@/types';
 import toast from 'react-hot-toast';
-
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
 
 type FilterType = 'all' | 'shorts' | 'reels' | 'long';
 
@@ -17,8 +14,6 @@ export default function EditorAvailablePage() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<FilterType>('all');
   const [pickingId, setPickingId] = useState<string | null>(null);
-  const [zippingId, setZippingId] = useState<string | null>(null);
-  const [zipProgress, setZipProgress] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
@@ -90,48 +85,6 @@ export default function EditorAvailablePage() {
       toast.error('Failed to skip project');
     }
   };
-
-  const handleDownloadAll = useCallback(async (files: any[], projectName: string, projectId: string) => {
-    if (zippingId || files.length === 0) return;
-
-    try {
-      setZippingId(projectId);
-      setZipProgress('Preparing download...');
-
-      // Build backend URL with file IDs
-      const fileIds = files.map((f: any) => f.file_id).filter(Boolean).join(',');
-      const zipName = encodeURIComponent(projectName || 'raw-footage');
-      const url = `${BACKEND_URL}/api/upload/download-zip?fileIds=${fileIds}&name=${zipName}`;
-
-      setZipProgress('Downloading zip...');
-
-      // Use fetchWithAuth - automatically refreshes token on 401 and retries
-      const response = await fetchWithAuth(url);
-
-      if (!response.ok) {
-        const errorText = await response.text().catch(() => '');
-        throw new Error(errorText || `Download failed: ${response.statusText}`);
-      }
-
-      const blob = await response.blob();
-      const blobUrl = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = blobUrl;
-      a.download = `${projectName || 'raw-footage'}.zip`;
-      document.body.appendChild(a);
-      a.click();
-      URL.revokeObjectURL(blobUrl);
-      document.body.removeChild(a);
-
-      toast.success('Download complete!');
-    } catch (err) {
-      console.error('Zip download failed:', err);
-      toast.error('Download failed. Try downloading files individually.');
-    } finally {
-      setZippingId(null);
-      setZipProgress('');
-    }
-  }, [zippingId]);
 
   const getFileCount = (project: ViralAnalysis) => {
     return project.production_files?.filter((f: any) => !f.is_deleted).length || 0;
@@ -349,27 +302,6 @@ export default function EditorAvailablePage() {
                           </a>
                         ))}
                       </div>
-                      {/* Download All Zip Button */}
-                      <button
-                        onClick={(e) => {
-                          e.preventDefault();
-                          handleDownloadAll(uploadedFiles, project.content_id || project.title || 'raw-footage', project.id);
-                        }}
-                        disabled={zippingId === project.id}
-                        className="w-full flex items-center justify-center gap-2 p-3 bg-editor/10 rounded-lg text-editor font-semibold text-sm active:bg-editor/20 disabled:opacity-60"
-                      >
-                        {zippingId === project.id ? (
-                          <>
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                            <span className="truncate">{zipProgress}</span>
-                          </>
-                        ) : (
-                          <>
-                            <Download className="w-4 h-4" />
-                            Download All ({getTotalSize(project)})
-                          </>
-                        )}
-                      </button>
                     </div>
                   )}
 

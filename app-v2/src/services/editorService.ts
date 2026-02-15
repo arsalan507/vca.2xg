@@ -229,6 +229,97 @@ export const editorService = {
   },
 
   /**
+   * Get homepage data in a single call (stats + projects combined)
+   * Avoids duplicate project_assignments query that getMyStats + getMyProjects make separately
+   */
+  async getHomepageData(): Promise<{ stats: EditorStats; projects: ViralAnalysis[] }> {
+    const { data: { user } } = await auth.getUser();
+    if (!user) throw new Error('Not authenticated');
+
+    // 1. Single assignments fetch (shared between stats + projects)
+    const { data: assignments, error: assignError } = await supabase
+      .from('project_assignments')
+      .select('analysis_id')
+      .eq('user_id', user.id)
+      .eq('role', 'EDITOR');
+
+    if (assignError) throw assignError;
+    const assignmentsList = (assignments || []) as { analysis_id: string }[];
+    const myIds = assignmentsList.map((a) => a.analysis_id);
+
+    // 2. Run stats counts + project data in parallel
+    const [
+      availableCountResult,
+      assignedEditorsResult,
+      projectsResult,
+      filesResult,
+    ] = await Promise.all([
+      // Stats: count READY_FOR_EDIT
+      supabase.from('viral_analyses').select('id', { count: 'exact', head: true })
+        .eq('status', 'APPROVED').eq('production_stage', 'READY_FOR_EDIT'),
+      // Stats: count assigned editors
+      supabase.from('project_assignments').select('id', { count: 'exact', head: true })
+        .eq('role', 'EDITOR'),
+      // Projects: full data
+      myIds.length > 0
+        ? supabase
+            .from('viral_analyses')
+            .select(`
+              *,
+              industry:industries(id, name, short_code),
+              profile:profile_list(id, name, platform),
+              profiles:user_id(email, full_name, avatar_url),
+              assignments:project_assignments(
+                id, role,
+                user:profiles!project_assignments_user_id_fkey(id, email, full_name, avatar_url)
+              )
+            `)
+            .in('id', myIds)
+            .order('priority', { ascending: false })
+            .order('created_at', { ascending: false })
+        : Promise.resolve({ data: [], error: null }),
+      // Files for all projects
+      myIds.length > 0
+        ? supabase.from('production_files').select('*').in('analysis_id', myIds)
+        : Promise.resolve({ data: [], error: null }),
+    ]);
+
+    // Calculate stats from fetched data
+    const projectList = (projectsResult.data || []) as any[];
+    const inProgress = projectList.filter((p: any) => p.production_stage === 'EDITING').length;
+    const completed = projectList.filter((p: any) =>
+      ['EDIT_REVIEW', 'READY_TO_POST', 'POSTED'].includes(p.production_stage || '')
+    ).length;
+    const roughAvailable = Math.max(0,
+      (availableCountResult.count || 0) - (assignedEditorsResult.count || 0)
+    );
+
+    // Attach files to projects
+    const filesByAnalysis = new Map<string, any[]>();
+    for (const file of (filesResult.data || []) as any[]) {
+      const existing = filesByAnalysis.get(file.analysis_id) || [];
+      existing.push(file);
+      filesByAnalysis.set(file.analysis_id, existing);
+    }
+
+    const projects = projectList.map((project: any) => ({
+      ...project,
+      email: project.profiles?.email,
+      full_name: project.profiles?.full_name,
+      avatar_url: project.profiles?.avatar_url,
+      videographer: project.assignments?.find((a: any) => a.role === 'VIDEOGRAPHER')?.user,
+      editor: project.assignments?.find((a: any) => a.role === 'EDITOR')?.user,
+      posting_manager: project.assignments?.find((a: any) => a.role === 'POSTING_MANAGER')?.user,
+      production_files: filesByAnalysis.get(project.id) || [],
+    })) as ViralAnalysis[];
+
+    return {
+      stats: { inProgress, available: roughAvailable, completed },
+      projects,
+    };
+  },
+
+  /**
    * Get a single project by ID with full details
    */
   async getProjectById(analysisId: string): Promise<ViralAnalysis> {
