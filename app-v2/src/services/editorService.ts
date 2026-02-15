@@ -199,13 +199,16 @@ export const editorService = {
     const myIds = assignmentsList.map((a) => a.analysis_id);
 
     // Run all queries in parallel
-    const [readyForEditResult, editorAssignmentsResult, inProgressResult, completedResult] = await Promise.all([
+    const [readyForEditResult, editorAssignmentsResult, skipsResult, inProgressResult, completedResult] = await Promise.all([
       // READY_FOR_EDIT project IDs
       supabase.from('viral_analyses').select('id')
         .eq('status', 'APPROVED').eq('production_stage', 'READY_FOR_EDIT'),
       // All editor assignment analysis_ids
       supabase.from('project_assignments').select('analysis_id')
         .eq('role', 'EDITOR'),
+      // My skipped projects
+      supabase.from('project_skips').select('analysis_id')
+        .eq('user_id', user.id).eq('role', 'EDITOR'),
       // My in-progress edits
       myIds.length > 0
         ? supabase.from('viral_analyses').select('id', { count: 'exact', head: true }).in('id', myIds).eq('production_stage', 'EDITING')
@@ -216,12 +219,29 @@ export const editorService = {
         : Promise.resolve({ count: 0 }),
     ]);
 
-    // Available = READY_FOR_EDIT projects that don't have an editor assigned
+    // Available = READY_FOR_EDIT projects without an editor, not skipped
     const editorProjectIds = new Set(
       ((editorAssignmentsResult.data || []) as { analysis_id: string }[]).map(a => a.analysis_id)
     );
-    const availableCount = ((readyForEditResult.data || []) as { id: string }[])
-      .filter(p => !editorProjectIds.has(p.id)).length;
+    const skippedIds = new Set(
+      ((skipsResult.data || []) as { analysis_id: string }[]).map(s => s.analysis_id)
+    );
+    const candidateIds = ((readyForEditResult.data || []) as { id: string }[])
+      .filter(p => !editorProjectIds.has(p.id) && !skippedIds.has(p.id))
+      .map(p => p.id);
+
+    // Also check for raw footage files
+    let availableCount = 0;
+    if (candidateIds.length > 0) {
+      const { data: rawFiles } = await supabase
+        .from('production_files')
+        .select('analysis_id')
+        .in('analysis_id', candidateIds)
+        .in('file_type', RAW_FILE_TYPES)
+        .eq('is_deleted', false);
+      const projectsWithRaw = new Set(((rawFiles || []) as { analysis_id: string }[]).map(f => f.analysis_id));
+      availableCount = candidateIds.filter(id => projectsWithRaw.has(id)).length;
+    }
 
     return {
       inProgress: inProgressResult.count || 0,
@@ -253,6 +273,7 @@ export const editorService = {
     const [
       readyForEditResult,
       editorAssignmentsResult,
+      skipsResult,
       projectsResult,
       filesResult,
     ] = await Promise.all([
@@ -262,6 +283,9 @@ export const editorService = {
       // Stats: get all editor assignment analysis_ids (to check which READY_FOR_EDIT already have editors)
       supabase.from('project_assignments').select('analysis_id')
         .eq('role', 'EDITOR'),
+      // Stats: get my skipped projects
+      supabase.from('project_skips').select('analysis_id')
+        .eq('user_id', user.id).eq('role', 'EDITOR'),
       // Projects: full data
       myIds.length > 0
         ? supabase
@@ -293,12 +317,29 @@ export const editorService = {
       ['EDIT_REVIEW', 'READY_TO_POST', 'POSTED'].includes(p.production_stage || '')
     ).length;
 
-    // Available = READY_FOR_EDIT projects that don't have an editor assigned
+    // Available = READY_FOR_EDIT projects without an editor, not skipped, with raw footage
     const editorProjectIds = new Set(
       ((editorAssignmentsResult.data || []) as { analysis_id: string }[]).map(a => a.analysis_id)
     );
-    const availableCount = ((readyForEditResult.data || []) as { id: string }[])
-      .filter(p => !editorProjectIds.has(p.id)).length;
+    const skippedIds = new Set(
+      ((skipsResult.data || []) as { analysis_id: string }[]).map(s => s.analysis_id)
+    );
+    const candidateIds = ((readyForEditResult.data || []) as { id: string }[])
+      .filter(p => !editorProjectIds.has(p.id) && !skippedIds.has(p.id))
+      .map(p => p.id);
+
+    // Check for raw footage files on candidate projects
+    let availableCount = 0;
+    if (candidateIds.length > 0) {
+      const { data: rawFiles } = await supabase
+        .from('production_files')
+        .select('analysis_id')
+        .in('analysis_id', candidateIds)
+        .in('file_type', RAW_FILE_TYPES)
+        .eq('is_deleted', false);
+      const projectsWithRaw = new Set(((rawFiles || []) as { analysis_id: string }[]).map(f => f.analysis_id));
+      availableCount = candidateIds.filter(id => projectsWithRaw.has(id)).length;
+    }
 
     // Attach files to projects
     const filesByAnalysis = new Map<string, any[]>();
