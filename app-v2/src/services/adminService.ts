@@ -782,6 +782,77 @@ export const adminService = {
   },
 
   /**
+   * Get all profiles from profile_list
+   */
+  async getProfiles(): Promise<{ id: string; name: string; code: string | null; platform: string | null; is_active: boolean; project_count: number }[]> {
+    const { data, error } = await supabase
+      .from('profile_list')
+      .select('*')
+      .order('name');
+
+    if (error) throw error;
+
+    const profiles = (data || []) as any[];
+
+    // Get project counts per profile in parallel
+    const countPromises = profiles.map(async (profile) => {
+      const { count } = await supabase
+        .from('viral_analyses')
+        .select('id', { count: 'exact', head: true })
+        .eq('profile_id', profile.id);
+      return { ...profile, project_count: count || 0 };
+    });
+
+    return Promise.all(countPromises);
+  },
+
+  /**
+   * Create a new profile
+   */
+  async createProfile(name: string, code: string, platform?: string): Promise<any> {
+    const { data, error } = await supabase
+      .from('profile_list')
+      .insert({ name, code: code.toUpperCase(), platform: platform || null })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  },
+
+  /**
+   * Update a profile
+   */
+  async updateProfile(profileId: string, updates: { name?: string; code?: string; platform?: string }): Promise<any> {
+    const updateData: Record<string, unknown> = {};
+    if (updates.name !== undefined) updateData.name = updates.name;
+    if (updates.code !== undefined) updateData.code = updates.code.toUpperCase();
+    if (updates.platform !== undefined) updateData.platform = updates.platform;
+
+    const { data, error } = await supabase
+      .from('profile_list')
+      .update(updateData)
+      .eq('id', profileId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  },
+
+  /**
+   * Soft delete a profile (set is_active = false)
+   */
+  async deleteProfile(profileId: string): Promise<void> {
+    const { error } = await supabase
+      .from('profile_list')
+      .update({ is_active: false })
+      .eq('id', profileId);
+
+    if (error) throw error;
+  },
+
+  /**
    * Delete a project/analysis (Admin only)
    * Cascades to production_files, project_assignments, project_skips
    */

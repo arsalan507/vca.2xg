@@ -195,6 +195,17 @@ export default function UploadPage() {
           driveFileType
         );
 
+        // Generate auto-renamed file name: {content_id}_raw_{NN}.{ext}
+        let renamedFileName: string | undefined;
+        if (project.content_id) {
+          const ext = file.file.name.split('.').pop() || 'mov';
+          // Count existing raw files + already-uploaded files in this batch
+          const existingFiles = project.production_files?.filter((f: any) => !f.is_deleted) || [];
+          const alreadyUploadedInBatch = files.filter((f2, idx) => idx < i && f2.status === 'complete').length;
+          const rawNum = existingFiles.length + alreadyUploadedInBatch + 1;
+          renamedFileName = `${project.content_id}_raw_${String(rawNum).padStart(2, '0')}.${ext}`;
+        }
+
         // Upload to user's Google Drive
         const result = await googleDriveOAuthService.uploadFile(
           file.file,
@@ -206,15 +217,17 @@ export default function UploadPage() {
               )
             );
           },
-          file.id
+          file.id,
+          renamedFileName
         );
 
         // Record file in database with selected file type
+        const displayName = renamedFileName || file.file.name;
         try {
           const dbRecord = await productionFilesService.createFileRecord({
             analysisId: project.id,
             fileType: selectedFileType,
-            fileName: file.file.name,
+            fileName: displayName,
             fileUrl: result.webViewLink,
             fileId: result.fileId,
             fileSize: result.size,

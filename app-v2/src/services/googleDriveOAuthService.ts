@@ -363,16 +363,20 @@ class GoogleDriveOAuthService {
     file: File,
     folderId: string,
     onProgress?: (progress: UploadProgress) => void,
-    uploadKey?: string
+    uploadKey?: string,
+    fileName?: string
   ): Promise<UploadResult> {
     await this.ensureSignedIn();
 
     const throttledProgress = createThrottledProgress(onProgress);
 
+    // If a custom fileName is provided, create a renamed File object
+    const uploadFile = fileName ? new File([file], fileName, { type: file.type }) : file;
+
     try {
-      const result = file.size > FIVE_MB
-        ? await this.chunkedResumableUpload(file, folderId, throttledProgress, uploadKey)
-        : await this.multipartUpload(file, folderId, throttledProgress, uploadKey);
+      const result = uploadFile.size > FIVE_MB
+        ? await this.chunkedResumableUpload(uploadFile, folderId, throttledProgress, uploadKey)
+        : await this.multipartUpload(uploadFile, folderId, throttledProgress, uploadKey);
 
       // Make file public and share with admin
       const permissionPromises: Promise<void>[] = [

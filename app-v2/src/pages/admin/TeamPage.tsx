@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, Plus, RefreshCw, Pencil, Trash2, X, Mail, User as UserIcon } from 'lucide-react';
+import { ChevronLeft, Plus, RefreshCw, Pencil, Trash2, X, Mail, User as UserIcon, Tag } from 'lucide-react';
 import { adminService } from '@/services/adminService';
 import ResetPinModal from '@/components/admin/ResetPinModal';
 import toast from 'react-hot-toast';
@@ -44,7 +44,29 @@ const ROLE_OPTIONS = [
   { id: 'super_admin', icon: '🛡️', label: 'Admin' },
 ];
 
+interface Profile {
+  id: string;
+  name: string;
+  code: string | null;
+  platform: string | null;
+  is_active: boolean;
+  project_count: number;
+}
+
+type PageTab = 'team' | 'profiles';
+
+function suggestCode(name: string): string {
+  const words = name.trim().split(/\s+/).filter(Boolean);
+  if (words.length >= 2) {
+    // Multi-word: first letter of each word
+    return words.map(w => w[0]).join('').toUpperCase().slice(0, 4);
+  }
+  // Single word: first 3 letters
+  return name.replace(/[^a-zA-Z]/g, '').toUpperCase().slice(0, 3);
+}
+
 export default function TeamPage() {
+  const [pageTab, setPageTab] = useState<PageTab>('team');
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [teamStats, setTeamStats] = useState<TeamStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -74,9 +96,23 @@ export default function TeamPage() {
   // Delete confirmation state
   const [deletingMember, setDeletingMember] = useState<TeamMember | null>(null);
 
+  // Profile management state
+  const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [profilesLoading, setProfilesLoading] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [profileModalData, setProfileModalData] = useState({ name: '', code: '', platform: '' });
+  const [isSubmittingProfile, setIsSubmittingProfile] = useState(false);
+  const [deletingProfile, setDeletingProfile] = useState<Profile | null>(null);
+
   useEffect(() => {
     loadData();
   }, []);
+
+  useEffect(() => {
+    if (pageTab === 'profiles' && profiles.length === 0) {
+      loadProfiles();
+    }
+  }, [pageTab]);
 
   const loadData = async (isRefresh = false) => {
     try {
@@ -231,6 +267,65 @@ export default function TeamPage() {
     }
   };
 
+  // Profile management functions
+  const loadProfiles = async () => {
+    try {
+      setProfilesLoading(true);
+      const data = await adminService.getProfiles();
+      setProfiles(data.filter(p => p.is_active !== false));
+    } catch (error) {
+      console.error('Failed to load profiles:', error);
+      toast.error('Failed to load profiles');
+    } finally {
+      setProfilesLoading(false);
+    }
+  };
+
+  const openProfileModal = () => {
+    setProfileModalData({ name: '', code: '', platform: '' });
+    setShowProfileModal(true);
+  };
+
+  const handleProfileNameChange = (name: string) => {
+    const autoCode = suggestCode(name);
+    setProfileModalData(prev => ({
+      ...prev,
+      name,
+      code: prev.code === suggestCode(prev.name) || prev.code === '' ? autoCode : prev.code,
+    }));
+  };
+
+  const handleSaveProfile = async () => {
+    const { name, code, platform } = profileModalData;
+    if (!name.trim()) { toast.error('Enter a profile name'); return; }
+    if (!code.trim() || code.length < 2 || code.length > 4) { toast.error('Code must be 2-4 uppercase letters'); return; }
+    if (!/^[A-Z]{2,4}$/.test(code)) { toast.error('Code must be uppercase letters only'); return; }
+
+    setIsSubmittingProfile(true);
+    try {
+      await adminService.createProfile(name.trim(), code.trim(), platform || undefined);
+      toast.success(`Profile "${name}" created!`);
+      setShowProfileModal(false);
+      loadProfiles();
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to create profile');
+    } finally {
+      setIsSubmittingProfile(false);
+    }
+  };
+
+  const handleDeleteProfile = async () => {
+    if (!deletingProfile) return;
+    try {
+      await adminService.deleteProfile(deletingProfile.id);
+      toast.success(`Profile "${deletingProfile.name}" deleted`);
+      setProfiles(prev => prev.filter(p => p.id !== deletingProfile.id));
+      setDeletingProfile(null);
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to delete profile');
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -245,7 +340,7 @@ export default function TeamPage() {
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex items-center justify-between mb-6"
+        className="flex items-center justify-between mb-4"
       >
         <div className="flex items-center gap-3">
           <Link
@@ -255,19 +350,261 @@ export default function TeamPage() {
             <ChevronLeft className="w-5 h-5" />
           </Link>
           <div>
-            <h1 className="text-xl font-semibold text-gray-900">Team Members</h1>
-            <p className="text-sm text-gray-500">{teamStats?.total || 0} active members</p>
+            <h1 className="text-xl font-semibold text-gray-900">
+              {pageTab === 'team' ? 'Team Members' : 'Profiles'}
+            </h1>
+            <p className="text-sm text-gray-500">
+              {pageTab === 'team' ? `${teamStats?.total || 0} active members` : `${profiles.length} profiles`}
+            </p>
           </div>
         </div>
         <button
-          onClick={() => loadData(true)}
-          disabled={refreshing}
+          onClick={() => pageTab === 'team' ? loadData(true) : loadProfiles()}
+          disabled={refreshing || profilesLoading}
           className="w-10 h-10 flex items-center justify-center rounded-full bg-gray-100 active:bg-gray-200"
         >
-          <RefreshCw className={`w-5 h-5 text-gray-600 ${refreshing ? 'animate-spin' : ''}`} />
+          <RefreshCw className={`w-5 h-5 text-gray-600 ${(refreshing || profilesLoading) ? 'animate-spin' : ''}`} />
         </button>
       </motion.div>
 
+      {/* Page Tab Switcher */}
+      <div className="flex gap-2 mb-4">
+        <button
+          onClick={() => setPageTab('team')}
+          className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium transition-all ${
+            pageTab === 'team' ? 'bg-purple-500 text-white' : 'bg-gray-100 text-gray-600'
+          }`}
+        >
+          <UserIcon className="w-4 h-4" />
+          Team
+        </button>
+        <button
+          onClick={() => setPageTab('profiles')}
+          className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium transition-all ${
+            pageTab === 'profiles' ? 'bg-purple-500 text-white' : 'bg-gray-100 text-gray-600'
+          }`}
+        >
+          <Tag className="w-4 h-4" />
+          Profiles
+        </button>
+      </div>
+
+      {pageTab === 'profiles' ? (
+        <>
+          {/* Profiles List */}
+          {profilesLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500"></div>
+            </div>
+          ) : profiles.length === 0 ? (
+            <div className="text-center py-12">
+              <div className="text-5xl mb-4">🎯</div>
+              <h3 className="text-lg font-semibold text-gray-800 mb-2">No Profiles</h3>
+              <p className="text-gray-500 text-sm">Add profiles to organize content</p>
+            </div>
+          ) : (
+            <div className="space-y-3 mb-20">
+              {profiles.map((profile) => (
+                <motion.div
+                  key={profile.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="bg-white rounded-xl p-4 border border-gray-100"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+                      {profile.code || '?'}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-gray-900">{profile.name}</h3>
+                      <div className="flex items-center gap-2 flex-wrap mt-0.5">
+                        {profile.code && (
+                          <span className="px-1.5 py-0.5 bg-purple-100 text-purple-700 text-xs font-mono font-medium rounded">
+                            {profile.code}
+                          </span>
+                        )}
+                        {profile.platform && (
+                          <span className="text-xs text-gray-500">{profile.platform}</span>
+                        )}
+                        <span className="text-xs text-gray-400">{profile.project_count} projects</span>
+                      </div>
+                      {profile.code && (
+                        <p className="text-[10px] text-gray-400 mt-1">
+                          IDs: {profile.code}-001, {profile.code}-002...
+                        </p>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => setDeletingProfile(profile)}
+                      className="w-8 h-8 rounded-full border border-gray-200 flex items-center justify-center hover:bg-red-50 hover:border-red-200 transition-colors group"
+                    >
+                      <Trash2 className="w-4 h-4 text-gray-400 group-hover:text-red-500" />
+                    </button>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          )}
+
+          {/* Add Profile FAB */}
+          <motion.button
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ delay: 0.3, type: 'spring' }}
+            onClick={openProfileModal}
+            className="fixed bottom-24 right-4 w-14 h-14 rounded-full bg-gradient-to-br from-purple-500 to-purple-600 text-white shadow-lg flex items-center justify-center active:scale-95 transition-transform z-40"
+            style={{ boxShadow: '0 4px 15px rgba(139, 92, 246, 0.4)' }}
+          >
+            <Plus className="w-7 h-7" />
+          </motion.button>
+
+          {/* Add Profile Modal */}
+          <AnimatePresence>
+            {showProfileModal && (
+              <>
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  onClick={() => setShowProfileModal(false)}
+                  className="fixed inset-0 bg-black/50 z-50"
+                />
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                  className="fixed inset-x-4 top-4 bottom-4 bg-white rounded-2xl z-50 max-w-md mx-auto overflow-y-auto my-auto max-h-fit"
+                >
+                  <div className="flex items-center justify-between p-4 border-b border-gray-100">
+                    <h3 className="text-lg font-semibold text-gray-900">Add Profile</h3>
+                    <button
+                      onClick={() => setShowProfileModal(false)}
+                      className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center"
+                    >
+                      <X className="w-5 h-5 text-gray-500" />
+                    </button>
+                  </div>
+                  <div className="p-4 space-y-4">
+                    {/* Name */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1.5">Profile Name</label>
+                      <input
+                        type="text"
+                        value={profileModalData.name}
+                        onChange={(e) => handleProfileNameChange(e.target.value)}
+                        placeholder="e.g. Whatts On Wheel"
+                        className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
+                      />
+                    </div>
+                    {/* Code */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                        Code <span className="text-gray-400 font-normal">(2-4 uppercase letters)</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={profileModalData.code}
+                        onChange={(e) => setProfileModalData(prev => ({ ...prev, code: e.target.value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4) }))}
+                        placeholder="e.g. WOW"
+                        maxLength={4}
+                        className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm font-mono text-center text-xl tracking-widest focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
+                      />
+                      {profileModalData.code.length >= 2 && (
+                        <p className="text-xs text-gray-500 mt-1.5">
+                          Content IDs will look like: <span className="font-mono font-medium text-purple-600">{profileModalData.code}-001</span>, <span className="font-mono font-medium text-purple-600">{profileModalData.code}-002</span>...
+                        </p>
+                      )}
+                    </div>
+                    {/* Platform */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Platform</label>
+                      <div className="grid grid-cols-3 gap-2">
+                        {[
+                          { id: 'instagram', label: 'Instagram', emoji: '📸' },
+                          { id: 'youtube', label: 'YouTube', emoji: '▶️' },
+                          { id: 'tiktok', label: 'TikTok', emoji: '🎵' },
+                        ].map((p) => (
+                          <button
+                            key={p.id}
+                            onClick={() => setProfileModalData(prev => ({ ...prev, platform: prev.platform === p.id ? '' : p.id }))}
+                            className={`p-3 rounded-xl border-2 text-center transition-all ${
+                              profileModalData.platform === p.id
+                                ? 'border-purple-500 bg-purple-50'
+                                : 'border-gray-200'
+                            }`}
+                          >
+                            <div className="text-xl mb-1">{p.emoji}</div>
+                            <div className="text-xs font-medium text-gray-700">{p.label}</div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex gap-3 p-4 border-t border-gray-100">
+                    <button
+                      onClick={() => setShowProfileModal(false)}
+                      className="flex-1 py-3 px-4 bg-gray-100 text-gray-700 font-medium rounded-xl"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleSaveProfile}
+                      disabled={isSubmittingProfile}
+                      className="flex-1 py-3 px-4 bg-purple-500 text-white font-medium rounded-xl disabled:opacity-50"
+                    >
+                      {isSubmittingProfile ? 'Creating...' : 'Create Profile'}
+                    </button>
+                  </div>
+                </motion.div>
+              </>
+            )}
+          </AnimatePresence>
+
+          {/* Delete Profile Confirmation */}
+          <AnimatePresence>
+            {deletingProfile && (
+              <>
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  onClick={() => setDeletingProfile(null)}
+                  className="fixed inset-0 bg-black/50 z-50"
+                />
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  className="fixed inset-x-4 top-1/2 -translate-y-1/2 bg-white rounded-2xl z-50 max-w-sm mx-auto p-6 text-center"
+                >
+                  <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
+                    <Trash2 className="w-8 h-8 text-red-500" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Delete Profile?</h3>
+                  <p className="text-sm text-gray-500 mb-6">
+                    Are you sure you want to delete <strong>{deletingProfile.name}</strong>? Existing projects with this profile won't be affected.
+                  </p>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => setDeletingProfile(null)}
+                      className="flex-1 py-3 px-4 bg-gray-100 text-gray-700 font-medium rounded-xl"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleDeleteProfile}
+                      className="flex-1 py-3 px-4 bg-red-500 text-white font-medium rounded-xl"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </motion.div>
+              </>
+            )}
+          </AnimatePresence>
+        </>
+      ) : (
+      <>
       {/* Filter Tabs */}
       <motion.div
         initial={{ opacity: 0, y: 10 }}
@@ -633,6 +970,9 @@ export default function TeamPage() {
           </>
         )}
       </AnimatePresence>
+
+      </>
+      )}
 
       {/* Reset PIN Modal */}
       <ResetPinModal

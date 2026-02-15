@@ -127,6 +127,16 @@ export default function EditorUploadPage() {
         'edited-video'
       );
 
+      // Generate auto-renamed file name: {content_id}_v{N}.{ext}
+      let renamedFileName: string | undefined;
+      if (project.content_id) {
+        const ext = selectedFile.name.split('.').pop() || 'mp4';
+        // Count existing edited videos for this project to determine version number
+        const { editedVideo: existingCount } = await productionFilesService.getFileCounts(project.id);
+        const versionNum = existingCount + 1;
+        renamedFileName = `${project.content_id}_v${versionNum}.${ext}`;
+      }
+
       // Upload to user's Google Drive
       const result = await googleDriveOAuthService.uploadFile(
         selectedFile,
@@ -134,14 +144,16 @@ export default function EditorUploadPage() {
         (progress: UploadProgress) => {
           setUploadProgress(progress.percentage);
         },
-        uploadKey
+        uploadKey,
+        renamedFileName
       );
 
-      // Record file in database
+      // Record file in database with renamed file name
+      const displayName = renamedFileName || selectedFile.name;
       await productionFilesService.createFileRecord({
         analysisId: project.id,
         fileType: 'edited-video',
-        fileName: selectedFile.name,
+        fileName: displayName,
         fileUrl: result.webViewLink,
         fileId: result.fileId,
         fileSize: result.size,
