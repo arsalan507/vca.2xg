@@ -87,6 +87,7 @@ function createThrottledProgress(
 class GoogleDriveOAuthService {
   private tokenClient: any = null;
   private accessToken: string | null = null;
+  private tokenExpiresAt: number = 0;
   private gapiInited = false;
   private gisInited = false;
   private activeUploads: Map<string, XMLHttpRequest> = new Map();
@@ -135,7 +136,10 @@ class GoogleDriveOAuthService {
           return;
         }
         this.accessToken = response.access_token;
-        console.log('Access token received');
+        // Token expires in expires_in seconds (default 3600). Set expiry 5 min early to be safe.
+        const expiresIn = (response.expires_in || 3600) - 300;
+        this.tokenExpiresAt = Date.now() + expiresIn * 1000;
+        console.log('Access token received, expires in', expiresIn, 'seconds');
       },
     });
     this.gisInited = true;
@@ -182,9 +186,17 @@ class GoogleDriveOAuthService {
   async signIn(): Promise<void> {
     await this.initialize();
 
-    if (this.accessToken) {
-      console.log('Already have access token');
+    // Only skip re-auth if token exists AND is not expired
+    if (this.accessToken && Date.now() < this.tokenExpiresAt) {
+      console.log('Already have valid access token');
       return;
+    }
+
+    // Clear expired token
+    if (this.accessToken) {
+      console.log('Access token expired, requesting new one');
+      this.accessToken = null;
+      this.tokenExpiresAt = 0;
     }
 
     return new Promise((resolve, reject) => {
@@ -195,12 +207,14 @@ class GoogleDriveOAuthService {
             return;
           }
           this.accessToken = response.access_token;
+          const expiresIn = (response.expires_in || 3600) - 300;
+          this.tokenExpiresAt = Date.now() + expiresIn * 1000;
           gapi.client.setToken({ access_token: this.accessToken });
           console.log('Signed in to Google Drive');
           resolve();
         };
 
-        this.tokenClient.requestAccessToken({ prompt: 'consent' });
+        this.tokenClient.requestAccessToken({ prompt: '' });
       } catch (error: any) {
         console.error('Sign in error:', error);
         reject(error);
@@ -224,6 +238,7 @@ class GoogleDriveOAuthService {
         console.log('Access token revoked');
       });
       this.accessToken = null;
+      this.tokenExpiresAt = 0;
       gapi.client.setToken(null);
     }
 
@@ -236,7 +251,7 @@ class GoogleDriveOAuthService {
    */
   async isUserSignedIn(): Promise<boolean> {
     await this.initialize();
-    return this.accessToken !== null;
+    return this.accessToken !== null && Date.now() < this.tokenExpiresAt;
   }
 
   /**
@@ -264,6 +279,11 @@ class GoogleDriveOAuthService {
       return response.result.id;
     } catch (error: any) {
       console.error('Create folder error:', error);
+      // If auth error, clear token so next ensureSignedIn() will re-authenticate
+      if (error.status === 401 || error.result?.error?.code === 401) {
+        this.accessToken = null;
+        this.tokenExpiresAt = 0;
+      }
       throw new Error(`Failed to create folder: ${error.result?.error?.message || error.message}`);
     }
   }
