@@ -19,6 +19,7 @@ import {
   Download,
   RotateCcw,
   SkipForward,
+  Trash2,
 } from 'lucide-react';
 import { adminService } from '@/services/adminService';
 import type { ViralAnalysis } from '@/types';
@@ -66,6 +67,8 @@ export default function ProjectDetailPage() {
     rejectReason: '',
     submitting: false,
   });
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -149,6 +152,21 @@ export default function ProjectDetailPage() {
       toast.error('Failed to reject edit');
     } finally {
       setEditReview((prev) => ({ ...prev, submitting: false }));
+    }
+  };
+
+  const handleDeleteProject = async () => {
+    try {
+      setDeleting(true);
+      await adminService.deleteProject(id!);
+      toast.success('Project deleted');
+      navigate(-1);
+    } catch (error) {
+      console.error('Failed to delete project:', error);
+      toast.error('Failed to delete project');
+    } finally {
+      setDeleting(false);
+      setShowDeleteConfirm(false);
     }
   };
 
@@ -264,7 +282,15 @@ export default function ProjectDetailPage() {
             <span>{getPlatformIcon(project.platform)} {getPlatformLabel(project.platform)}</span>
           </div>
         </div>
-        {getStatusBadge(project.status)}
+        <div className="flex items-center gap-2 shrink-0">
+          {getStatusBadge(project.status)}
+          <button
+            onClick={() => setShowDeleteConfirm(true)}
+            className="p-2 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </div>
       </motion.div>
 
       {/* Production Stage Progress */}
@@ -829,6 +855,45 @@ export default function ProjectDetailPage() {
             {editReview.submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
             Approve Edit
           </button>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="w-full max-w-sm bg-white rounded-2xl p-6"
+          >
+            <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
+              <Trash2 className="w-6 h-6 text-red-600" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 text-center mb-2">Delete Project?</h3>
+            <p className="text-sm text-gray-500 text-center mb-1">
+              <span className="font-medium text-gray-700">{project.title}</span>
+            </p>
+            <p className="text-sm text-gray-500 text-center mb-6">
+              This will permanently delete the project, all uploaded files, and assignments. This cannot be undone.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                disabled={deleting}
+                className="flex-1 py-3 bg-gray-100 text-gray-700 rounded-xl font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteProject}
+                disabled={deleting}
+                className="flex-1 py-3 bg-red-500 text-white rounded-xl font-medium disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                Delete
+              </button>
+            </div>
+          </motion.div>
         </div>
       )}
 

@@ -780,4 +780,17 @@ export const adminService = {
 
     return { success: true };
   },
+
+  /**
+   * Delete a project/analysis (Admin only)
+   * Cascades to production_files, project_assignments, project_skips
+   */
+  async deleteProject(analysisId: string): Promise<void> {
+    const { error } = await supabase
+      .from('viral_analyses')
+      .delete()
+      .eq('id', analysisId);
+
+    if (error) throw error;
+  },
 };
