@@ -25,6 +25,7 @@ export interface SetPostingDetailsData {
   postingHeading?: string;
   postingHashtags?: string[];
   scheduledPostTime?: string;
+  profileId?: string;
 }
 
 export interface MarkAsPostedData {
@@ -294,6 +295,9 @@ export const postingManagerService = {
     }
     if (data.scheduledPostTime) {
       updateData.scheduled_post_time = data.scheduledPostTime;
+    }
+    if (data.profileId) {
+      updateData.profile_id = data.profileId;
     }
 
     const { error } = await supabase

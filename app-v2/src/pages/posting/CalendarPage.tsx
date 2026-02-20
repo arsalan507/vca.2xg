@@ -1,10 +1,12 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Loader2, Upload } from 'lucide-react';
 import { postingManagerService } from '@/services/postingManagerService';
 import { videographerService } from '@/services/videographerService';
 import type { ViralAnalysis } from '@/types';
+
+type ViewMode = 'scheduled' | 'ready';
 
 type PlatformFilter = 'all' | 'instagram' | 'youtube_shorts' | 'youtube_long' | 'tiktok';
 
@@ -26,12 +28,14 @@ interface GroupedPosts {
 export default function CalendarPage() {
   const navigate = useNavigate();
   const [scheduledPosts, setScheduledPosts] = useState<ViralAnalysis[]>([]);
+  const [readyToPostProjects, setReadyToPostProjects] = useState<ViralAnalysis[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedProfile, setSelectedProfile] = useState<string>('all');
   const [selectedPlatform, setSelectedPlatform] = useState<PlatformFilter>('all');
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<ViewMode>('scheduled');
 
   useEffect(() => {
     loadData();
@@ -46,15 +50,17 @@ export default function CalendarPage() {
       const endDate = new Date();
       endDate.setMonth(endDate.getMonth() + 3);
 
-      const [posts, profileList] = await Promise.all([
+      const [posts, readyProjects, profileList] = await Promise.all([
         postingManagerService.getScheduledPosts(startDate.toISOString(), endDate.toISOString()),
+        postingManagerService.getReadyToPostProjects(),
         videographerService.getProfiles(),
       ]);
 
       setScheduledPosts(posts);
+      setReadyToPostProjects(readyProjects);
       setProfiles(profileList);
     } catch (error) {
-      console.error('Failed to load scheduled posts:', error);
+      console.error('Failed to load data:', error);
     } finally {
       setLoading(false);
     }
@@ -264,10 +270,29 @@ export default function CalendarPage() {
     setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1));
   };
 
+  // Filter ready to post projects by profile
+  const getFilteredReadyProjects = (): ViralAnalysis[] => {
+    if (selectedProfile === 'all') return readyToPostProjects;
+    return readyToPostProjects.filter((project) => project.profile_id === selectedProfile);
+  };
+
+  // Get profile counts for ready to post
+  const getReadyProfileCounts = () => {
+    const counts: { [key: string]: number } = { all: readyToPostProjects.length };
+    readyToPostProjects.forEach((project) => {
+      if (project.profile_id) {
+        counts[project.profile_id] = (counts[project.profile_id] || 0) + 1;
+      }
+    });
+    return counts;
+  };
+
   const counts = getCounts();
   const filteredPosts = getFilteredPosts();
   const groupedPosts = groupPostsByDate(filteredPosts);
   const platformCounts = getPlatformCounts();
+  const filteredReadyProjects = getFilteredReadyProjects();
+  const readyProfileCounts = getReadyProfileCounts();
 
   // Get sorted dates, optionally filtering to selected date
   const sortedDates = useMemo(() => {
@@ -294,7 +319,7 @@ export default function CalendarPage() {
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex items-center gap-3 mb-6"
+        className="flex items-center gap-3 mb-4"
       >
         <button
           onClick={() => navigate(-1)}
@@ -303,13 +328,57 @@ export default function CalendarPage() {
           <ChevronLeft className="w-5 h-5" />
         </button>
         <div>
-          <h1 className="text-xl font-semibold text-gray-900">Calendar</h1>
-          <p className="text-sm text-gray-500">{scheduledPosts.length} posts scheduled</p>
+          <h1 className="text-xl font-semibold text-gray-900">
+            {viewMode === 'scheduled' ? 'Calendar' : 'Ready to Post'}
+          </h1>
+          <p className="text-sm text-gray-500">
+            {viewMode === 'scheduled'
+              ? `${scheduledPosts.length} posts scheduled`
+              : selectedProfile !== 'all'
+              ? `${filteredReadyProjects.length} of ${readyToPostProjects.length} videos`
+              : `${readyToPostProjects.length} videos ready`}
+          </p>
         </div>
       </motion.div>
 
-      {/* Profile Filter */}
-      {profiles.length > 0 && (
+      {/* View Mode Tabs */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex gap-2 mb-6"
+      >
+        <button
+          onClick={() => setViewMode('scheduled')}
+          className={`flex-1 py-3 rounded-xl font-semibold text-sm transition-all ${
+            viewMode === 'scheduled'
+              ? 'bg-cyan-500 text-white shadow-md'
+              : 'bg-gray-100 text-gray-600'
+          }`}
+        >
+          📅 Scheduled
+        </button>
+        <button
+          onClick={() => setViewMode('ready')}
+          className={`flex-1 py-3 rounded-xl font-semibold text-sm transition-all ${
+            viewMode === 'ready'
+              ? 'bg-green-500 text-white shadow-md'
+              : 'bg-gray-100 text-gray-600'
+          }`}
+        >
+          ✅ Ready to Post
+          {readyToPostProjects.length > 0 && (
+            <span className="ml-1.5 px-2 py-0.5 rounded-full text-xs bg-white/20">
+              {readyToPostProjects.length}
+            </span>
+          )}
+        </button>
+      </motion.div>
+
+      {/* SCHEDULED VIEW */}
+      {viewMode === 'scheduled' && (
+        <>
+          {/* Profile Filter */}
+          {profiles.length > 0 && (
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -616,6 +685,140 @@ export default function CalendarPage() {
               : 'Schedule posts from the To Post page'}
           </p>
         </motion.div>
+      )}
+        </>
+      )}
+
+      {/* READY TO POST VIEW */}
+      {viewMode === 'ready' && (
+        <>
+          {/* Profile Filter */}
+          {profiles.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.05 }}
+              className="mb-6"
+            >
+              <div className="text-xs font-semibold text-gray-500 mb-2 flex items-center gap-1">
+                <span>📁</span> Filter by Profile
+              </div>
+              <div className="flex gap-2 overflow-x-auto hide-scrollbar -mx-4 px-4 pb-1">
+                <button
+                  onClick={() => setSelectedProfile('all')}
+                  className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap border-2 transition-all flex-shrink-0 ${
+                    selectedProfile === 'all'
+                      ? 'bg-green-500 border-green-500 text-white'
+                      : 'bg-white border-gray-200 text-gray-600'
+                  }`}
+                >
+                  All Profiles
+                  <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-xs ${
+                    selectedProfile === 'all' ? 'bg-white/20' : 'bg-gray-200'
+                  }`}>
+                    {readyProfileCounts.all}
+                  </span>
+                </button>
+                {profiles.map((profile) => (
+                  <button
+                    key={profile.id}
+                    onClick={() => setSelectedProfile(profile.id)}
+                    className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap border-2 transition-all flex-shrink-0 ${
+                      selectedProfile === profile.id
+                        ? 'bg-green-500 border-green-500 text-white'
+                        : 'bg-white border-gray-200 text-gray-600'
+                    }`}
+                  >
+                    {profile.name}
+                    {readyProfileCounts[profile.id] && (
+                      <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-xs ${
+                        selectedProfile === profile.id ? 'bg-white/20' : 'bg-gray-200'
+                      }`}>
+                        {readyProfileCounts[profile.id]}
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </motion.div>
+          )}
+
+          {/* Ready to Post List */}
+          {filteredReadyProjects.length > 0 ? (
+            <div className="space-y-3">
+              {filteredReadyProjects.map((project, index) => {
+                const platform = getPlatformIcon(project.posting_platform || project.platform);
+                const profileName = project.profile?.name;
+
+                return (
+                  <motion.div
+                    key={project.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                  >
+                    <Link
+                      to={`/posting/post/${project.id}`}
+                      className="flex items-center gap-3 p-4 bg-white rounded-xl border border-gray-100 active:bg-gray-50 shadow-sm"
+                    >
+                      {/* Platform Icon */}
+                      <div className={`w-12 h-12 rounded-xl ${platform.bgColor} flex items-center justify-center text-2xl shrink-0`}>
+                        {platform.emoji}
+                      </div>
+
+                      {/* Info */}
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-gray-900 truncate">
+                          {project.title || 'Untitled'}
+                        </h3>
+                        <p className="text-xs text-gray-500 mt-0.5">
+                          {project.content_id || 'No ID'}
+                        </p>
+                        {profileName && (
+                          <div className="mt-1.5">
+                            <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-medium bg-green-100 text-green-700">
+                              🎯 {profileName}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Post Now Button */}
+                      <div className="shrink-0">
+                        <div className="flex items-center gap-1.5 px-4 py-2 bg-green-500 text-white rounded-lg font-medium text-sm">
+                          <Upload className="w-4 h-4" />
+                          Post Now
+                        </div>
+                      </div>
+                    </Link>
+                  </motion.div>
+                );
+              })}
+            </div>
+          ) : (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-center py-12"
+            >
+              <div className="text-5xl mb-4">✅</div>
+              <h3 className="text-lg font-semibold text-gray-800 mb-2">No Videos Ready</h3>
+              <p className="text-gray-500 text-sm">
+                {selectedProfile !== 'all'
+                  ? 'No videos match this profile filter'
+                  : 'Videos will appear here after being edited and approved'}
+              </p>
+              {selectedProfile !== 'all' && (
+                <button
+                  onClick={() => setSelectedProfile('all')}
+                  className="mt-4 text-sm text-green-600 font-medium underline"
+                >
+                  Show all profiles
+                </button>
+              )}
+            </motion.div>
+          )}
+        </>
       )}
     </div>
   );

@@ -36,10 +36,12 @@ const PostingPosted = lazy(() => import('@/pages/posting/PostedPage'));
 const AdminHome = lazy(() => import('@/pages/admin/HomePage'));
 const AdminPending = lazy(() => import('@/pages/admin/PendingPage'));
 const AdminReview = lazy(() => import('@/pages/admin/ReviewPage'));
+const AdminEditedReview = lazy(() => import('@/pages/admin/EditedReviewPage'));
 const AdminProduction = lazy(() => import('@/pages/admin/ProductionPage'));
 const AdminProjectDetail = lazy(() => import('@/pages/admin/ProjectDetailPage'));
 const AdminTeam = lazy(() => import('@/pages/admin/TeamPage'));
 const AdminAnalytics = lazy(() => import('@/pages/admin/AnalyticsPage'));
+const AdminNewScript = lazy(() => import('@/pages/admin/NewScriptPage'));
 
 // Script Writer pages
 const WriterHome = lazy(() => import('@/pages/writer/HomePage'));
@@ -171,10 +173,12 @@ export default function App() {
             <Route index element={<AdminHome />} />
             <Route path="pending" element={<AdminPending />} />
             <Route path="review/:id" element={<AdminReview />} />
+            <Route path="edited-review" element={<AdminEditedReview />} />
             <Route path="production" element={<AdminProduction />} />
             <Route path="project/:id" element={<AdminProjectDetail />} />
             <Route path="team" element={<AdminTeam />} />
             <Route path="analytics" element={<AdminAnalytics />} />
+            <Route path="new-script" element={<AdminNewScript />} />
             <Route path="settings" element={<SettingsPage />} />
           </Route>
 

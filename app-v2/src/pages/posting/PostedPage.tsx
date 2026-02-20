@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ChevronLeft, RefreshCw, Loader2, ExternalLink, Play } from 'lucide-react';
+import { ChevronLeft, RefreshCw, Loader2, ExternalLink, Play, Eye, Heart, MessageCircle, TrendingUp } from 'lucide-react';
 import { postingManagerService } from '@/services/postingManagerService';
 import type { ViralAnalysis } from '@/types';
 
@@ -168,21 +168,29 @@ export default function PostedPage() {
         transition={{ delay: 0.05 }}
         className="grid grid-cols-3 gap-3 mb-4"
       >
-        <div className="bg-white rounded-xl p-4 border border-gray-100 text-center">
-          <div className="text-xl font-bold text-gray-800">
+        {/* Total Views - Blue Gradient */}
+        <div className="bg-gradient-to-br from-blue-500 to-cyan-500 rounded-xl p-4 text-center shadow-md">
+          <Eye className="w-5 h-5 text-white/80 mx-auto mb-1.5" />
+          <div className="text-xl font-bold text-white">
             {stats.totalViews > 0 ? formatNumber(stats.totalViews) : '--'}
           </div>
-          <div className="text-[10px] text-gray-500 uppercase">Total Views</div>
+          <div className="text-[10px] text-white/80 uppercase font-medium">Total Views</div>
         </div>
-        <div className="bg-white rounded-xl p-4 border border-gray-100 text-center">
-          <div className="text-xl font-bold text-gray-800">{stats.totalPosts}</div>
-          <div className="text-[10px] text-gray-500 uppercase">Posted</div>
+
+        {/* Posted - Purple Gradient */}
+        <div className="bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl p-4 text-center shadow-md">
+          <Play className="w-5 h-5 text-white/80 mx-auto mb-1.5" />
+          <div className="text-xl font-bold text-white">{stats.totalPosts}</div>
+          <div className="text-[10px] text-white/80 uppercase font-medium">Posted</div>
         </div>
-        <div className="bg-white rounded-xl p-4 border border-gray-100 text-center">
-          <div className="text-xl font-bold text-gray-800">
+
+        {/* Engagement - Green Gradient */}
+        <div className="bg-gradient-to-br from-green-500 to-emerald-500 rounded-xl p-4 text-center shadow-md">
+          <TrendingUp className="w-5 h-5 text-white/80 mx-auto mb-1.5" />
+          <div className="text-xl font-bold text-white">
             {stats.avgEngagement > 0 ? `${stats.avgEngagement.toFixed(1)}%` : '--'}
           </div>
-          <div className="text-[10px] text-gray-500 uppercase">Avg Engage</div>
+          <div className="text-[10px] text-white/80 uppercase font-medium">Avg Engage</div>
         </div>
       </motion.div>
 
@@ -291,20 +299,24 @@ export default function PostedPage() {
                 </div>
 
                 {/* Stats Row */}
-                <div className="flex bg-gray-50 border-t border-gray-100">
+                <div className="flex bg-gradient-to-r from-gray-50 to-gray-100 border-t border-gray-100">
                   <div className="flex-1 py-3 text-center">
+                    <Eye className="w-3.5 h-3.5 text-blue-500 mx-auto mb-1" />
                     <div className="text-sm font-bold text-gray-800">{formatNumber(project.post_views)}</div>
                     <div className="text-[10px] text-gray-500 uppercase">Views</div>
                   </div>
-                  <div className="flex-1 py-3 text-center border-l border-gray-100">
+                  <div className="flex-1 py-3 text-center border-l border-gray-200">
+                    <Heart className="w-3.5 h-3.5 text-pink-500 mx-auto mb-1" />
                     <div className="text-sm font-bold text-gray-800">{formatNumber(project.post_likes)}</div>
                     <div className="text-[10px] text-gray-500 uppercase">Likes</div>
                   </div>
-                  <div className="flex-1 py-3 text-center border-l border-gray-100">
+                  <div className="flex-1 py-3 text-center border-l border-gray-200">
+                    <MessageCircle className="w-3.5 h-3.5 text-green-500 mx-auto mb-1" />
                     <div className="text-sm font-bold text-gray-800">{formatNumber(project.post_comments)}</div>
                     <div className="text-[10px] text-gray-500 uppercase">Comments</div>
                   </div>
-                  <div className="flex-1 py-3 text-center border-l border-gray-100">
+                  <div className="flex-1 py-3 text-center border-l border-gray-200">
+                    <TrendingUp className="w-3.5 h-3.5 text-purple-500 mx-auto mb-1" />
                     <div className="text-sm font-bold text-gray-800">
                       {(project.post_views || 0) > 0
                         ? `${((((project.post_likes || 0) + (project.post_comments || 0)) / project.post_views!) * 100).toFixed(1)}%`

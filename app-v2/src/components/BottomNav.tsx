@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Home, FolderOpen, CheckCircle, Plus, FileText, Users } from 'lucide-react';
+import { Home, FolderOpen, CheckCircle, Plus, FileText, Users, Video } from 'lucide-react';
 import type { UserRole } from '@/types';
 
 interface BottomNavProps {
@@ -43,6 +43,7 @@ export default function BottomNav({ role }: BottomNavProps) {
         return [
           { icon: Home, label: 'Home', href: '/admin' },
           { icon: FileText, label: 'Pending', href: '/admin/pending' },
+          { icon: Video, label: 'Edited', href: '/admin/edited-review' },
           { icon: Users, label: 'Team', href: '/admin/team' },
         ];
       default:
@@ -61,6 +62,9 @@ export default function BottomNav({ role }: BottomNavProps) {
         return { href: '/videographer/new-script', icon: Plus };
       case 'editor':
         return { href: '/editor/available', icon: Plus };
+      case 'admin':
+      case 'super_admin':
+        return { href: '/admin/new-script', icon: Plus };
       default:
         return null;
     }

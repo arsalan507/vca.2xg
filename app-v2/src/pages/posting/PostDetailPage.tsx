@@ -14,8 +14,14 @@ import {
 } from 'lucide-react';
 import { Button, Input } from '@/components/ui';
 import { postingManagerService } from '@/services/postingManagerService';
+import { videographerService } from '@/services/videographerService';
 import type { ViralAnalysis } from '@/types';
 import toast from 'react-hot-toast';
+
+interface Profile {
+  id: string;
+  name: string;
+}
 
 const PLATFORMS = [
   { id: 'instagram_reel', label: 'Instagram', emoji: '📸', bgColor: 'bg-gradient-to-r from-pink-500 to-orange-400' },
@@ -49,6 +55,8 @@ export default function PostDetailPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [posting, setPosting] = useState(false);
+  const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [selectedProfileId, setSelectedProfileId] = useState<string>('');
 
   // Form state
   const [platform, setPlatform] = useState('instagram_reel');
@@ -75,8 +83,12 @@ export default function PostDetailPage() {
   const loadProject = async () => {
     try {
       setLoading(true);
-      const data = await postingManagerService.getProjectById(id!);
+      const [data, profileList] = await Promise.all([
+        postingManagerService.getProjectById(id!),
+        videographerService.getProfiles(),
+      ]);
       setProject(data);
+      setProfiles(profileList);
 
       // Pre-fill form if already set
       if (data.posting_platform) setPlatform(data.posting_platform);
@@ -87,6 +99,13 @@ export default function PostDetailPage() {
       if (data.post_views) setMetricViews(String(data.post_views));
       if (data.post_likes) setMetricLikes(String(data.post_likes));
       if (data.post_comments) setMetricComments(String(data.post_comments));
+
+      // Set current profile (or first available if none set)
+      if (data.profile_id) {
+        setSelectedProfileId(data.profile_id);
+      } else if (profileList.length > 0) {
+        setSelectedProfileId(profileList[0].id);
+      }
     } catch (error) {
       console.error('Failed to load project:', error);
       toast.error('Failed to load project');
@@ -136,8 +155,11 @@ export default function PostDetailPage() {
         postingHeading: heading || undefined,
         postingHashtags: hashtags.length > 0 ? hashtags : undefined,
         scheduledPostTime: scheduledTime || undefined,
+        profileId: selectedProfileId || undefined,
       });
       toast.success('Posting details saved!');
+      // Reload to show updated profile
+      await loadProject();
     } catch (error: any) {
       console.error('Failed to save details:', error);
       toast.error(error.message || 'Failed to save details');
@@ -275,31 +297,21 @@ export default function PostDetailPage() {
         >
           <ChevronLeft className="w-5 h-5" />
         </button>
-        <div>
+        <div className="flex-1">
           <h1 className="text-xl font-semibold text-gray-900">Post Details</h1>
           <p className="text-sm text-gray-500">{project.content_id} • {project.title || 'Untitled'}</p>
         </div>
-      </motion.div>
-
-      {/* Large Video Preview - Like prototype */}
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="mb-4"
-      >
-        <div className="w-full aspect-[9/16] max-h-[200px] rounded-xl bg-gray-800 flex items-center justify-center text-white overflow-hidden relative">
-          {videoThumbnail ? (
-            <img src={videoThumbnail} alt="" className="w-full h-full object-cover" />
-          ) : (
-            <Play className="w-12 h-12 opacity-50" />
-          )}
-          {/* Play button overlay */}
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="w-14 h-14 rounded-full bg-white/90 flex items-center justify-center cursor-pointer hover:scale-105 transition-transform">
-              <Play className="w-6 h-6 text-gray-800 ml-1" fill="currentColor" />
+        {/* Current Profile Badge */}
+        {project.profile?.name && (
+          <div className="flex-shrink-0">
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-green-100 rounded-full">
+              <div className="w-6 h-6 rounded-full bg-green-500 flex items-center justify-center text-white text-[10px] font-bold">
+                {project.profile.name.substring(0, 2).toUpperCase()}
+              </div>
+              <span className="text-xs font-semibold text-green-700">{project.profile.name}</span>
             </div>
           </div>
-        </div>
+        )}
       </motion.div>
 
       {/* Reference Link - Styled like prototype */}
@@ -457,6 +469,54 @@ export default function PostDetailPage() {
                   ))}
                 </div>
               </div>
+
+              {/* Profile Selection */}
+              {profiles.length > 0 && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Posting Profile
+                    {project?.profile?.name && selectedProfileId !== project.profile_id && (
+                      <span className="ml-2 text-xs text-orange-600">
+                        (Originally: {project.profile.name})
+                      </span>
+                    )}
+                  </label>
+                  <div className="space-y-2">
+                    {profiles.map((profile) => (
+                      <button
+                        key={profile.id}
+                        onClick={() => setSelectedProfileId(profile.id)}
+                        className={`w-full flex items-center gap-3 p-3 rounded-xl border-2 transition-all ${
+                          selectedProfileId === profile.id
+                            ? 'border-green-500 bg-green-50'
+                            : 'border-gray-200 bg-white'
+                        }`}
+                      >
+                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center text-white font-semibold text-sm">
+                          {profile.name.substring(0, 2).toUpperCase()}
+                        </div>
+                        <div className="flex-1 text-left">
+                          <p className="text-sm font-semibold text-gray-900">{profile.name}</p>
+                          <p className="text-xs text-gray-500">
+                            {profile.id === project?.profile_id ? 'Originally assigned' : 'Switch to this profile'}
+                          </p>
+                        </div>
+                        {selectedProfileId === profile.id && (
+                          <Check className="w-5 h-5 text-green-500" />
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                  {selectedProfileId !== project?.profile_id && (
+                    <div className="mt-2 p-2 bg-orange-50 rounded-lg flex items-start gap-2">
+                      <span className="text-orange-600 text-xs">⚠️</span>
+                      <p className="text-xs text-orange-700">
+                        Profile changed from <strong>{project?.profile?.name}</strong>. Save to confirm.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Heading */}
               {['youtube_shorts', 'youtube_long', 'tiktok'].includes(platform) && (
