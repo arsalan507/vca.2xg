@@ -1,5 +1,5 @@
 import { useState, useRef, type FormEvent } from 'react';
-import { useNavigate, Navigate } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 import { Mail } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { useAuth } from '@/hooks/useAuth';
@@ -12,7 +12,6 @@ const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
 type LoginMode = 'choose' | 'pin-login' | 'pin-setup';
 
 export default function LoginPage() {
-  const navigate = useNavigate();
   const { signInWithSession, isAuthenticated, isLoading: authLoading } = useAuth();
   const [mode, setMode] = useState<LoginMode>('choose');
   const [email, setEmail] = useState('');
@@ -95,7 +94,8 @@ export default function LoginPage() {
       if (body.session) {
         signInWithSession(body.session);
         toast.success('Welcome back!');
-        navigate('/');
+        // No navigate() here — the isAuthenticated guard at the top handles redirect
+        // to avoid a race condition where ProtectedRoute fires before state updates
       }
     } catch {
       toast.error('Failed to connect to server');
@@ -133,7 +133,6 @@ export default function LoginPage() {
       if (body.session) {
         signInWithSession(body.session);
         toast.success('PIN set! Welcome!');
-        navigate('/');
       }
     } catch {
       toast.error('Failed to connect to server');
@@ -172,7 +171,6 @@ export default function LoginPage() {
       if (body.session) {
         signInWithSession(body.session);
         toast.success('Welcome back!');
-        navigate('/');
       }
     } catch {
       toast.error('Failed to connect to server');

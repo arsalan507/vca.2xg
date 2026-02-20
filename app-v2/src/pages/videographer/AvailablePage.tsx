@@ -1,14 +1,14 @@
 import { useEffect, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
-import { Loader2, X, ChevronUp, ChevronDown, Play, ExternalLink, Eye, Search, Check } from 'lucide-react';
+import { Loader2, X, ChevronUp, ChevronDown, Play, ExternalLink, Eye, Search, Check, PlusCircle } from 'lucide-react';
 import Header from '@/components/Header';
 import { videographerService } from '@/services/videographerService';
 import type { ViralAnalysis } from '@/types';
 import toast from 'react-hot-toast';
 
 type FilterType = 'all' | 'high_priority' | 'indoor' | 'outdoor';
-type Profile = { id: string; name: string; is_active?: boolean };
+type Profile = { id: string; name: string; code: string | null; platform?: string; is_active?: boolean };
 
 // Helper to extract video ID and platform from URL
 const getVideoEmbed = (url?: string) => {
@@ -72,6 +72,13 @@ export default function AvailablePage() {
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [profilesLoading, setProfilesLoading] = useState(false);
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
+
+  // Inline profile creation state
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [newProfileName, setNewProfileName] = useState('');
+  const [newProfileCode, setNewProfileCode] = useState('');
+  const [newProfilePlatform, setNewProfilePlatform] = useState('INSTAGRAM');
+  const [creatingProfile, setCreatingProfile] = useState(false);
 
   // Reels viewer state
   const [showReelsViewer, setShowReelsViewer] = useState(false);
@@ -213,6 +220,46 @@ export default function AvailablePage() {
         }
       }
       setPicking(null);
+    }
+  };
+
+  const handleCreateProfile = async () => {
+    if (!newProfileName.trim() || !newProfileCode.trim()) {
+      toast.error('Name and Code are required');
+      return;
+    }
+
+    if (newProfileCode.length < 2 || newProfileCode.length > 4) {
+      toast.error('Code must be 2-4 characters');
+      return;
+    }
+
+    try {
+      setCreatingProfile(true);
+      const created = await videographerService.createProfile(
+        newProfileName.trim(),
+        newProfileCode.trim(),
+        newProfilePlatform
+      );
+      toast.success(`Profile "${created.name}" created!`);
+
+      // Refresh profiles list
+      const updatedProfiles = await videographerService.getProfiles();
+      setProfiles(updatedProfiles);
+
+      // Select the newly created profile
+      setSelectedProfileId(created.id);
+
+      // Reset form and hide it
+      setNewProfileName('');
+      setNewProfileCode('');
+      setNewProfilePlatform('INSTAGRAM');
+      setShowCreateForm(false);
+    } catch (error: any) {
+      console.error('Failed to create profile:', error);
+      toast.error(error.message || 'Failed to create profile');
+    } finally {
+      setCreatingProfile(false);
     }
   };
 
@@ -704,13 +751,111 @@ export default function AvailablePage() {
                         profile.name.charAt(0).toUpperCase()
                       )}
                     </div>
-                    <span className={`font-medium text-sm ${
-                      selectedProfileId === profile.id ? 'text-orange-700' : 'text-gray-800'
-                    }`}>
-                      {profile.name}
-                    </span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className={`font-medium text-sm ${
+                          selectedProfileId === profile.id ? 'text-orange-700' : 'text-gray-800'
+                        }`}>
+                          {profile.name}
+                        </span>
+                        {profile.code && (
+                          <span className="text-xs px-1.5 py-0.5 bg-gray-200 text-gray-600 rounded font-mono">
+                            {profile.code}
+                          </span>
+                        )}
+                      </div>
+                      {profile.platform && (
+                        <span className="text-xs text-gray-400">{profile.platform}</span>
+                      )}
+                    </div>
                   </button>
                 ))
+              )}
+
+              {/* Create New Profile Button */}
+              {!showCreateForm && !profilesLoading && (
+                <button
+                  onClick={() => setShowCreateForm(true)}
+                  className="w-full flex items-center justify-center gap-2 p-3 rounded-xl border-2 border-dashed border-gray-300 text-gray-600 hover:border-orange-400 hover:text-orange-600 transition-colors"
+                >
+                  <PlusCircle className="w-5 h-5" />
+                  <span className="font-medium text-sm">Create New Profile</span>
+                </button>
+              )}
+
+              {/* Inline Create Profile Form */}
+              {showCreateForm && (
+                <div className="p-4 border-2 border-orange-200 rounded-xl bg-orange-50 space-y-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="font-semibold text-sm text-gray-900">New Profile</h4>
+                    <button
+                      onClick={() => {
+                        setShowCreateForm(false);
+                        setNewProfileName('');
+                        setNewProfileCode('');
+                        setNewProfilePlatform('INSTAGRAM');
+                      }}
+                      className="text-gray-400 hover:text-gray-600"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Profile Name</label>
+                    <input
+                      type="text"
+                      value={newProfileName}
+                      onChange={(e) => setNewProfileName(e.target.value)}
+                      placeholder="e.g., BCH Main, Next.blr"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Code (2-4 letters)</label>
+                    <input
+                      type="text"
+                      value={newProfileCode}
+                      onChange={(e) => setNewProfileCode(e.target.value.toUpperCase().slice(0, 4))}
+                      placeholder="e.g., BCH, NEXT, 2nd"
+                      maxLength={4}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono uppercase focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Platform</label>
+                    <select
+                      value={newProfilePlatform}
+                      onChange={(e) => setNewProfilePlatform(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    >
+                      <option value="INSTAGRAM">Instagram</option>
+                      <option value="YOUTUBE">YouTube</option>
+                      <option value="TIKTOK">TikTok</option>
+                      <option value="FACEBOOK">Facebook</option>
+                    </select>
+                  </div>
+
+                  <button
+                    onClick={handleCreateProfile}
+                    disabled={creatingProfile || !newProfileName.trim() || !newProfileCode.trim()}
+                    className="w-full h-10 flex items-center justify-center gap-2 bg-orange-500 rounded-lg text-white text-sm font-semibold active:bg-orange-600 disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    {creatingProfile ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Creating...
+                      </>
+                    ) : (
+                      <>
+                        <PlusCircle className="w-4 h-4" />
+                        Create Profile
+                      </>
+                    )}
+                  </button>
+                </div>
               )}
             </div>
 

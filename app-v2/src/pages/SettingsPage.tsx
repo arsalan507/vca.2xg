@@ -130,10 +130,8 @@ export default function SettingsPage() {
     }
   };
 
-  const handleSignOut = async () => {
-    await signOut();
-    toast.success('Signed out');
-    navigate('/login');
+  const handleSignOut = () => {
+    signOut(); // clears session instantly — ProtectedRoute redirects to /login automatically
   };
 
   const getRoleDisplay = (r: string | null) => {

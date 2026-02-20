@@ -582,7 +582,7 @@ export default function TeamPage() {
                   </div>
                   <h3 className="text-lg font-semibold text-gray-900 mb-2">Delete Profile?</h3>
                   <p className="text-sm text-gray-500 mb-6">
-                    Are you sure you want to delete <strong>{deletingProfile.name}</strong>? Existing projects with this profile won't be affected.
+                    Are you sure you want to permanently delete <strong>{deletingProfile.name}</strong>? This action cannot be undone. Existing projects with this profile won't be affected.
                   </p>
                   <div className="flex gap-3">
                     <button

@@ -49,9 +49,9 @@ export default function EditorHomePage() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleLogout = async () => {
+  const handleLogout = () => {
     setShowProfileDropdown(false);
-    await signOut();
+    signOut(); // clears session instantly — ProtectedRoute redirects to /login automatically
   };
 
   useEffect(() => {

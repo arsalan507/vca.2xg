@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { TrendingUp, Users, Settings, LogOut, UsersRound, ChevronRight } from 'lucide-react';
 import { adminService, type DashboardStats, type QueueStats } from '@/services/adminService';
@@ -17,7 +17,6 @@ interface PendingScript {
 }
 
 export default function AdminHomePage() {
-  const navigate = useNavigate();
   const { user, role, signOut } = useAuth();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [queueStats, setQueueStats] = useState<QueueStats | null>(null);
@@ -60,13 +59,13 @@ export default function AdminHomePage() {
   const loadStats = async () => {
     try {
       setLoading(true);
-      const [dashboardStats, queue, pending] = await Promise.all([
-        adminService.getDashboardStats(),
-        adminService.getQueueStats(),
+      // getDashboardAndQueueStats: 2 requests instead of the old 14 separate HEAD requests
+      const [combined, pending] = await Promise.all([
+        adminService.getDashboardAndQueueStats(),
         adminService.getPendingAnalyses().catch(() => []),
       ]);
-      setStats(dashboardStats);
-      setQueueStats(queue);
+      setStats(combined.dashboard);
+      setQueueStats(combined.queue);
 
       // Transform pending analyses to scripts format
       const scripts: PendingScript[] = (pending || []).slice(0, 3).map((item: any) => ({
@@ -87,10 +86,9 @@ export default function AdminHomePage() {
     }
   };
 
-  const handleLogout = async () => {
+  const handleLogout = () => {
     setShowProfileMenu(false);
-    await signOut();
-    navigate('/login');
+    signOut(); // clears session instantly — ProtectedRoute redirects to /login automatically
   };
 
   const formatTimeAgo = (dateString: string) => {

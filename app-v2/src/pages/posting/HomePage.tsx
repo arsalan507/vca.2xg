@@ -39,14 +39,8 @@ export default function PostingHomePage() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleLogout = async () => {
-    try {
-      await signOut();
-      navigate('/login');
-    } catch (error) {
-      console.error('Logout failed:', error);
-      toast.error('Failed to logout');
-    }
+  const handleLogout = () => {
+    signOut(); // clears session instantly — ProtectedRoute redirects to /login automatically
   };
 
   useEffect(() => {

@@ -79,8 +79,8 @@ export default function ProductionPage() {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [statsData, planningProjects, shootingProjects, editingProjects, readyForEditProjects, editReviewProjects, readyToPostProjects] = await Promise.all([
-        adminService.getQueueStats(),
+      const [combinedStats, planningProjects, shootingProjects, editingProjects, readyForEditProjects, editReviewProjects, readyToPostProjects] = await Promise.all([
+        adminService.getDashboardAndQueueStats(),
         adminService.getAnalysesByStage('planning'),
         adminService.getAnalysesByStage('shooting'),
         adminService.getAnalysesByStage('editing'),
@@ -88,7 +88,7 @@ export default function ProductionPage() {
         adminService.getAnalysesByStage('edit_review'),
         adminService.getAnalysesByStage('ready_to_post'),
       ]);
-      setStats(statsData);
+      setStats(combinedStats.queue);
       setAllProjects([...planningProjects, ...shootingProjects, ...readyForEditProjects, ...editingProjects, ...editReviewProjects, ...readyToPostProjects]);
     } catch (error) {
       console.error('Failed to load data:', error);

@@ -107,43 +107,50 @@ export const auth = {
   },
 
   async signOut(): Promise<{ error: Error | null }> {
-    try {
-      if (_accessToken) {
-        await fetch(`${BACKEND_URL}/api/auth/logout`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${_accessToken}` },
-        }).catch(() => {});
-      }
-    } finally {
-      _saveSession(null);
-      _notifyAuthChange('SIGNED_OUT', null);
+    // Clear session IMMEDIATELY so the UI updates without waiting for the network.
+    // Fire the backend logout in the background — it's just server-side cleanup.
+    const tokenToRevoke = _accessToken;
+    _saveSession(null);
+    _notifyAuthChange('SIGNED_OUT', null);
+    if (tokenToRevoke) {
+      fetch(`${BACKEND_URL}/api/auth/logout`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${tokenToRevoke}` },
+      }).catch(() => {});
     }
     return { error: null };
   },
 
   async getUser() {
-    if (_user && _accessToken) {
-      return { data: { user: _user }, error: null };
+    // Always load from localStorage first (in case session was updated elsewhere)
+    _loadSession();
+
+    // If no token, user is definitely not logged in
+    if (!_accessToken) {
+      return { data: { user: null }, error: null };
     }
-    if (!_user) {
-      _loadSession();
-      if (_user && _accessToken) {
+
+    // Validate the token with the backend (prevents using expired sessions)
+    try {
+      const response = await fetch(`${BACKEND_URL}/api/auth/me`, {
+        headers: { 'Authorization': `Bearer ${_accessToken}` }
+      });
+
+      if (response.ok) {
+        // Token is valid, return cached user
         return { data: { user: _user }, error: null };
+      } else {
+        // Token invalid/expired - clear session
+        _saveSession(null);
+        _notifyAuthChange('SIGNED_OUT', null);
+        return { data: { user: null }, error: null };
       }
+    } catch (error) {
+      // Network error - clear session to be safe
+      _saveSession(null);
+      _notifyAuthChange('SIGNED_OUT', null);
+      return { data: { user: null }, error: null };
     }
-    if (_accessToken) {
-      try {
-        const res = await fetch(`${BACKEND_URL}/api/auth/me`, {
-          headers: { 'Authorization': `Bearer ${_accessToken}` },
-        });
-        if (res.ok) {
-          const body = await res.json();
-          _user = body.user;
-          return { data: { user: _user }, error: null };
-        }
-      } catch { /* ignore */ }
-    }
-    return { data: { user: null }, error: null };
   },
 
   async getSession() {
@@ -405,7 +412,11 @@ class PostgRESTQueryBuilder {
   }
 
   private _buildUrl(): string {
-    const url = new URL(`${POSTGREST_URL}/${this._table}`);
+    // Support relative base URLs (e.g. /postgrest used by the Vite dev proxy)
+    const base = POSTGREST_URL.startsWith('/')
+      ? `${window.location.origin}${POSTGREST_URL}`
+      : POSTGREST_URL;
+    const url = new URL(`${base}/${this._table}`);
 
     if (this._selectColumns && this._selectColumns !== '*') {
       url.searchParams.set('select', this._selectColumns);
@@ -463,12 +474,16 @@ class PostgRESTQueryBuilder {
   }
 
   private _buildHeaders(): Record<string, string> {
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-    };
+    const headers: Record<string, string> = {};
 
     // PostgREST auth: anon JWT for authorization
     headers['Authorization'] = `Bearer ${POSTGREST_JWT}`;
+
+    // Only set Content-Type for requests with a body (POST/PATCH).
+    // Setting it on GET/HEAD triggers an unnecessary CORS preflight for every query.
+    if (this._body && (this._method === 'POST' || this._method === 'PATCH')) {
+      headers['Content-Type'] = 'application/json';
+    }
 
     if (this._isSingle) {
       headers['Accept'] = 'application/vnd.pgrst.object+json';

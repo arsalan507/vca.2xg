@@ -181,12 +181,24 @@ export default function UploadPage() {
 
       setCurrentUploadIndex(i);
 
+      // If retrying a previously failed upload that has a Drive fileId, delete the orphaned file first
+      if (file.status === 'error' && file.uploadResult?.fileId) {
+        try {
+          console.log('[UploadPage] Cleaning up orphaned file from previous attempt:', file.uploadResult.fileId);
+          await googleDriveOAuthService.deleteFile(file.uploadResult.fileId);
+        } catch (cleanupError) {
+          console.warn('[UploadPage] Failed to delete orphaned file, continuing anyway:', cleanupError);
+        }
+      }
+
       // Update status to uploading
       setFiles((prev) =>
         prev.map((f) =>
-          f.id === file.id ? { ...f, status: 'uploading' as const, progress: 0 } : f
+          f.id === file.id ? { ...f, status: 'uploading' as const, progress: 0, errorMessage: undefined } : f
         )
       );
+
+      let driveUploadResult: any = null;
 
       try {
         // Get or create folder structure in user's Drive
@@ -207,7 +219,7 @@ export default function UploadPage() {
         }
 
         // Upload to user's Google Drive
-        const result = await googleDriveOAuthService.uploadFile(
+        driveUploadResult = await googleDriveOAuthService.uploadFile(
           file.file,
           folderId,
           (progress: UploadProgress) => {
@@ -228,18 +240,31 @@ export default function UploadPage() {
             analysisId: project.id,
             fileType: selectedFileType,
             fileName: displayName,
-            fileUrl: result.webViewLink,
-            fileId: result.fileId,
-            fileSize: result.size,
+            fileUrl: driveUploadResult.webViewLink,
+            fileId: driveUploadResult.fileId,
+            fileSize: driveUploadResult.size,
             mimeType: file.file.type,
           });
           console.log('[UploadPage] File record saved to DB:', dbRecord);
         } catch (dbError: any) {
           console.error('Failed to save file record to database:', dbError);
           const errMsg = dbError?.message || dbError?.details || 'Database error';
-          toast.error(`File uploaded to Drive but failed to save record: ${errMsg}`);
-          // Still mark as error since the DB record is needed
-          throw new Error(`File uploaded to Drive but database record failed: ${errMsg}`);
+
+          // Database save failed - delete the orphaned file from Drive
+          if (driveUploadResult?.fileId) {
+            try {
+              console.log('[UploadPage] Database save failed, deleting orphaned Drive file:', driveUploadResult.fileId);
+              await googleDriveOAuthService.deleteFile(driveUploadResult.fileId);
+              toast.error(`Upload failed: ${errMsg}. Cleaned up Drive file. Tap to retry.`);
+            } catch (deleteError) {
+              console.error('[UploadPage] Failed to delete orphaned Drive file:', deleteError);
+              toast.error(`Upload failed: ${errMsg}. WARNING: File may be orphaned in Drive. Contact admin.`);
+              // Store the fileId so we can clean it up on retry
+              throw new Error(`Database save failed. File orphaned in Drive (ID: ${driveUploadResult.fileId}). ${errMsg}`);
+            }
+          }
+
+          throw new Error(`Failed to save to database: ${errMsg}`);
         }
 
         // Mark as complete
@@ -251,8 +276,8 @@ export default function UploadPage() {
                   status: 'complete' as const,
                   progress: 100,
                   uploadResult: {
-                    fileId: result.fileId,
-                    webViewLink: result.webViewLink,
+                    fileId: driveUploadResult.fileId,
+                    webViewLink: driveUploadResult.webViewLink,
                   },
                 }
               : f
@@ -267,6 +292,11 @@ export default function UploadPage() {
                   ...f,
                   status: 'error' as const,
                   errorMessage: error instanceof Error ? error.message : 'Upload failed',
+                  // Store Drive fileId if upload succeeded but DB save failed, so we can clean it up on retry
+                  uploadResult: driveUploadResult ? {
+                    fileId: driveUploadResult.fileId,
+                    webViewLink: driveUploadResult.webViewLink,
+                  } : undefined,
                 }
               : f
           )

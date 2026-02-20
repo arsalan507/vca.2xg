@@ -50,7 +50,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signOut = useCallback(async () => {
-    await auth.signOut();
+    auth.signOut(); // clears session instantly, backend cleanup is fire-and-forget
     setUser(null);
   }, []);
 
@@ -79,5 +79,3 @@ export function useAuth(): AuthContextValue {
   }
   return context;
 }
-
-export default useAuth;

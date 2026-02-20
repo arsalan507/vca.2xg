@@ -36,13 +36,8 @@ export default function WriterHomePage() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleLogout = async () => {
-    try {
-      await signOut();
-      navigate('/login');
-    } catch (error) {
-      toast.error('Failed to logout');
-    }
+  const handleLogout = () => {
+    signOut(); // clears session instantly — ProtectedRoute redirects to /login automatically
   };
 
   useEffect(() => {

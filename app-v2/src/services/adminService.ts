@@ -280,6 +280,68 @@ export const adminService = {
   },
 
   /**
+   * Get dashboard stats AND queue stats in 2 requests instead of 14.
+   * Fetches status+production_stage for all analyses (minimal payload),
+   * counts client-side — replaces the 5+9 separate HEAD requests pattern.
+   */
+  async getDashboardAndQueueStats(): Promise<{ dashboard: DashboardStats; queue: QueueStats }> {
+    const PLANNING_STAGES = new Set(['PLANNING', 'NOT_STARTED', 'PRE_PRODUCTION', 'PLANNED']);
+
+    const [analysesResult, usersResult] = await Promise.all([
+      supabase.from('viral_analyses').select('status,production_stage'),
+      supabase.from('profiles').select('id', { count: 'exact', head: true }),
+    ]);
+
+    if (analysesResult.error) throw analysesResult.error;
+
+    const analyses = (analysesResult.data || []) as { status: string; production_stage: string | null }[];
+    const approvedAnalyses = analyses.filter(a => a.status === 'APPROVED');
+
+    // Dashboard counts
+    const totalAnalyses = analyses.length;
+    const pendingCount = analyses.filter(a => a.status === 'PENDING').length;
+    const approvedCount = approvedAnalyses.length;
+    const rejectedCount = analyses.filter(a => a.status === 'REJECTED').length;
+
+    // Queue stage counts
+    const planning = approvedAnalyses.filter(a =>
+      a.production_stage === null || PLANNING_STAGES.has(a.production_stage)
+    ).length;
+    const shooting = approvedAnalyses.filter(a => a.production_stage === 'SHOOTING').length;
+    const readyForEdit = approvedAnalyses.filter(a =>
+      a.production_stage === 'READY_FOR_EDIT' || a.production_stage === 'SHOOT_REVIEW'
+    ).length;
+    const editing = approvedAnalyses.filter(a => a.production_stage === 'EDITING').length;
+    const editReview = approvedAnalyses.filter(a => a.production_stage === 'EDIT_REVIEW').length;
+    const readyToPost = approvedAnalyses.filter(a =>
+      a.production_stage === 'READY_TO_POST' || a.production_stage === 'FINAL_REVIEW'
+    ).length;
+    const posted = approvedAnalyses.filter(a => a.production_stage === 'POSTED').length;
+    const totalActive = planning + shooting + readyForEdit + editing + editReview + readyToPost;
+
+    return {
+      dashboard: {
+        totalAnalyses,
+        totalUsers: usersResult.count || 0,
+        pendingAnalyses: pendingCount,
+        approvedAnalyses: approvedCount,
+        rejectedAnalyses: rejectedCount,
+      },
+      queue: {
+        pending: pendingCount,
+        planning,
+        shooting,
+        readyForEdit,
+        editing,
+        editReview,
+        readyToPost,
+        posted,
+        totalActive,
+      },
+    };
+  },
+
+  /**
    * Get dashboard stats
    */
   async getDashboardStats(): Promise<DashboardStats> {
@@ -946,12 +1008,12 @@ export const adminService = {
   },
 
   /**
-   * Soft delete a profile (set is_active = false)
+   * Hard delete a profile (permanent deletion)
    */
   async deleteProfile(profileId: string): Promise<void> {
     const { error } = await supabase
       .from('profile_list')
-      .update({ is_active: false })
+      .delete()
       .eq('id', profileId);
 
     if (error) throw error;
@@ -968,5 +1030,37 @@ export const adminService = {
       .eq('id', analysisId);
 
     if (error) throw error;
+  },
+
+  /**
+   * Get projects in edit review stage with production files (optimized for EditedReviewPage)
+   * Avoids complex joins that cause 504 timeout
+   */
+  async getEditReviewProjects(): Promise<ViralAnalysis[]> {
+    // Fetch projects and files in parallel
+    const [projectsResult, filesResult] = await Promise.all([
+      supabase
+        .from('viral_analyses')
+        .select('id, title, content_id, status, production_stage, created_at, updated_at')
+        .eq('status', 'APPROVED')
+        .eq('production_stage', 'EDIT_REVIEW')
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('production_files')
+        .select('*')
+        .in('file_type', ['EDITED_VIDEO', 'FINAL_VIDEO', 'edited-video', 'final-video'])
+        .eq('is_deleted', false),
+    ]);
+
+    if (projectsResult.error) throw projectsResult.error;
+
+    const projects = (projectsResult.data || []) as any[];
+    const allFiles = (filesResult.data || []) as any[];
+
+    // Map files to projects
+    return projects.map(project => ({
+      ...project,
+      production_files: allFiles.filter(f => f.analysis_id === project.id),
+    })) as ViralAnalysis[];
   },
 };

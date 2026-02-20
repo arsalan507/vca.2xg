@@ -558,7 +558,7 @@ export const videographerService = {
   /**
    * Get content profiles list
    */
-  async getProfiles(): Promise<{ id: string; name: string; platform?: string; is_active?: boolean }[]> {
+  async getProfiles(): Promise<{ id: string; name: string; code: string | null; platform?: string; is_active?: boolean }[]> {
     const { data, error } = await supabase
       .from('profile_list')
       .select('*')
@@ -566,30 +566,30 @@ export const videographerService = {
       .order('name');
 
     if (error) throw error;
-    return (data || []) as { id: string; name: string; platform?: string; is_active?: boolean }[];
+    return (data || []) as { id: string; name: string; code: string | null; platform?: string; is_active?: boolean }[];
   },
 
   /**
-   * Create a new content profile
+   * Create a new content profile (videographer can create with CODE)
    */
-  async createProfile(name: string, platform: string = 'INSTAGRAM'): Promise<{ id: string; name: string; platform?: string }> {
+  async createProfile(name: string, code: string, platform?: string): Promise<any> {
     const { data, error } = await supabase
       .from('profile_list')
-      .insert({ name, platform })
+      .insert({ name, code: code.toUpperCase(), platform: platform || null })
       .select()
       .single();
 
     if (error) throw error;
-    return data as { id: string; name: string; platform?: string };
+    return data;
   },
 
   /**
-   * Delete a content profile (soft delete - sets is_active to false)
+   * Hard delete a content profile (permanent deletion)
    */
   async deleteProfile(profileId: string): Promise<void> {
     const { error } = await supabase
       .from('profile_list')
-      .update({ is_active: false })
+      .delete()
       .eq('id', profileId);
 
     if (error) throw error;

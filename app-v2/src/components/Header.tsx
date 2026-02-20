@@ -19,9 +19,8 @@ export default function Header({ title, subtitle, showBack, showLogout, rightAct
     navigate(-1);
   };
 
-  const handleLogout = async () => {
-    await signOut();
-    navigate('/login');
+  const handleLogout = () => {
+    signOut(); // clears session instantly — ProtectedRoute redirects to /login automatically
   };
 
   const handleSettings = () => {
