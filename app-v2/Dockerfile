@@ -13,6 +13,9 @@ RUN npm ci
 # Copy source code
 COPY . .
 
+# Cache buster - change this value to force rebuild
+ARG CACHE_BUST=2026-02-20
+
 # Build arguments for environment variables
 ARG VITE_BACKEND_URL
 ARG VITE_POSTGREST_URL
