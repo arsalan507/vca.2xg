@@ -4,6 +4,9 @@ FROM node:20-alpine AS builder
 # Set working directory
 WORKDIR /app
 
+# Cache buster - change this value to force rebuild (must come before COPY)
+ARG CACHE_BUST=2026-02-20
+
 # Copy package files
 COPY package.json package-lock.json ./
 
@@ -12,9 +15,6 @@ RUN npm ci
 
 # Copy source code
 COPY . .
-
-# Cache buster - change this value to force rebuild
-ARG CACHE_BUST=2026-02-20
 
 # Build arguments for environment variables
 ARG VITE_BACKEND_URL
