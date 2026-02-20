@@ -53,7 +53,7 @@ services:
       - "traefik.http.middlewares.vca-postgrest-strip.stripprefix.prefixes=/postgrest"
       - "traefik.http.middlewares.vca-postgrest-cors.headers.accesscontrolallowmethods=GET,HEAD,POST,PATCH,DELETE,OPTIONS"
       - "traefik.http.middlewares.vca-postgrest-cors.headers.accesscontrolallowheaders=Content-Type,Authorization,apikey,Prefer,Accept"
-      - "traefik.http.middlewares.vca-postgrest-cors.headers.accesscontrolalloworiginlist=https://vca.2xg.in,http://localhost:5173,http://localhost:5174"
+      - "traefik.http.middlewares.vca-postgrest-cors.headers.accesscontrolalloworiginlist=https://vca.2xg.in,http://localhost:5173,http://localhost:5174,http://localhost:5175,http://localhost:5176,http://192.168.68.125:5173,http://192.168.68.125:5174,http://192.168.68.125:5175"
       - "traefik.http.middlewares.vca-postgrest-cors.headers.accesscontrolmaxage=86400"
       - "traefik.http.middlewares.vca-postgrest-cors.headers.addvaryheader=true"
       - "traefik.http.routers.vca-postgrest.middlewares=vca-postgrest-strip,vca-postgrest-cors"
@@ -112,6 +112,7 @@ services:
       context: ./app-v2
       dockerfile: Dockerfile
       args:
+        CACHE_BUST: 2026-02-20-v1
         VITE_BACKEND_URL: https://vca-api.2xg.in
         VITE_POSTGREST_URL: https://vca-api.2xg.in/postgrest
         VITE_POSTGREST_JWT: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InNlbGYtaG9zdGVkIiwiaWF0IjoxNzcwNjIyOTY2LCJleHAiOjIwODYxOTg5NjZ9.MlToNcTzEBR0k9NLH3f0dU7RPHvkA_CCMgMwv9pEVxY
