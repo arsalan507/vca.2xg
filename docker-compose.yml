@@ -112,7 +112,7 @@ services:
       context: ./app-v2
       dockerfile: Dockerfile
       args:
-        CACHE_BUST: 2026-02-20-v1
+        CACHE_BUST: 2026-02-20-v2
         VITE_BACKEND_URL: https://vca-api.2xg.in
         VITE_POSTGREST_URL: https://vca-api.2xg.in/postgrest
         VITE_POSTGREST_JWT: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InNlbGYtaG9zdGVkIiwiaWF0IjoxNzcwNjIyOTY2LCJleHAiOjIwODYxOTg5NjZ9.MlToNcTzEBR0k9NLH3f0dU7RPHvkA_CCMgMwv9pEVxY
