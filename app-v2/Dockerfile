@@ -4,14 +4,15 @@ FROM node:20-alpine AS builder
 # Set working directory
 WORKDIR /app
 
-# Cache buster - change this value to force rebuild (must come before COPY)
-ARG CACHE_BUST=2026-02-20
-
 # Copy package files
 COPY package.json package-lock.json ./
 
 # Install all dependencies (including devDependencies for build)
 RUN npm ci
+
+# Cache buster - force rebuild by echoing timestamp
+ARG CACHE_BUST=2026-02-20
+RUN echo "Cache bust: ${CACHE_BUST}"
 
 # Copy source code
 COPY . .
