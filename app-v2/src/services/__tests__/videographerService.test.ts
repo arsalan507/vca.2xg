@@ -519,10 +519,10 @@ describe('videographerService', () => {
   describe('createProfile', () => {
     it('should create and return new profile', async () => {
       fromResultsQueue['profile_list'] = [
-        { data: { id: 'new-p', name: 'New Profile' }, error: null },
+        { data: { id: 'new-p', name: 'New Profile', code: 'NP' }, error: null },
       ];
 
-      const result = await videographerService.createProfile('New Profile');
+      const result = await videographerService.createProfile('New Profile', 'NP');
       expect(result.name).toBe('New Profile');
     });
 
@@ -531,7 +531,7 @@ describe('videographerService', () => {
         { data: null, error: { message: 'Duplicate name' } },
       ];
 
-      await expect(videographerService.createProfile('Dup')).rejects.toEqual({ message: 'Duplicate name' });
+      await expect(videographerService.createProfile('Dup', 'DUP')).rejects.toEqual({ message: 'Duplicate name' });
     });
   });
 

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Clock, FileText } from 'lucide-react';
+import { Clock, FileText, CheckSquare, Square, CheckCircle, Eye, Loader2 } from 'lucide-react';
 import { adminService } from '@/services/adminService';
 import type { ViralAnalysis } from '@/types';
 import toast from 'react-hot-toast';
@@ -12,6 +12,9 @@ export default function PendingPage() {
   const [scripts, setScripts] = useState<ViralAnalysis[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<FilterType>('all');
+  const [bulkMode, setBulkMode] = useState(false);
+  const [selectedScripts, setSelectedScripts] = useState<Set<string>>(new Set());
+  const [bulkApproving, setBulkApproving] = useState(false);
 
   useEffect(() => {
     loadScripts();
@@ -28,6 +31,66 @@ export default function PendingPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Toggle bulk mode
+  const toggleBulkMode = () => {
+    setBulkMode(!bulkMode);
+    setSelectedScripts(new Set()); // Clear selections when toggling
+  };
+
+  // Select/deselect individual script
+  const toggleScript = (scriptId: string) => {
+    const newSelection = new Set(selectedScripts);
+    if (newSelection.has(scriptId)) {
+      newSelection.delete(scriptId);
+    } else {
+      newSelection.add(scriptId);
+    }
+    setSelectedScripts(newSelection);
+  };
+
+  // Select all visible scripts
+  const selectAll = () => {
+    const allIds = new Set(filteredScripts.map(s => s.id));
+    setSelectedScripts(allIds);
+  };
+
+  // Deselect all
+  const deselectAll = () => {
+    setSelectedScripts(new Set());
+  };
+
+  // Bulk approve handler
+  const handleBulkApprove = async () => {
+    if (selectedScripts.size === 0) {
+      toast.error('Please select at least one script');
+      return;
+    }
+
+    // TODO: Implement bulk approve method in adminService
+    toast.error('Bulk approve feature coming soon');
+    return;
+
+    // try {
+    //   setBulkApproving(true);
+    //   // Approve all selected scripts in parallel
+    //   const approvalPromises = Array.from(selectedScripts).map(scriptId =>
+    //     adminService.approveScript({ analysisId: scriptId })
+    //   );
+    //   await Promise.all(approvalPromises);
+    //   toast.success(`Successfully approved ${selectedScripts.size} scripts!`);
+    //   // Refresh list
+    //   await loadScripts();
+    //   // Clear selections
+    //   setSelectedScripts(new Set());
+    //   setBulkMode(false);
+    // } catch (error) {
+    //   console.error('Bulk approve failed:', error);
+    //   toast.error('Some approvals failed. Check console for details.');
+    // } finally {
+    //   setBulkApproving(false);
+    // }
   };
 
   const filteredScripts = scripts.filter((script) => {
@@ -101,11 +164,87 @@ export default function PendingPage() {
 
   return (
     <div className="pb-4">
+      {/* Header with Bulk Mode Toggle */}
+      <div className="flex items-center justify-between mb-4">
+        <h1 className="text-2xl font-bold text-gray-900">
+          Pending Scripts
+          <span className="text-sm text-gray-500 font-normal ml-2">
+            {scripts.length} total
+          </span>
+        </h1>
+        <button
+          onClick={toggleBulkMode}
+          className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-1 ${
+            bulkMode
+              ? 'bg-purple-500 text-white'
+              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+          }`}
+        >
+          {bulkMode ? (
+            <>
+              <CheckSquare className="w-4 h-4" />
+              Cancel
+            </>
+          ) : (
+            <>
+              <Square className="w-4 h-4" />
+              Bulk Select
+            </>
+          )}
+        </button>
+      </div>
+
+      {/* Bulk Action Bar - Fixed when in bulk mode */}
+      {bulkMode && (
+        <div className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-200 px-4 py-3 shadow-sm">
+          <div className="max-w-mobile mx-auto flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <span className="text-sm font-semibold text-gray-700">
+                {selectedScripts.size} selected
+              </span>
+              {selectedScripts.size < filteredScripts.length ? (
+                <button
+                  onClick={selectAll}
+                  className="text-xs text-purple-600 font-medium hover:underline"
+                >
+                  Select All ({filteredScripts.length})
+                </button>
+              ) : (
+                <button
+                  onClick={deselectAll}
+                  className="text-xs text-gray-500 font-medium hover:underline"
+                >
+                  Deselect All
+                </button>
+              )}
+            </div>
+
+            <button
+              onClick={handleBulkApprove}
+              disabled={selectedScripts.size === 0 || bulkApproving}
+              className="px-4 py-2 bg-green-500 text-white rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              {bulkApproving ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Approving...
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="w-4 h-4" />
+                  Approve ({selectedScripts.size})
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Filter Tabs */}
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex gap-2 mb-6 overflow-x-auto pb-2 -mx-4 px-4"
+        className={`flex gap-2 mb-6 overflow-x-auto pb-2 -mx-4 px-4 ${bulkMode ? 'mt-16' : ''}`}
       >
         {filters.map((f) => (
           <button
@@ -146,50 +285,76 @@ export default function PendingPage() {
 
       {/* Script Cards */}
       <div className="space-y-3">
-        {filteredScripts.map((script, index) => (
-          <motion.div
-            key={script.id}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.05 }}
-          >
-            <div className="bg-white border border-gray-200 rounded-xl p-4">
-              <div className="flex items-start justify-between mb-2">
-                <div>
-                  <h3 className="font-medium text-gray-900">{script.title || 'Untitled'}</h3>
-                  <p className="text-gray-500 text-sm">
-                    {script.full_name || script.email} • {formatTimeAgo(script.created_at)}
-                  </p>
-                </div>
-                <span className="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs font-medium rounded-full flex items-center gap-1">
-                  <Clock className="w-3 h-3" />
-                  Pending
-                </span>
-              </div>
+        {filteredScripts.map((script, index) => {
+          const isSelected = selectedScripts.has(script.id);
 
-              <div className="flex items-center gap-2 mb-3">
-                <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">
-                  {getPlatformIcon(script.platform)} {getPlatformLabel(script.platform)}
-                </span>
-                <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">
-                  {script.shoot_type === 'outdoor' ? '🌳' : '🏠'} {script.shoot_type || 'Indoor'}
-                </span>
-                {script.content_rating && (
-                  <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">
-                    ⭐ {script.content_rating}
-                  </span>
+          return (
+            <motion.div
+              key={script.id}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.05 }}
+            >
+              <div className={`relative bg-white border-2 rounded-xl p-4 transition-all ${
+                isSelected ? 'border-purple-500 bg-purple-50' : 'border-gray-200'
+              }`}>
+                {/* Selection Checkbox - Only visible in bulk mode */}
+                {bulkMode && (
+                  <button
+                    onClick={() => toggleScript(script.id)}
+                    className="absolute top-3 left-3 z-10 w-8 h-8 flex items-center justify-center bg-white rounded-lg border-2 border-gray-300 transition-colors"
+                  >
+                    {isSelected ? (
+                      <CheckSquare className="w-5 h-5 text-purple-500" />
+                    ) : (
+                      <Square className="w-5 h-5 text-gray-400" />
+                    )}
+                  </button>
                 )}
-              </div>
 
-              <Link
-                to={`/admin/review/${script.id}`}
-                className="block w-full py-2 bg-purple-500 text-white text-center rounded-lg text-sm font-medium active:bg-purple-600"
-              >
-                Review
-              </Link>
-            </div>
-          </motion.div>
-        ))}
+                <div className={`${bulkMode ? 'pl-10' : ''}`}>
+                  <div className="flex items-start justify-between mb-2">
+                    <div>
+                      <h3 className="font-medium text-gray-900">{script.title || 'Untitled'}</h3>
+                      <p className="text-gray-500 text-sm">
+                        {script.full_name || script.email} • {formatTimeAgo(script.created_at)}
+                      </p>
+                    </div>
+                    {!bulkMode && (
+                      <span className="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs font-medium rounded-full flex items-center gap-1">
+                        <Clock className="w-3 h-3" />
+                        Pending
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">
+                      {getPlatformIcon(script.platform)} {getPlatformLabel(script.platform)}
+                    </span>
+                    <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">
+                      {script.shoot_type === 'outdoor' ? '🌳' : '🏠'} {script.shoot_type || 'Indoor'}
+                    </span>
+                    {script.content_rating && (
+                      <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">
+                        ⭐ {script.content_rating}
+                      </span>
+                    )}
+                  </div>
+
+                  {!bulkMode && (
+                    <Link
+                      to={`/admin/review/${script.id}`}
+                      className="block w-full py-2 bg-purple-500 text-white text-center rounded-lg text-sm font-medium active:bg-purple-600"
+                    >
+                      Review
+                    </Link>
+                  )}
+                </div>
+              </div>
+            </motion.div>
+          );
+        })}
       </div>
     </div>
   );
