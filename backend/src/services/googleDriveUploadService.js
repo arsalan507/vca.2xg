@@ -236,6 +236,59 @@ class GoogleDriveUploadService {
   }
 
   /**
+   * Create a resumable upload session and return the resumable URI.
+   * The URI is a capability URL — no auth header is needed when uploading chunks to it.
+   * @param {string} fileName - File name for the upload
+   * @param {string} mimeType - File MIME type
+   * @param {number} fileSize - File size in bytes
+   * @param {string} folderId - Target Drive folder ID
+   * @returns {Promise<string>} - Resumable upload URI
+   */
+  async createResumableSession(fileName, mimeType, fileSize, folderId) {
+    await this.initialize();
+
+    try {
+      const authClient = await this.auth.getClient();
+      const accessToken = (await authClient.getAccessToken()).token;
+
+      const metadata = {
+        name: fileName,
+        parents: [folderId],
+      };
+
+      const response = await fetch(
+        'https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&supportsAllDrives=true',
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json; charset=UTF-8',
+            'X-Upload-Content-Type': mimeType || 'application/octet-stream',
+            'X-Upload-Content-Length': String(fileSize),
+          },
+          body: JSON.stringify(metadata),
+        }
+      );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to create resumable session: ${response.status} ${errorText}`);
+      }
+
+      const resumableUri = response.headers.get('Location');
+      if (!resumableUri) {
+        throw new Error('No resumable session URI returned from Google Drive');
+      }
+
+      console.log(`📤 Created resumable session for ${fileName} (${(fileSize / 1024 / 1024).toFixed(2)} MB)`);
+      return resumableUri;
+    } catch (error) {
+      console.error('❌ Resumable session error:', error.message);
+      throw new Error(`Failed to create resumable upload session: ${error.message}`);
+    }
+  }
+
+  /**
    * Get file metadata
    * @param {string} fileId - File ID
    * @returns {Promise<object>} - File metadata

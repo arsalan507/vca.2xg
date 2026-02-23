@@ -179,6 +179,122 @@ router.post('/final-video', verifyAuth, upload.single('file'), async (req, res) 
 });
 
 /**
+ * Initialize a resumable upload session (for direct frontend-to-Drive uploads)
+ * POST /api/upload/init-resumable
+ * Returns a resumable URI that the frontend can upload to directly (no auth needed on the URI)
+ */
+router.post('/init-resumable', verifyAuth, async (req, res) => {
+  try {
+    const { contentId, analysisId, fileName, mimeType, fileSize, fileType, fileIndex } = req.body;
+
+    if (!fileName || !mimeType || !fileSize || !fileType) {
+      return res.status(400).json({ error: 'Missing required fields: fileName, mimeType, fileSize, fileType' });
+    }
+
+    // Determine base folder ID from env
+    const folderMap = {
+      'raw-footage': process.env.GOOGLE_DRIVE_RAW_FOOTAGE_FOLDER_ID,
+      'edited-video': process.env.GOOGLE_DRIVE_EDITED_VIDEO_FOLDER_ID,
+      'final-video': process.env.GOOGLE_DRIVE_FINAL_VIDEO_FOLDER_ID,
+    };
+
+    const baseFolderId = folderMap[fileType];
+    if (!baseFolderId) {
+      return res.status(400).json({ error: `Invalid or unconfigured fileType: ${fileType}` });
+    }
+
+    // Get or create project subfolder: {base}/{contentId}/
+    const projectId = contentId || analysisId;
+    const folderId = await googleDriveUploadService.getOrCreateProjectFolder(projectId, baseFolderId);
+
+    // Auto-rename file based on type + existing count
+    const ext = fileName.split('.').pop() || 'mp4';
+    let renamedFileName = fileName;
+
+    if (contentId && pool) {
+      if (fileType === 'raw-footage') {
+        // Count existing raw files for this project
+        const countResult = await pool.query(
+          `SELECT COUNT(*) FROM production_files WHERE analysis_id = $1 AND file_type IN ('raw-footage', 'A_ROLL', 'B_ROLL', 'HOOK', 'BODY', 'CTA', 'AUDIO_CLIP', 'OTHER') AND is_deleted = false`,
+          [analysisId]
+        );
+        const existingCount = parseInt(countResult.rows[0].count, 10);
+        const rawNum = existingCount + (fileIndex || 0) + 1;
+        renamedFileName = `${contentId}_raw_${String(rawNum).padStart(2, '0')}.${ext}`;
+      } else if (fileType === 'edited-video') {
+        const countResult = await pool.query(
+          `SELECT COUNT(*) FROM production_files WHERE analysis_id = $1 AND file_type = 'edited-video' AND is_deleted = false`,
+          [analysisId]
+        );
+        const existingCount = parseInt(countResult.rows[0].count, 10);
+        const versionNum = existingCount + 1;
+        renamedFileName = `${contentId}_v${versionNum}.${ext}`;
+      } else if (fileType === 'final-video') {
+        renamedFileName = `${contentId}_final.${ext}`;
+      }
+    }
+
+    // Create resumable upload session
+    const resumableUri = await googleDriveUploadService.createResumableSession(
+      renamedFileName,
+      mimeType,
+      fileSize,
+      folderId
+    );
+
+    res.json({
+      success: true,
+      resumableUri,
+      fileName: renamedFileName,
+      folderId,
+    });
+  } catch (error) {
+    console.error('Init resumable error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * Finalize an upload — make file public and save record to DB
+ * POST /api/upload/finalize
+ */
+router.post('/finalize', verifyAuth, async (req, res) => {
+  try {
+    const { analysisId, fileType, fileName, fileId, fileUrl, fileSize, mimeType } = req.body;
+
+    if (!analysisId || !fileType || !fileName || !fileId) {
+      return res.status(400).json({ error: 'Missing required fields: analysisId, fileType, fileName, fileId' });
+    }
+
+    // Make file publicly accessible
+    await googleDriveUploadService.makeFilePublic(fileId);
+
+    // Save record to production_files table
+    if (pool) {
+      const result = await pool.query(
+        `INSERT INTO production_files (analysis_id, file_type, file_name, file_url, file_id, file_size, mime_type, uploaded_by)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+         RETURNING *`,
+        [analysisId, fileType, fileName, fileUrl || `https://drive.google.com/file/d/${fileId}/view`, fileId, fileSize || null, mimeType || null, req.user.id]
+      );
+
+      res.json({
+        success: true,
+        record: result.rows[0],
+      });
+    } else {
+      res.json({
+        success: true,
+        message: 'File made public but database not configured',
+      });
+    }
+  } catch (error) {
+    console.error('Finalize upload error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
  * Download multiple files as a streamed zip
  * GET /api/upload/download-zip?fileIds=id1,id2&name=project-name
  * Streams files from Google Drive through the server into a zip — no buffering in memory.

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Video, Play, Download, CheckCircle, XCircle, Eye, ChevronDown, ChevronUp, Loader2, CheckSquare, Square } from 'lucide-react';
 import { adminService } from '@/services/adminService';
-import { getDriveDownloadUrl } from '@/services/googleDriveOAuthService';
+import { getDriveDownloadUrl } from '@/lib/driveUtils';
 import toast from 'react-hot-toast';
 import type { ViralAnalysis } from '@/types';
 import { motion } from 'framer-motion';
