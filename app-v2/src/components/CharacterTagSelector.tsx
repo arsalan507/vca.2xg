@@ -226,9 +226,9 @@ export default function CharacterTagSelector({ analysisId, value, onChange, read
 
       {/* Dropdown panel */}
       {open && (
-        <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden">
-          {/* Tag list */}
-          <div className="max-h-52 overflow-y-auto">
+        <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg flex flex-col" style={{ maxHeight: '260px' }}>
+          {/* Tag list — scrolls within the panel */}
+          <div className="overflow-y-auto flex-1 min-h-0">
             {loadingTags ? (
               <div className="flex items-center justify-center py-6">
                 <Loader2 className="w-5 h-5 text-purple-500 animate-spin" />
@@ -290,8 +290,8 @@ export default function CharacterTagSelector({ analysisId, value, onChange, read
             )}
           </div>
 
-          {/* Add new tag form */}
-          <div className="border-t border-gray-100">
+          {/* Add new tag form — always visible at bottom, never scrolled away */}
+          <div className="border-t border-gray-100 flex-shrink-0 bg-white">
             {!showAddForm ? (
               <button
                 type="button"
@@ -304,7 +304,6 @@ export default function CharacterTagSelector({ analysisId, value, onChange, read
             ) : (
               <div className="p-3 space-y-2 bg-purple-50">
                 <input
-                  autoFocus
                   type="text"
                   value={newTagName}
                   onChange={e => setNewTagName(e.target.value)}

@@ -145,11 +145,10 @@ export const auth = {
         _notifyAuthChange('SIGNED_OUT', null);
         return { data: { user: null }, error: null };
       }
-    } catch (error) {
-      // Network error - clear session to be safe
-      _saveSession(null);
-      _notifyAuthChange('SIGNED_OUT', null);
-      return { data: { user: null }, error: null };
+    } catch {
+      // Network error — backend temporarily unavailable.
+      // Do NOT sign the user out; return the cached user so the session survives.
+      return { data: { user: _user }, error: null };
     }
   },
 

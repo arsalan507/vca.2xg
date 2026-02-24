@@ -140,7 +140,8 @@ export const videographerService = {
           assignments:project_assignments(
             id, role,
             user:profiles!project_assignments_user_id_fkey(id, email, full_name, avatar_url)
-          )
+          ),
+          character_tags:analysis_character_tags(character_tag:character_tags(id, name, is_active))
         `)
         .in('id', analysisIds)
         .order('priority', { ascending: false })
@@ -170,6 +171,7 @@ export const videographerService = {
       videographer: project.assignments?.find((a: any) => a.role === 'VIDEOGRAPHER')?.user,
       editor: project.assignments?.find((a: any) => a.role === 'EDITOR')?.user,
       production_files: filesByAnalysis.get(project.id) || [],
+      character_tags: (project.character_tags || []).map((ct: any) => ct.character_tag).filter(Boolean),
     })) as ViralAnalysis[];
   },
 
