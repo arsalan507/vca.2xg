@@ -119,6 +119,7 @@ export const adminService = {
         profile:profile_list (id, name, platform)
       `)
       .eq('status', 'PENDING')
+      .or('is_dissolved.eq.false,is_dissolved.is.null')
       .order('created_at', { ascending: false });
 
     if (error) throw error;
@@ -285,18 +286,20 @@ export const adminService = {
    * 11 parallel lightweight HEAD requests (no row data transferred).
    */
   async getDashboardAndQueueStats(): Promise<{ dashboard: DashboardStats; queue: QueueStats }> {
-    const approvedBase = () => supabase.from('viral_analyses').select('id', { count: 'exact', head: true }).eq('status', 'APPROVED');
+    const notDissolved = 'is_dissolved.eq.false,is_dissolved.is.null';
+    const activeBase = () => supabase.from('viral_analyses').select('id', { count: 'exact', head: true }).or(notDissolved);
+    const approvedBase = () => activeBase().eq('status', 'APPROVED');
 
     const [
       totalResult, usersResult, pendingResult, approvedResult, rejectedResult,
       planningResult, nullStageResult, shootingResult, readyForEditResult,
       editingResult, editReviewResult, readyToPostResult, postedResult,
     ] = await Promise.all([
-      supabase.from('viral_analyses').select('id', { count: 'exact', head: true }),
+      activeBase(),
       supabase.from('profiles').select('id', { count: 'exact', head: true }),
-      supabase.from('viral_analyses').select('id', { count: 'exact', head: true }).eq('status', 'PENDING'),
-      supabase.from('viral_analyses').select('id', { count: 'exact', head: true }).eq('status', 'APPROVED'),
-      supabase.from('viral_analyses').select('id', { count: 'exact', head: true }).eq('status', 'REJECTED'),
+      activeBase().eq('status', 'PENDING'),
+      activeBase().eq('status', 'APPROVED'),
+      activeBase().eq('status', 'REJECTED'),
       approvedBase().in('production_stage', ['PLANNING', 'NOT_STARTED', 'PRE_PRODUCTION', 'PLANNED']),
       approvedBase().is('production_stage', null),
       approvedBase().eq('production_stage', 'SHOOTING'),
@@ -346,12 +349,14 @@ export const adminService = {
    */
   async getDashboardStats(): Promise<DashboardStats> {
     // Use server-side count queries instead of fetching all records
+    const notDissolved = 'is_dissolved.eq.false,is_dissolved.is.null';
+    const base = () => supabase.from('viral_analyses').select('id', { count: 'exact', head: true }).or(notDissolved);
     const [totalResult, usersResult, pendingResult, approvedResult, rejectedResult] = await Promise.all([
-      supabase.from('viral_analyses').select('id', { count: 'exact', head: true }),
+      base(),
       supabase.from('profiles').select('id', { count: 'exact', head: true }),
-      supabase.from('viral_analyses').select('id', { count: 'exact', head: true }).eq('status', 'PENDING'),
-      supabase.from('viral_analyses').select('id', { count: 'exact', head: true }).eq('status', 'APPROVED'),
-      supabase.from('viral_analyses').select('id', { count: 'exact', head: true }).eq('status', 'REJECTED'),
+      base().eq('status', 'PENDING'),
+      base().eq('status', 'APPROVED'),
+      base().eq('status', 'REJECTED'),
     ]);
 
     if (totalResult.error) throw totalResult.error;
@@ -669,6 +674,7 @@ export const adminService = {
       .from('viral_analyses')
       .select(selectQuery)
       .eq('status', 'APPROVED')
+      .or('is_dissolved.eq.false,is_dissolved.is.null')
       .not('production_stage', 'eq', 'POSTED')
       .order('created_at', { ascending: false });
 

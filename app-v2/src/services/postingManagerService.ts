@@ -63,6 +63,7 @@ export const postingManagerService = {
       `)
       .eq('status', 'APPROVED')
       .eq('production_stage', 'READY_TO_POST')
+      .or('is_dissolved.eq.false,is_dissolved.is.null')
       .order('scheduled_post_time', { ascending: true, nullsFirst: false })
       .order('priority', { ascending: false })
       .order('deadline', { ascending: true });
@@ -119,6 +120,7 @@ export const postingManagerService = {
       `)
       .eq('status', 'APPROVED')
       .in('production_stage', ['READY_TO_POST', 'POSTED'])
+      .or('is_dissolved.eq.false,is_dissolved.is.null')
       .not('scheduled_post_time', 'is', null);
 
     if (startDate) {
@@ -162,6 +164,7 @@ export const postingManagerService = {
       `)
       .eq('status', 'APPROVED')
       .eq('production_stage', 'POSTED')
+      .or('is_dissolved.eq.false,is_dissolved.is.null')
       .order('posted_at', { ascending: false })
       .limit(limit);
 

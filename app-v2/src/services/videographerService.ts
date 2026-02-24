@@ -49,6 +49,7 @@ export const videographerService = {
         `)
         .eq('status', 'APPROVED')
         .or(`production_stage.in.(${planningStages.join(',')}),production_stage.is.null`)
+        .or('is_dissolved.eq.false,is_dissolved.is.null')
         .order('priority', { ascending: false })
         .order('created_at', { ascending: false }),
       auth.getUser(),
@@ -112,6 +113,7 @@ export const videographerService = {
           character_tags:analysis_character_tags(character_tag:character_tags(id, name, is_active))
         `)
         .in('id', analysisIds)
+        .or('is_dissolved.eq.false,is_dissolved.is.null')
         .order('priority', { ascending: false })
         .order('created_at', { ascending: false }),
       // Only fetch fields needed for file count display (not full file data)
@@ -156,6 +158,7 @@ export const videographerService = {
         profile:profile_list(id, name, platform)
       `)
       .eq('user_id', user.id)
+      .or('is_dissolved.eq.false,is_dissolved.is.null')
       .order('created_at', { ascending: false });
 
     if (error) throw error;
@@ -268,6 +271,7 @@ export const videographerService = {
         profiles:user_id(email, full_name, avatar_url)
       `).eq('status', 'APPROVED')
         .or(`production_stage.in.(${planningStages.join(',')}),production_stage.is.null`)
+        .or('is_dissolved.eq.false,is_dissolved.is.null')
         .order('priority', { ascending: false }).order('created_at', { ascending: false }),
       // Skipped projects
       supabase.from('project_skips').select('analysis_id')

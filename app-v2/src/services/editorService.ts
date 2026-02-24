@@ -56,6 +56,7 @@ export const editorService = {
       `)
       .eq('status', 'APPROVED')
       .eq('production_stage', 'READY_FOR_EDIT')
+      .or('is_dissolved.eq.false,is_dissolved.is.null')
       .order('priority', { ascending: false })
       .order('created_at', { ascending: true });
 
@@ -152,6 +153,7 @@ export const editorService = {
           )
         `)
         .in('id', analysisIds)
+        .or('is_dissolved.eq.false,is_dissolved.is.null')
         .order('priority', { ascending: false })
         .order('created_at', { ascending: false }),
       supabase.from('production_files')
@@ -299,6 +301,7 @@ export const editorService = {
               )
             `)
             .in('id', myIds)
+            .or('is_dissolved.eq.false,is_dissolved.is.null')
             .order('priority', { ascending: false })
             .order('created_at', { ascending: false })
         : Promise.resolve({ data: [], error: null }),
