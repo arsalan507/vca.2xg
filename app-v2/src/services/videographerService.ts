@@ -264,7 +264,7 @@ export const videographerService = {
       // My scripts (minimal columns, no script_body)
       supabase.from('viral_analyses').select(`
         ${CARD_COLS}, profile:profile_list(id, name, platform)
-      `).eq('user_id', user.id).order('created_at', { ascending: false }),
+      `).eq('user_id', user.id).or('is_dissolved.eq.false,is_dissolved.is.null').order('created_at', { ascending: false }),
       // Available projects (combined OR — one query instead of two, minimal columns)
       supabase.from('viral_analyses').select(`
         ${CARD_COLS}, profile:profile_list(id, name, platform),
@@ -287,7 +287,7 @@ export const videographerService = {
           ${CARD_COLS}, profile:profile_list(id, name, platform),
           profiles:user_id(email, full_name, avatar_url),
           assignments:project_assignments(id, role, user:profiles!project_assignments_user_id_fkey(id, email, full_name, avatar_url))
-        `).in('id', myIds).order('priority', { ascending: false }).order('created_at', { ascending: false })
+        `).in('id', myIds).or('is_dissolved.eq.false,is_dissolved.is.null').order('priority', { ascending: false }).order('created_at', { ascending: false })
       : { data: [], error: null };
 
     const projects = ((myProjectsResult.data || []) as any[]).map((project: any) => ({
@@ -317,7 +317,7 @@ export const videographerService = {
     return {
       stats: {
         activeShoots,
-        totalShoots: myIds.length,
+        totalShoots: projects.length,
         scripts: ((myScriptsResult.data || []) as any[]).length,
         completed,
         available: available.length,
