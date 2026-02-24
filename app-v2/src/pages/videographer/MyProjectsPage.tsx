@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Loader2, Check } from 'lucide-react';
+import { Loader2, Check, Search, X } from 'lucide-react';
 import Header from '@/components/Header';
 import { videographerService } from '@/services/videographerService';
+import { smartSearch } from '@/lib/smartSearch';
 import type { ViralAnalysis } from '@/types';
 import toast from 'react-hot-toast';
 
@@ -13,6 +14,7 @@ export default function MyProjectsPage() {
   const [projects, setProjects] = useState<ViralAnalysis[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<TabType>('active');
+  const [searchQuery, setSearchQuery] = useState('');
   const [markingComplete, setMarkingComplete] = useState<string | null>(null);
 
   useEffect(() => {
@@ -32,9 +34,13 @@ export default function MyProjectsPage() {
     }
   };
 
-  // Group projects by status
-  const shootingProjects = projects.filter((p) => p.production_stage === 'SHOOTING');
-  const completedProjects = projects.filter((p) =>
+  // Apply smart search, then split by tab
+  const searched = searchQuery.trim()
+    ? smartSearch(searchQuery, projects)
+    : projects;
+
+  const shootingProjects = searched.filter((p) => p.production_stage === 'SHOOTING');
+  const completedProjects = searched.filter((p) =>
     ['READY_FOR_EDIT', 'EDITING', 'READY_TO_POST', 'POSTED'].includes(p.production_stage || '')
   );
 
@@ -124,6 +130,34 @@ export default function MyProjectsPage() {
       <Header title="My Shoots" subtitle={`${activeCount} active, ${completedCount} completed`} showBack />
 
       <div className="px-4 py-4">
+        {/* Smart Search Bar */}
+        <div className="relative mb-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search shoots — title, crew, notes, shoot type…"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-10 pr-9 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          )}
+        </div>
+        <p className="text-[11px] text-gray-400 mb-3 px-1">
+          💡 Try: "outdoor" · "zubair" · "no audio"
+        </p>
+        {searchQuery.trim() && (
+          <p className="text-xs text-orange-700 bg-orange-50 rounded-lg px-3 py-1.5 mb-3">
+            🔍 {activeCount + completedCount} result{activeCount + completedCount !== 1 ? 's' : ''} for "{searchQuery}"
+          </p>
+        )}
+
         {/* Tab Switcher - Pill Style */}
         <div className="flex gap-2 mb-6">
           <button
