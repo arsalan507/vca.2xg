@@ -226,9 +226,9 @@ export default function CharacterTagSelector({ analysisId, value, onChange, read
 
       {/* Dropdown panel */}
       {open && (
-        <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg flex flex-col" style={{ maxHeight: '260px' }}>
-          {/* Tag list — scrolls within the panel */}
-          <div className="overflow-y-auto flex-1 min-h-0">
+        <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg flex flex-col overflow-hidden" style={{ maxHeight: '260px' }}>
+          {/* Tag list — scrolls within the capped panel */}
+          <div className="overflow-y-auto flex-1 min-h-0 overscroll-contain">
             {loadingTags ? (
               <div className="flex items-center justify-center py-6">
                 <Loader2 className="w-5 h-5 text-purple-500 animate-spin" />
