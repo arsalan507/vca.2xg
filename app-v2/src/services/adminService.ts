@@ -137,8 +137,7 @@ export const adminService = {
    * Get single analysis by ID
    */
   async getAnalysis(id: string): Promise<ViralAnalysis> {
-    // Fetch project and production files in parallel
-    const [projectResult, filesResult] = await Promise.all([
+    const [projectResult, filesResult, charTagsResult] = await Promise.all([
       supabase
         .from('viral_analyses')
         .select(`
@@ -169,6 +168,10 @@ export const adminService = {
         .select('*')
         .eq('analysis_id', id)
         .order('created_at', { ascending: false }),
+      supabase
+        .from('analysis_character_tags')
+        .select('character_tag:character_tags(id, name, color)')
+        .eq('analysis_id', id),
     ]);
 
     if (projectResult.error) throw projectResult.error;
@@ -177,6 +180,7 @@ export const adminService = {
     const videographer = analysis.assignments?.find((a: any) => a.role === 'VIDEOGRAPHER')?.user;
     const editor = analysis.assignments?.find((a: any) => a.role === 'EDITOR')?.user;
     const posting_manager = analysis.assignments?.find((a: any) => a.role === 'POSTING_MANAGER')?.user;
+    const character_tags = ((charTagsResult.data as any[]) || []).map((r: any) => r.character_tag).filter(Boolean);
 
     return {
       ...analysis,
@@ -187,6 +191,7 @@ export const adminService = {
       editor,
       posting_manager,
       production_files: (filesResult.data || []) as any[],
+      character_tags,
     } as ViralAnalysis;
   },
 

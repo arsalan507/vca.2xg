@@ -404,6 +404,57 @@ export default function ProjectDetailPage() {
             </div>
           )}
 
+          {/* Script Content */}
+          {(project.hook || project.script_body || project.script_cta) && (
+            <div className="bg-yellow-50 border-2 border-dashed border-yellow-300 rounded-xl p-4 space-y-4">
+              <h3 className="text-xs font-bold text-yellow-800 uppercase tracking-wide">✨ Script</h3>
+              {project.hook && (
+                <div>
+                  <p className="text-xs font-semibold text-gray-700 mb-1">🎣 Hook</p>
+                  <p className="text-sm text-gray-700 whitespace-pre-wrap">{project.hook}</p>
+                </div>
+              )}
+              {project.script_body && (
+                <div>
+                  <p className="text-xs font-semibold text-gray-700 mb-1">📝 Body / Script</p>
+                  <p className="text-sm text-gray-700 whitespace-pre-wrap">{project.script_body}</p>
+                </div>
+              )}
+              {project.script_cta && (
+                <div>
+                  <p className="text-xs font-semibold text-gray-700 mb-1">📣 CTA</p>
+                  <p className="text-sm text-gray-700 whitespace-pre-wrap">{project.script_cta}</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Production Notes */}
+          {project.production_notes && (
+            <div className="bg-white border border-gray-200 rounded-xl p-4">
+              <h3 className="text-sm font-medium text-gray-700 mb-2">📋 Team Notes</h3>
+              <p className="text-sm text-gray-600 whitespace-pre-wrap">{project.production_notes}</p>
+            </div>
+          )}
+
+          {/* Character Tags */}
+          {(project as any).character_tags?.length > 0 && (
+            <div className="bg-white border border-gray-200 rounded-xl p-4">
+              <h3 className="text-sm font-medium text-gray-700 mb-3">🎭 Characters</h3>
+              <div className="flex flex-wrap gap-2">
+                {(project as any).character_tags.map((tag: any) => (
+                  <span
+                    key={tag.id}
+                    className="px-3 py-1 rounded-full text-xs font-medium text-white"
+                    style={{ backgroundColor: tag.color || '#6B7280' }}
+                  >
+                    {tag.name}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Scores */}
           {project.overall_score && (
             <div className="bg-white border border-gray-200 rounded-xl p-4">
