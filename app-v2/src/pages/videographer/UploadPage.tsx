@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Upload, Video, X, CheckCircle, AlertCircle, Loader2, Film, Mic, Play, FileVideo, Trash2, ExternalLink } from 'lucide-react';
+import { Upload, Video, X, CheckCircle, AlertCircle, Loader2, Film, Mic, Play, FileVideo, Trash2, ExternalLink, ChevronDown, ChevronUp } from 'lucide-react';
 import Header from '@/components/Header';
 import { Button } from '@/components/ui';
 import toast from 'react-hot-toast';
@@ -50,6 +50,7 @@ export default function UploadPage() {
   const [selectedFileType, setSelectedFileType] = useState<FileType>('A_ROLL');
   const [deletingFileId, setDeletingFileId] = useState<string | null>(null);
   const [productionNotes, setProductionNotes] = useState('');
+  const [showScript, setShowScript] = useState(true);
 
   useEffect(() => {
     if (id) loadProject();
@@ -362,6 +363,59 @@ export default function UploadPage() {
             </div>
           </div>
         </div>
+
+        {/* Script Section */}
+        {(project.hook || project.script_body || project.script_cta || project.production_notes || (project as any).character_tags?.length > 0) && (
+          <div className="mb-6">
+            <button
+              onClick={() => setShowScript(v => !v)}
+              className="w-full flex items-center justify-between bg-yellow-50 border-2 border-dashed border-yellow-300 rounded-xl px-4 py-3"
+            >
+              <span className="text-sm font-bold text-yellow-800">✨ Script & Notes</span>
+              {showScript ? <ChevronUp className="w-4 h-4 text-yellow-700" /> : <ChevronDown className="w-4 h-4 text-yellow-700" />}
+            </button>
+            {showScript && (
+              <div className="bg-yellow-50 border-2 border-dashed border-yellow-300 border-t-0 rounded-b-xl px-4 pb-4 space-y-4">
+                {(project as any).character_tags?.length > 0 && (
+                  <div>
+                    <p className="text-xs font-semibold text-yellow-800 mb-2">🎭 Characters</p>
+                    <div className="flex flex-wrap gap-2">
+                      {(project as any).character_tags.map((tag: any) => (
+                        <span key={tag.id} className="px-3 py-1 rounded-full text-xs font-medium text-white" style={{ backgroundColor: tag.color || '#6B7280' }}>
+                          {tag.name}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {project.hook && (
+                  <div>
+                    <p className="text-xs font-semibold text-gray-700 mb-1">🎣 Hook</p>
+                    <p className="text-sm text-gray-700 whitespace-pre-wrap">{project.hook}</p>
+                  </div>
+                )}
+                {project.script_body && (
+                  <div>
+                    <p className="text-xs font-semibold text-gray-700 mb-1">📝 Script</p>
+                    <p className="text-sm text-gray-700 whitespace-pre-wrap">{project.script_body}</p>
+                  </div>
+                )}
+                {project.script_cta && (
+                  <div>
+                    <p className="text-xs font-semibold text-gray-700 mb-1">📣 CTA</p>
+                    <p className="text-sm text-gray-700 whitespace-pre-wrap">{project.script_cta}</p>
+                  </div>
+                )}
+                {project.production_notes && (
+                  <div>
+                    <p className="text-xs font-semibold text-gray-700 mb-1">📋 Team Notes</p>
+                    <p className="text-sm text-gray-600 whitespace-pre-wrap">{project.production_notes}</p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* File Type Selection */}
         <div className="mb-6">
