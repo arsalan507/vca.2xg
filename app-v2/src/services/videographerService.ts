@@ -25,9 +25,10 @@ export interface PickProjectData {
   deadline?: string;
 }
 
-// Minimal columns for card/list display — excludes heavy text fields like script_body, audio URLs, etc.
+// Card columns — includes script text fields so smartSearch can search them
 const CARD_COLS = `id, title, content_id, platform, shoot_type, production_stage, priority, status,
-  created_at, deadline, profile_id, industry_id, cast_composition, content_type, is_dissolved`;
+  created_at, deadline, profile_id, industry_id, cast_composition, content_type, is_dissolved,
+  hook, script_body, script_cta, production_notes, creator_name`;
 
 export const videographerService = {
   /**
