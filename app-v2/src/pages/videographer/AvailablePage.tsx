@@ -4,7 +4,9 @@ import { useNavigate } from 'react-router-dom';
 import { Loader2, X, ChevronUp, ChevronDown, Play, ExternalLink, Eye, Search, Check, PlusCircle } from 'lucide-react';
 import Header from '@/components/Header';
 import { videographerService } from '@/services/videographerService';
-import type { ViralAnalysis } from '@/types';
+import { smartSearch } from '@/lib/smartSearch';
+import { adminService } from '@/services/adminService';
+import type { ViralAnalysis, CharacterTag } from '@/types';
 import toast from 'react-hot-toast';
 
 type FilterType = 'all' | 'high_priority' | 'indoor' | 'outdoor';
@@ -84,6 +86,10 @@ export default function AvailablePage() {
   const [showReelsViewer, setShowReelsViewer] = useState(false);
   const [currentReelIndex, setCurrentReelIndex] = useState(0);
 
+  // Character filter state
+  const [allCharacterTags, setAllCharacterTags] = useState<CharacterTag[]>([]);
+  const [selectedCharacterIds, setSelectedCharacterIds] = useState<Set<string>>(new Set());
+
   useEffect(() => {
     loadProjects();
   }, []);
@@ -91,8 +97,12 @@ export default function AvailablePage() {
   const loadProjects = async () => {
     try {
       setLoading(true);
-      const data = await videographerService.getAvailableProjects();
+      const [data, tags] = await Promise.all([
+        videographerService.getAvailableProjects(),
+        adminService.getAllCharacterTags().catch(() => []),
+      ]);
       setProjects(data);
+      setAllCharacterTags(tags);
     } catch (error) {
       console.error('Failed to load projects:', error);
       toast.error('Failed to load projects');
@@ -101,30 +111,26 @@ export default function AvailablePage() {
     }
   };
 
-  const filteredProjects = projects.filter((p) => {
-    // Filter by type/priority
-    let matchesFilter = true;
-    if (filter !== 'all') {
-      if (filter === 'high_priority') {
-        matchesFilter = p.priority === 'URGENT' || p.priority === 'HIGH';
-      } else {
-        matchesFilter = p.shoot_type?.toLowerCase() === filter;
-      }
-    }
-    if (!matchesFilter) return false;
-
-    // Filter by search query
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      const matchesTitle = p.title?.toLowerCase().includes(query);
-      const matchesId = p.content_id?.toLowerCase().includes(query);
-      const matchesProfile = p.profile?.name?.toLowerCase().includes(query);
-      const matchesAuthor = p.full_name?.toLowerCase().includes(query) || p.email?.toLowerCase().includes(query);
-      return matchesTitle || matchesId || matchesProfile || matchesAuthor;
-    }
-
+  // Step 1: filter by tab (priority / shoot type)
+  const tabFiltered = projects.filter((p) => {
+    if (filter === 'high_priority') return p.priority === 'URGENT' || p.priority === 'HIGH';
+    if (filter === 'indoor') return p.shoot_type?.toLowerCase() === 'indoor';
+    if (filter === 'outdoor') return p.shoot_type?.toLowerCase() === 'outdoor';
     return true;
   });
+
+  // Step 2: filter by selected character tags
+  const charFiltered =
+    selectedCharacterIds.size === 0
+      ? tabFiltered
+      : tabFiltered.filter((p) =>
+          (p.character_tags || []).some((t) => selectedCharacterIds.has(t.id))
+        );
+
+  // Step 3: smart search
+  const filteredProjects = searchQuery.trim()
+    ? smartSearch(searchQuery, charFiltered)
+    : charFiltered;
 
   const counts = {
     all: projects.length,
@@ -348,27 +354,64 @@ export default function AvailablePage() {
       <Header title="Available Projects" subtitle={`${filteredProjects.length} projects ready for shooting`} showBack />
 
       <div className="px-4 py-4">
-        {/* Search Bar */}
-        <div className="relative mb-4">
+        {/* Smart Search Bar */}
+        <div className="relative mb-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
           <input
             type="text"
-            placeholder="Search by title, profile, ID, or author..."
+            placeholder="Search by title, crew, notes, shoot type…"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+            className="w-full pl-10 pr-9 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
             aria-label="Search projects"
           />
           {searchQuery && (
             <button
               onClick={() => setSearchQuery('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
               aria-label="Clear search"
             >
               <X className="w-5 h-5" />
             </button>
           )}
         </div>
+        <p className="text-[11px] text-gray-400 mb-3 px-1">
+          💡 Try: "father son night" · "gym no equipment" · "outdoor café"
+        </p>
+
+        {/* Character Filter Chips */}
+        {allCharacterTags.length > 0 && (
+          <div className="flex gap-2 overflow-x-auto hide-scrollbar pb-1 mb-3">
+            {allCharacterTags.map((tag) => {
+              const active = selectedCharacterIds.has(tag.id);
+              return (
+                <button
+                  key={tag.id}
+                  onClick={() => {
+                    const next = new Set(selectedCharacterIds);
+                    if (active) next.delete(tag.id); else next.add(tag.id);
+                    setSelectedCharacterIds(next);
+                  }}
+                  className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-colors ${
+                    active
+                      ? 'bg-orange-500 text-white'
+                      : 'bg-gray-100 text-gray-600'
+                  }`}
+                >
+                  👤 {tag.name}
+                </button>
+              );
+            })}
+            {selectedCharacterIds.size > 0 && (
+              <button
+                onClick={() => setSelectedCharacterIds(new Set())}
+                className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap bg-red-50 text-red-500"
+              >
+                <X className="w-3 h-3" /> Clear
+              </button>
+            )}
+          </div>
+        )}
 
         {/* Filter Tabs */}
         <div className="flex gap-2 overflow-x-auto hide-scrollbar pb-3 mb-2">
@@ -453,7 +496,22 @@ export default function AvailablePage() {
                         >
                           {priority.label}
                         </span>
+                        {project.cast_composition && project.cast_composition.total > 0 && (
+                          <span className="text-xs px-2 py-1 bg-blue-50 text-blue-600 rounded">
+                            👥 {project.cast_composition.total} cast
+                          </span>
+                        )}
                       </div>
+                      {/* Character tags */}
+                      {project.character_tags && project.character_tags.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {project.character_tags.map((t) => (
+                            <span key={t.id} className="text-[10px] px-2 py-0.5 bg-purple-50 text-purple-600 rounded-full font-medium">
+                              {t.name}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
 

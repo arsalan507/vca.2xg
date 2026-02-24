@@ -224,6 +224,23 @@ export const analysesService = {
         // Notes for team
         production_notes: formData.productionNotes ? `[Script Writer Notes]\n${formData.productionNotes}` : null,
 
+        // Script content (Phase 1)
+        hook: formData.hookText || null,
+        script_body: formData.scriptBody || null,
+        script_cta: formData.scriptCta || null,
+        cast_composition: formData.castComposition ? {
+          man: formData.castComposition.man ?? 0,
+          woman: formData.castComposition.woman ?? 0,
+          boy: formData.castComposition.boy ?? 0,
+          girl: formData.castComposition.girl ?? 0,
+          teen_boy: formData.castComposition.teen_boy ?? 0,
+          teen_girl: formData.castComposition.teen_girl ?? 0,
+          senior_man: formData.castComposition.senior_man ?? 0,
+          senior_woman: formData.castComposition.senior_woman ?? 0,
+          include_owner: formData.castComposition.include_owner ?? false,
+          total: 0, // auto-calculated by DB trigger
+        } : undefined,
+
         // Profile/Industry
         profile_id: formData.profileId || null,
         industry_id: formData.industryId || null,
@@ -267,6 +284,19 @@ export const analysesService = {
     if (error) throw error;
 
     const insertedData = data as ViralAnalysis;
+
+    // Save character tags if provided
+    if (formData.characterTagIds && formData.characterTagIds.length > 0 && insertedData) {
+      try {
+        const tagRows = formData.characterTagIds.map((tagId) => ({
+          analysis_id: insertedData.id,
+          character_tag_id: tagId,
+        }));
+        await supabase.from('analysis_character_tags').insert(tagRows);
+      } catch (tagError) {
+        console.warn('Failed to save character tags:', tagError);
+      }
+    }
 
     // Generate content_id if profile was provided (for videographer/admin submissions)
     if (formData.profileId && insertedData) {

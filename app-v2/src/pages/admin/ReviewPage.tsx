@@ -7,8 +7,10 @@ import {
   CheckCircle,
   XCircle,
   Loader2,
+  Copy,
 } from 'lucide-react';
 import VoiceRecorder from '@/components/VoiceRecorder';
+import CharacterTagSelector from '@/components/CharacterTagSelector';
 import { adminService, type ReviewData } from '@/services/adminService';
 import { supabase } from '@/lib/api';
 import type { ViralAnalysis } from '@/types';
@@ -39,6 +41,7 @@ export default function ReviewPage() {
   const [feedbackVoiceNote, setFeedbackVoiceNote] = useState<Blob | null>(null);
   const [profiles, setProfiles] = useState<{ id: string; name: string; platform?: string }[]>([]);
   const [selectedProfileId, setSelectedProfileId] = useState<string>('');
+  const [characterTags, setCharacterTags] = useState<{ id: string; name: string; description?: string; is_active: boolean }[]>([]);
 
   useEffect(() => {
     if (id) {
@@ -66,6 +69,7 @@ export default function ReviewPage() {
       setLoading(true);
       const data = await adminService.getAnalysis(scriptId);
       setScript(data);
+      setCharacterTags(data.character_tags || []);
     } catch (error) {
       console.error('Failed to load script:', error);
       toast.error('Failed to load script');
@@ -80,6 +84,14 @@ export default function ReviewPage() {
       const audio = new Audio(url);
       audio.play();
     }
+  };
+
+  const copyText = (text: string, label: string) => {
+    navigator.clipboard.writeText(text).then(() => {
+      toast.success(`${label} copied!`);
+    }).catch(() => {
+      toast.error('Failed to copy');
+    });
   };
 
   const handleSubmit = async () => {
@@ -206,6 +218,66 @@ export default function ReviewPage() {
           <p className="text-sm text-gray-700 leading-relaxed">
             {script.how_to_replicate || 'Not specified'}
           </p>
+        </div>
+
+        {/* Hook */}
+        {script.hook && (
+          <div className="mb-3 p-3 rounded-xl bg-amber-50 border border-amber-200">
+            <div className="flex items-center justify-between mb-1.5">
+              <p className="text-xs font-bold text-amber-700 uppercase tracking-wide">🎣 Hook</p>
+              <button
+                onClick={() => copyText(script.hook!, 'Hook')}
+                className="flex items-center gap-1 text-xs text-amber-600 font-medium px-2 py-0.5 rounded-lg hover:bg-amber-100 active:bg-amber-200 transition-colors"
+              >
+                <Copy className="w-3 h-3" />
+                Copy
+              </button>
+            </div>
+            <p className="text-sm text-gray-800 leading-relaxed">{script.hook}</p>
+          </div>
+        )}
+
+        {/* Script Body */}
+        {script.script_body && (
+          <div className="mb-3 p-3 rounded-xl bg-green-50 border border-green-200">
+            <div className="flex items-center justify-between mb-1.5">
+              <p className="text-xs font-bold text-green-700 uppercase tracking-wide">📝 Body / Script</p>
+              <button
+                onClick={() => copyText(script.script_body!, 'Script')}
+                className="flex items-center gap-1 text-xs text-green-600 font-medium px-2 py-0.5 rounded-lg hover:bg-green-100 active:bg-green-200 transition-colors"
+              >
+                <Copy className="w-3 h-3" />
+                Copy
+              </button>
+            </div>
+            <p className="text-sm text-gray-800 whitespace-pre-wrap leading-relaxed">{script.script_body}</p>
+          </div>
+        )}
+
+        {/* CTA */}
+        {script.script_cta && (
+          <div className="mb-3 p-3 rounded-xl bg-red-50 border border-red-200">
+            <div className="flex items-center justify-between mb-1.5">
+              <p className="text-xs font-bold text-red-700 uppercase tracking-wide">📣 CTA</p>
+              <button
+                onClick={() => copyText(script.script_cta!, 'CTA')}
+                className="flex items-center gap-1 text-xs text-red-600 font-medium px-2 py-0.5 rounded-lg hover:bg-red-100 active:bg-red-200 transition-colors"
+              >
+                <Copy className="w-3 h-3" />
+                Copy
+              </button>
+            </div>
+            <p className="text-sm text-gray-800 leading-relaxed">{script.script_cta}</p>
+          </div>
+        )}
+
+        {/* Character Tags */}
+        <div className="mb-4">
+          <CharacterTagSelector
+            analysisId={id!}
+            value={characterTags}
+            onChange={setCharacterTags}
+          />
         </div>
 
         {/* Voice Note */}

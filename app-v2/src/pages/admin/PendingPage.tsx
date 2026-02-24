@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Clock, FileText, CheckSquare, Square, CheckCircle, Eye, Loader2 } from 'lucide-react';
+import { Clock, FileText, CheckSquare, Square, CheckCircle, Eye, Loader2, Search, X } from 'lucide-react';
 import { adminService } from '@/services/adminService';
+import { smartSearch } from '@/lib/smartSearch';
 import type { ViralAnalysis } from '@/types';
 import toast from 'react-hot-toast';
 
@@ -12,6 +13,7 @@ export default function PendingPage() {
   const [scripts, setScripts] = useState<ViralAnalysis[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<FilterType>('all');
+  const [searchQuery, setSearchQuery] = useState('');
   const [bulkMode, setBulkMode] = useState(false);
   const [selectedScripts, setSelectedScripts] = useState<Set<string>>(new Set());
   const [bulkApproving, setBulkApproving] = useState(false);
@@ -93,13 +95,17 @@ export default function PendingPage() {
     // }
   };
 
-  const filteredScripts = scripts.filter((script) => {
+  const platformFiltered = scripts.filter((script) => {
     if (filter === 'all') return true;
     if (filter === 'instagram') return script.platform === 'instagram_reel';
     if (filter === 'youtube_shorts') return script.platform === 'youtube_shorts';
     if (filter === 'youtube_long') return script.platform === 'youtube_long';
     return true;
   });
+
+  const filteredScripts = searchQuery.trim()
+    ? smartSearch(searchQuery, platformFiltered)
+    : platformFiltered;
 
   const counts = {
     all: scripts.length,
@@ -237,6 +243,38 @@ export default function PendingPage() {
               )}
             </button>
           </div>
+        </div>
+      )}
+
+      {/* Smart Search Bar */}
+      {!bulkMode && (
+        <div className="mb-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Smart search — title, notes, crew, shoot type…"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-9 pr-9 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+          <p className="text-[11px] text-gray-400 mt-1 px-1">
+            💡 Try: "father son night" · "outdoor cafe" · "no audio"
+          </p>
+          {searchQuery.trim() && (
+            <p className="text-xs text-purple-700 bg-purple-50 rounded-lg px-3 py-1.5 mt-2">
+              🔍 {filteredScripts.length} result{filteredScripts.length !== 1 ? 's' : ''} for "{searchQuery}"
+            </p>
+          )}
         </div>
       )}
 

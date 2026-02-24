@@ -48,7 +48,8 @@ export const videographerService = {
           *,
           industry:industries(id, name, short_code),
           profile:profile_list(id, name, platform),
-          profiles:user_id(email, full_name, avatar_url)
+          profiles:user_id(email, full_name, avatar_url),
+          character_tags:analysis_character_tags(character_tag:character_tags(id, name, is_active))
         `)
         .eq('status', 'APPROVED')
         .in('production_stage', planningStages)
@@ -70,7 +71,8 @@ export const videographerService = {
         *,
         industry:industries(id, name, short_code),
         profile:profile_list(id, name, platform),
-        profiles:user_id(email, full_name, avatar_url)
+        profiles:user_id(email, full_name, avatar_url),
+        character_tags:analysis_character_tags(character_tag:character_tags(id, name, is_active))
       `)
       .eq('status', 'APPROVED')
       .is('production_stage', null)
@@ -101,6 +103,7 @@ export const videographerService = {
         email: project.profiles?.email,
         full_name: project.profiles?.full_name,
         avatar_url: project.profiles?.avatar_url,
+        character_tags: (project.character_tags || []).map((ct: any) => ct.character_tag).filter(Boolean),
       })) as ViralAnalysis[];
   },
 
@@ -396,7 +399,8 @@ export const videographerService = {
           assignments:project_assignments(
             id, role,
             user:profiles!project_assignments_user_id_fkey(id, email, full_name, avatar_url)
-          )
+          ),
+          character_tags:analysis_character_tags(character_tag:character_tags(id, name, is_active))
         `)
         .eq('id', analysisId)
         .single(),
@@ -419,6 +423,7 @@ export const videographerService = {
       editor: analysis.assignments?.find((a: any) => a.role === 'EDITOR')?.user,
       posting_manager: analysis.assignments?.find((a: any) => a.role === 'POSTING_MANAGER')?.user,
       production_files: (filesResult.data || []) as any[],
+      character_tags: (analysis.character_tags || []).map((ct: any) => ct.character_tag).filter(Boolean),
     } as ViralAnalysis;
   },
 

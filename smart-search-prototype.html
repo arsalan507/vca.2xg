@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Smart Search Prototype — VCA</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f3f4f6; }
+  .phone { max-width: 390px; margin: 0 auto; min-height: 100vh; background: white; position: relative; overflow: hidden; }
+  .screen { display: none; }
+  .screen.active { display: block; }
+  .tab-btn { transition: all 0.2s; }
+  .tab-btn.active { background: #7c3aed; color: white; }
+  mark { background: #fef08a; color: #713f12; padding: 0 2px; border-radius: 2px; }
+  .animate-in { animation: slideUp 0.2s ease; }
+  @keyframes slideUp { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+  .badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 500; }
+  .chip { background: #f3f4f6; color: #4b5563; }
+  .chip.active-purple { background: #7c3aed; color: white; }
+  .chip.active-orange { background: #f97316; color: white; }
+  .match-badge { font-size: 10px; background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; padding: 2px 6px; border-radius: 4px; }
+  .score-dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
+</style>
+</head>
+<body class="bg-gray-100 py-6">
+
+<!-- View Switcher -->
+<div class="max-w-[390px] mx-auto mb-4 flex gap-2 px-4">
+  <button class="tab-btn flex-1 py-2 rounded-xl text-sm font-semibold border-2 border-purple-600 text-purple-700 active"
+    onclick="switchView('admin')">Admin Pending</button>
+  <button class="tab-btn flex-1 py-2 rounded-xl text-sm font-semibold border-2 border-orange-400 text-orange-600"
+    onclick="switchView('videographer')">Videographer</button>
+</div>
+
+<div class="phone shadow-2xl rounded-3xl overflow-hidden border border-gray-200">
+
+  <!-- ===== ADMIN PENDING PAGE ===== -->
+  <div id="screen-admin" class="screen active">
+    <!-- Status bar -->
+    <div class="bg-white px-5 pt-3 pb-1 flex items-center justify-between">
+      <span class="text-xs font-semibold text-gray-900">9:41</span>
+      <div class="flex gap-1 items-center">
+        <div class="w-4 h-2.5 border border-gray-800 rounded-sm relative"><div class="absolute left-0.5 top-0.5 bottom-0.5 bg-gray-800 rounded-sm" style="right:1px"></div></div>
+      </div>
+    </div>
+
+    <!-- Page Header -->
+    <div class="px-4 pt-3 pb-2 bg-white flex items-center justify-between">
+      <div>
+        <h1 class="text-xl font-bold text-gray-900">Pending Scripts
+          <span class="text-sm text-gray-500 font-normal ml-1" id="admin-count">5 total</span>
+        </h1>
+      </div>
+      <button class="px-3 py-1.5 rounded-lg text-sm font-medium bg-gray-100 text-gray-700 flex items-center gap-1">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" stroke-width="2"/></svg>
+        Bulk Select
+      </button>
+    </div>
+
+    <!-- ★ NEW: Smart Search Bar -->
+    <div class="px-4 pb-3 bg-white border-b border-gray-100">
+      <div class="relative">
+        <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <circle cx="11" cy="11" r="8" stroke-width="2"/><path d="m21 21-4.35-4.35" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        <input id="admin-search" type="text" placeholder="Smart search — title, notes, shoot type, crew..."
+          class="w-full pl-9 pr-9 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+          oninput="filterAdminScripts(this.value)" />
+        <button onclick="clearAdminSearch()" id="admin-clear" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hidden">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12" stroke-width="2" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+      <!-- Smart search hint -->
+      <p class="text-[11px] text-gray-400 mt-1.5 px-1">
+        💡 Try: "father son night" · "outdoor cafe" · "works without audio"
+      </p>
+    </div>
+
+    <!-- Filter Tabs -->
+    <div class="flex gap-2 px-4 py-3 overflow-x-auto">
+      <button class="badge chip active-purple whitespace-nowrap" onclick="setAdminFilter('all',this)">All <span id="admin-f-all">5</span></button>
+      <button class="badge chip whitespace-nowrap" onclick="setAdminFilter('instagram',this)">Instagram <span id="admin-f-ig">2</span></button>
+      <button class="badge chip whitespace-nowrap" onclick="setAdminFilter('youtube_shorts',this)">YT Shorts <span id="admin-f-yts">2</span></button>
+      <button class="badge chip whitespace-nowrap" onclick="setAdminFilter('youtube_long',this)">YouTube <span id="admin-f-ytl">1</span></button>
+    </div>
+
+    <!-- Smart search result info -->
+    <div id="admin-search-info" class="hidden px-4 pb-2">
+      <p class="text-xs text-purple-700 bg-purple-50 rounded-lg px-3 py-2" id="admin-search-info-text"></p>
+    </div>
+
+    <!-- Script Cards -->
+    <div id="admin-cards" class="px-4 space-y-3 pb-6">
+    </div>
+
+    <!-- Empty state -->
+    <div id="admin-empty" class="hidden text-center py-12 px-4">
+      <div class="w-14 h-14 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-3">
+        <svg class="w-7 h-7 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" stroke-width="2" stroke-linecap="round"/></svg>
+      </div>
+      <h3 class="font-semibold text-gray-900 mb-1">No results found</h3>
+      <p class="text-gray-500 text-sm">Try different keywords or clear the search</p>
+    </div>
+  </div>
+
+  <!-- ===== VIDEOGRAPHER AVAILABLE PAGE ===== -->
+  <div id="screen-videographer" class="screen">
+    <!-- Status bar -->
+    <div class="bg-white px-5 pt-3 pb-1 flex items-center justify-between">
+      <span class="text-xs font-semibold text-gray-900">9:41</span>
+    </div>
+
+    <!-- Header -->
+    <div class="px-4 pt-2 pb-3 bg-white border-b border-gray-100 flex items-center gap-3">
+      <button class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
+        <svg class="w-4 h-4 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <div>
+        <h1 class="text-base font-bold text-gray-900">Available Projects</h1>
+        <p class="text-xs text-gray-500" id="vg-subtitle">5 projects ready for shooting</p>
+      </div>
+    </div>
+
+    <div class="px-4 py-3">
+      <!-- ★ ENHANCED: Smart Search Bar (replaces basic search) -->
+      <div class="relative mb-1">
+        <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <circle cx="11" cy="11" r="8" stroke-width="2"/><path d="m21 21-4.35-4.35" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        <input id="vg-search" type="text"
+          placeholder="Search by title, crew, location, mood..."
+          value=""
+          class="w-full pl-10 pr-9 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+          oninput="filterVgProjects(this.value)" />
+        <button onclick="clearVgSearch()" id="vg-clear" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hidden">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12" stroke-width="2" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+      <!-- Smart search hint -->
+      <p class="text-[11px] text-gray-400 mb-3 px-1">
+        💡 Try: "father son night" · "gym no equipment" · "outdoor café"
+      </p>
+
+      <!-- Filter Tabs -->
+      <div class="flex gap-2 overflow-x-auto hide-scrollbar pb-2 mb-2">
+        <button class="badge chip active-orange whitespace-nowrap" onclick="setVgFilter('all',this)">All <span id="vg-f-all">5</span></button>
+        <button class="badge chip whitespace-nowrap" onclick="setVgFilter('high_priority',this)">High Priority <span id="vg-f-hp">1</span></button>
+        <button class="badge chip whitespace-nowrap" onclick="setVgFilter('indoor',this)">Indoor <span id="vg-f-indoor">3</span></button>
+        <button class="badge chip whitespace-nowrap" onclick="setVgFilter('outdoor',this)">Outdoor <span id="vg-f-outdoor">2</span></button>
+      </div>
+
+      <p class="text-center text-xs text-gray-400 mb-3">← Swipe left to skip • Swipe right to pick →</p>
+
+      <!-- Smart search result info -->
+      <div id="vg-search-info" class="hidden mb-2">
+        <p class="text-xs text-orange-700 bg-orange-50 rounded-lg px-3 py-2" id="vg-search-info-text"></p>
+      </div>
+
+      <!-- Project Cards -->
+      <div id="vg-cards" class="space-y-3 pb-6"></div>
+
+      <!-- Empty state -->
+      <div id="vg-empty" class="hidden text-center py-12">
+        <div class="text-4xl mb-3">📭</div>
+        <h3 class="font-semibold text-gray-800 mb-1">No projects found</h3>
+        <p class="text-gray-500 text-sm">Try different keywords</p>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Legend -->
+<div class="max-w-[390px] mx-auto mt-4 px-4">
+  <div class="bg-white rounded-2xl p-4 border border-gray-200 text-sm">
+    <p class="font-semibold text-gray-900 mb-2">Smart Search — How it works</p>
+    <ul class="space-y-1.5 text-gray-600 text-xs">
+      <li>🔍 <strong>Searches ALL fields:</strong> title, production notes, why viral, how to replicate, shoot type, creator name</li>
+      <li>🧩 <strong>Multi-keyword:</strong> splits query into tokens — each word checked independently across all fields</li>
+      <li>🔄 <strong>Synonym matching:</strong> "boy" finds "kid/son/child", "dad" finds "father/papa", "store" finds "shop/mall", "night" finds "evening/dark", etc.</li>
+      <li>📊 <strong>Relevance scored:</strong> results ranked by how many keywords matched</li>
+      <li>💡 <strong>Example:</strong> "boy father night" matches a script with "one kid and father... at night" even though "boy" isn't in the script</li>
+    </ul>
+    <div class="mt-3 pt-3 border-t border-gray-100">
+      <p class="font-semibold text-gray-900 mb-1 text-xs">Try these demo searches:</p>
+      <div class="flex flex-wrap gap-1.5">
+        <button onclick="demoSearch('boy father night')" class="px-2 py-1 bg-purple-50 text-purple-700 rounded text-xs border border-purple-200">boy father night</button>
+        <button onclick="demoSearch('dad son indoor')" class="px-2 py-1 bg-purple-50 text-purple-700 rounded text-xs border border-purple-200">dad son indoor</button>
+        <button onclick="demoSearch('outdoor cafe')" class="px-2 py-1 bg-purple-50 text-purple-700 rounded text-xs border border-purple-200">outdoor cafe</button>
+        <button onclick="demoSearch('no equipment gym')" class="px-2 py-1 bg-purple-50 text-purple-700 rounded text-xs border border-purple-200">no equipment gym</button>
+        <button onclick="demoSearch('silent muted')" class="px-2 py-1 bg-purple-50 text-purple-700 rounded text-xs border border-purple-200">silent muted</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// =====================================================================
+// DEMO DATA — simulates ViralAnalysis records from the DB
+// Fields used in smart search: title, production_notes, why_viral,
+//   how_to_replicate, creator_name, shoot_type, works_without_audio
+// =====================================================================
+const SCRIPTS = [
+  {
+    id: '1',
+    title: 'Father & Son Morning Walk',
+    full_name: 'Riya Sharma',
+    created_at: new Date(Date.now() - 25*60000).toISOString(),
+    platform: 'instagram_reel',
+    shoot_type: 'Indoor',
+    priority: 'NORMAL',
+    content_id: 'BCH-1042',
+    creator_name: '@family.moments',
+    works_without_audio: 'Yes',
+    production_notes: 'Crew: one kid and father walking together at night. Use warm indoor lighting. Close-up on kid face reaction.',
+    why_viral: 'Heartwarming family moment that resonates emotionally with parents.',
+    how_to_replicate: 'Father and son in a hallway or living room at night, slow pan, golden hour lamp lighting.'
+  },
+  {
+    id: '2',
+    title: 'Morning Coffee Routine',
+    full_name: 'Ahmed Khan',
+    created_at: new Date(Date.now() - 2*3600000).toISOString(),
+    platform: 'youtube_shorts',
+    shoot_type: 'Indoor',
+    priority: 'HIGH',
+    content_id: 'BCH-1039',
+    creator_name: '@brew.culture',
+    works_without_audio: 'Maybe',
+    production_notes: 'Barista making specialty coffee in a cozy kitchen. No dialogue needed — ASMR sounds work perfectly.',
+    why_viral: 'Aesthetic morning content performs extremely well on Shorts.',
+    how_to_replicate: 'Use macro lens for coffee pour. Soft diffused light. No talking required.'
+  },
+  {
+    id: '3',
+    title: 'Street Style Lookbook',
+    full_name: 'Priya Nair',
+    created_at: new Date(Date.now() - 5*3600000).toISOString(),
+    platform: 'instagram_reel',
+    shoot_type: 'Outdoor',
+    priority: 'NORMAL',
+    content_id: 'BCH-1037',
+    creator_name: '@style.bch',
+    works_without_audio: 'Yes',
+    production_notes: 'Model showcasing 3 outfits on urban street. Golden hour preferred. No crew needed — solo shoot.',
+    why_viral: 'Fashion inspiration content consistently goes viral with trending audio.',
+    how_to_replicate: 'Find textured wall or busy street. Natural light. Quick cuts between outfits.'
+  },
+  {
+    id: '4',
+    title: 'Home Workout No Equipment',
+    full_name: 'Vikram Das',
+    created_at: new Date(Date.now() - 1*86400000).toISOString(),
+    platform: 'youtube_shorts',
+    shoot_type: 'Indoor',
+    priority: 'NORMAL',
+    content_id: 'BCH-1035',
+    creator_name: '@fit.everyday',
+    works_without_audio: 'No',
+    production_notes: 'Fitness trainer showing 5-minute routine — no gym equipment needed. Shoot in living room or bedroom.',
+    why_viral: 'Accessible fitness content drives high saves and shares.',
+    how_to_replicate: 'Wide shot first showing full body. Instructor faces camera. Natural lighting from window.'
+  },
+  {
+    id: '5',
+    title: 'Outdoor Café Vibe',
+    full_name: 'Sara Malik',
+    created_at: new Date(Date.now() - 3*86400000).toISOString(),
+    platform: 'youtube_long',
+    shoot_type: 'Outdoor',
+    priority: 'NORMAL',
+    content_id: 'BCH-1033',
+    creator_name: '@cafe.stories',
+    works_without_audio: 'Maybe',
+    production_notes: 'Film at outdoor café/restaurant patio in morning. Latte art, ambient sounds, greenery in background.',
+    why_viral: 'Lifestyle and food content with aesthetic framing performs well on YouTube.',
+    how_to_replicate: 'Arrive at 7-8am for soft light. Show menu, pour, and atmosphere. Minimal crew — just one shooter.'
+  }
+];
+
+// =====================================================================
+// SYNONYM DICTIONARY
+// Each group = words that mean the same thing.
+// When user searches any word in a group, all words in the group are
+// searched in the content automatically.
+// =====================================================================
+const SYNONYMS = [
+  ['boy', 'kid', 'son', 'child', 'children', 'lad', 'toddler', 'teen'],
+  ['girl', 'daughter', 'kid', 'child', 'children', 'lass'],
+  ['father', 'dad', 'papa', 'parent', 'daddy'],
+  ['mother', 'mom', 'mama', 'parent', 'mum'],
+  ['couple', 'husband', 'wife', 'pair', 'partner'],
+  ['store', 'shop', 'mall', 'retail', 'market', 'supermarket'],
+  ['night', 'evening', 'dark', 'nighttime', 'low light'],
+  ['morning', 'sunrise', 'dawn', 'early'],
+  ['outdoor', 'outside', 'exterior', 'street', 'park', 'open air'],
+  ['indoor', 'inside', 'interior', 'home', 'studio'],
+  ['gym', 'fitness', 'workout', 'exercise', 'training'],
+  ['food', 'cooking', 'recipe', 'eat', 'meal', 'restaurant', 'cafe', 'coffee'],
+  ['fashion', 'style', 'outfit', 'clothing', 'dress', 'clothes'],
+  ['funny', 'comedy', 'humor', 'humour', 'laugh', 'amusing'],
+  ['travel', 'trip', 'journey', 'explore', 'adventure'],
+  ['silent', 'muted', 'no audio', 'no sound', 'without audio', 'works without'],
+  ['warm', 'cozy', 'golden', 'soft light', 'ambient'],
+  ['person', 'people', 'man', 'woman', 'individual', 'crew'],
+];
+
+// Expand a single token into itself + all its synonyms
+function expandToken(token) {
+  const expanded = new Set([token]);
+  SYNONYMS.forEach(group => {
+    if (group.some(word => word.includes(token) || token.includes(word))) {
+      group.forEach(word => expanded.add(word));
+    }
+  });
+  return Array.from(expanded);
+}
+
+// =====================================================================
+// SMART SEARCH ENGINE
+// Tokenizes query, expands with synonyms, searches across all text
+// fields, scores by matches
+// =====================================================================
+function smartSearch(query, scripts) {
+  if (!query.trim()) return scripts.map(s => ({ ...s, score: 1, matchedFields: [], matchedTokens: [] }));
+
+  const rawTokens = query.toLowerCase().split(/\s+/).filter(t => t.length > 1);
+  // Expand each token with synonyms
+  const expandedGroups = rawTokens.map(t => ({ original: t, variants: expandToken(t) }));
+
+  return scripts
+    .map(script => {
+      // All searchable text fields
+      const fields = {
+        'title':            script.title || '',
+        'notes':            script.production_notes || '',
+        'why viral':        script.why_viral || '',
+        'how to replicate': script.how_to_replicate || '',
+        'creator':          script.creator_name || '',
+        'shoot type':       script.shoot_type || '',
+        'audio':            script.works_without_audio || '',
+        'author':           script.full_name || '',
+        'content id':       script.content_id || '',
+      };
+
+      const matchedFields = new Set();
+      const matchedTokens = new Set();   // original query tokens that matched
+      const matchedVariants = new Set(); // actual text found (for highlighting)
+
+      expandedGroups.forEach(({ original, variants }) => {
+        let tokenMatched = false;
+        Object.entries(fields).forEach(([fieldName, fieldVal]) => {
+          const lowerField = fieldVal.toLowerCase();
+          variants.forEach(variant => {
+            if (lowerField.includes(variant)) {
+              matchedFields.add(fieldName);
+              matchedTokens.add(original);
+              matchedVariants.add(variant);
+              tokenMatched = true;
+            }
+          });
+        });
+      });
+
+      // Score = fraction of original query tokens that matched
+      const score = matchedTokens.size / rawTokens.length;
+
+      return {
+        ...script,
+        score,
+        matchedFields: Array.from(matchedFields),
+        matchedTokens: Array.from(matchedVariants), // use variants for highlighting
+        tokens: rawTokens
+      };
+    })
+    .filter(s => s.score > 0)
+    .sort((a, b) => b.score - a.score);
+}
+
+// Highlight matched tokens in text
+function highlight(text, tokens) {
+  if (!tokens || tokens.length === 0) return escHtml(text);
+  let result = escHtml(text);
+  tokens.forEach(token => {
+    const escaped = token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    result = result.replace(new RegExp(escaped, 'gi'), m => `<mark>${m}</mark>`);
+  });
+  return result;
+}
+
+function escHtml(str) {
+  return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// =====================================================================
+// STATE
+// =====================================================================
+let adminFilter = 'all';
+let adminQuery = '';
+let vgFilter = 'all';
+let vgQuery = '';
+
+// =====================================================================
+// ADMIN PAGE LOGIC
+// =====================================================================
+function getAdminFiltered() {
+  let filtered = SCRIPTS.filter(s => {
+    if (adminFilter === 'all') return true;
+    if (adminFilter === 'instagram') return s.platform === 'instagram_reel';
+    if (adminFilter === 'youtube_shorts') return s.platform === 'youtube_shorts';
+    if (adminFilter === 'youtube_long') return s.platform === 'youtube_long';
+    return true;
+  });
+  return smartSearch(adminQuery, filtered);
+}
+
+function renderAdminCards() {
+  const results = getAdminFiltered();
+  const container = document.getElementById('admin-cards');
+  const empty = document.getElementById('admin-empty');
+  const info = document.getElementById('admin-search-info');
+
+  document.getElementById('admin-count').textContent = SCRIPTS.length + ' total';
+
+  if (results.length === 0) {
+    container.innerHTML = '';
+    empty.classList.remove('hidden');
+    info.classList.add('hidden');
+    return;
+  }
+
+  empty.classList.add('hidden');
+
+  if (adminQuery.trim()) {
+    info.classList.remove('hidden');
+    const tokens = adminQuery.split(/\s+/).filter(t=>t.length>1);
+    document.getElementById('admin-search-info-text').textContent =
+      `🔍 Found ${results.length} script${results.length!==1?'s':''} matching "${adminQuery}" — searching across title, notes, crew, shoot type and more`;
+  } else {
+    info.classList.add('hidden');
+  }
+
+  container.innerHTML = results.map(script => {
+    const platformMap = {
+      instagram_reel: { icon: '📸', label: 'Instagram', bg: 'bg-pink-50 text-pink-700' },
+      youtube_shorts: { icon: '🎬', label: 'YT Shorts', bg: 'bg-red-50 text-red-700' },
+      youtube_long:   { icon: '▶️', label: 'YouTube',   bg: 'bg-red-50 text-red-700' },
+    };
+    const plat = platformMap[script.platform] || { icon: '📹', label: 'Video', bg: 'bg-gray-100 text-gray-600' };
+    const shootEmoji = script.shoot_type?.toLowerCase().includes('outdoor') ? '🌳' : '🏠';
+    const timeAgo = formatTimeAgo(script.created_at);
+
+    const hasSearch = adminQuery.trim().length > 0;
+    const tokens = hasSearch ? script.matchedTokens : [];
+
+    // Show snippet from best matching field
+    let snippet = '';
+    if (hasSearch && script.matchedFields.length > 0) {
+      const bestField = script.matchedFields.find(f => f === 'notes' || f === 'how to replicate' || f === 'why viral') || script.matchedFields[0];
+      const fieldMap = { 'notes': script.production_notes, 'why viral': script.why_viral, 'how to replicate': script.how_to_replicate, 'creator': script.creator_name };
+      const fieldText = fieldMap[bestField] || '';
+      if (fieldText) {
+        // Find relevant portion
+        const tokenIdx = tokens.reduce((best, t) => {
+          const idx = fieldText.toLowerCase().indexOf(t);
+          return idx !== -1 && (best === -1 || idx < best) ? idx : best;
+        }, -1);
+        const start = Math.max(0, tokenIdx - 30);
+        const end = Math.min(fieldText.length, tokenIdx + 80);
+        snippet = (start > 0 ? '...' : '') + fieldText.slice(start, end) + (end < fieldText.length ? '...' : '');
+      }
+    }
+
+    const scorePercent = Math.round(script.score * 100);
+    const scoreColor = scorePercent >= 75 ? 'bg-green-500' : scorePercent >= 50 ? 'bg-yellow-400' : 'bg-orange-400';
+
+    return `
+      <div class="animate-in bg-white border-2 border-gray-200 rounded-xl p-4">
+        <div class="flex items-start justify-between mb-2">
+          <div class="flex-1 min-w-0 pr-2">
+            <h3 class="font-medium text-gray-900">${highlight(script.title, tokens)}</h3>
+            <p class="text-gray-500 text-sm mt-0.5">${highlight(script.full_name, tokens)} · ${timeAgo}</p>
+          </div>
+          <span class="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs font-medium rounded-full flex items-center gap-1 shrink-0">
+            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke-width="2"/><path d="M12 6v6l4 2" stroke-width="2" stroke-linecap="round"/></svg>
+            Pending
+          </span>
+        </div>
+
+        <div class="flex items-center gap-2 mb-3 flex-wrap">
+          <span class="badge chip">${plat.icon} ${plat.label}</span>
+          <span class="badge chip">${shootEmoji} ${highlight(script.shoot_type, tokens)}</span>
+          ${script.works_without_audio === 'Yes' ? '<span class="badge bg-green-50 text-green-700">🔇 No Audio OK</span>' : ''}
+        </div>
+
+        ${hasSearch && snippet ? `
+        <div class="mb-3 px-3 py-2 bg-gray-50 rounded-lg border border-gray-100">
+          <p class="text-[10px] text-gray-400 font-medium uppercase mb-1">Matched in: ${script.matchedFields.join(', ')}</p>
+          <p class="text-xs text-gray-600 leading-relaxed">${highlight(snippet, tokens)}</p>
+        </div>` : ''}
+
+        ${hasSearch ? `
+        <div class="flex items-center gap-2 mb-3">
+          <span class="text-[10px] text-gray-500">Relevance:</span>
+          <div class="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+            <div class="h-full ${scoreColor} rounded-full" style="width:${scorePercent}%"></div>
+          </div>
+          <span class="text-[10px] text-gray-500">${scorePercent}%</span>
+        </div>` : ''}
+
+        <button class="block w-full py-2 bg-purple-500 text-white text-center rounded-lg text-sm font-medium">
+          Review
+        </button>
+      </div>`;
+  }).join('');
+}
+
+function filterAdminScripts(q) {
+  adminQuery = q;
+  document.getElementById('admin-clear').classList.toggle('hidden', !q);
+  renderAdminCards();
+}
+
+function clearAdminSearch() {
+  adminQuery = '';
+  document.getElementById('admin-search').value = '';
+  document.getElementById('admin-clear').classList.add('hidden');
+  renderAdminCards();
+}
+
+function setAdminFilter(f, btn) {
+  adminFilter = f;
+  document.querySelectorAll('#screen-admin .badge').forEach(b => {
+    b.classList.remove('active-purple');
+    b.classList.add('chip');
+  });
+  btn.classList.add('active-purple');
+  btn.classList.remove('chip');
+  renderAdminCards();
+}
+
+// =====================================================================
+// VIDEOGRAPHER PAGE LOGIC
+// =====================================================================
+function getVgFiltered() {
+  let filtered = SCRIPTS.filter(s => {
+    if (vgFilter === 'all') return true;
+    if (vgFilter === 'high_priority') return s.priority === 'URGENT' || s.priority === 'HIGH';
+    if (vgFilter === 'indoor') return s.shoot_type?.toLowerCase() === 'indoor';
+    if (vgFilter === 'outdoor') return s.shoot_type?.toLowerCase() === 'outdoor';
+    return true;
+  });
+  return smartSearch(vgQuery, filtered);
+}
+
+function renderVgCards() {
+  const results = getVgFiltered();
+  const container = document.getElementById('vg-cards');
+  const empty = document.getElementById('vg-empty');
+  const info = document.getElementById('vg-search-info');
+
+  document.getElementById('vg-subtitle').textContent = `${results.length} project${results.length!==1?'s':''} ready for shooting`;
+
+  if (results.length === 0) {
+    container.innerHTML = '';
+    empty.classList.remove('hidden');
+    info.classList.add('hidden');
+    return;
+  }
+
+  empty.classList.add('hidden');
+
+  if (vgQuery.trim()) {
+    info.classList.remove('hidden');
+    document.getElementById('vg-search-info-text').textContent =
+      `🔍 Found ${results.length} project${results.length!==1?'s':''} matching "${vgQuery}"`;
+  } else {
+    info.classList.add('hidden');
+  }
+
+  const emojiMap = {
+    'Father': '👨‍👦', 'Coffee': '☕', 'Workout': '🏋️', 'Street': '🌆', 'Café': '☕', 'Outdoor': '🌳',
+    'Morning': '🌅', 'Style': '👗', 'Home': '🏠', 'Fitness': '💪'
+  };
+  function getEmoji(title) {
+    for (const [k,v] of Object.entries(emojiMap)) {
+      if (title.includes(k)) return v;
+    }
+    return '🎬';
+  }
+
+  const shootBg = {
+    'Indoor': 'rgba(249,115,22,0.1)',
+    'Outdoor': 'rgba(34,197,94,0.1)',
+  };
+
+  container.innerHTML = results.map(project => {
+    const hasSearch = vgQuery.trim().length > 0;
+    const tokens = hasSearch ? project.matchedTokens : [];
+    const emoji = getEmoji(project.title || '');
+    const bg = shootBg[project.shoot_type] || 'rgba(249,115,22,0.1)';
+    const shootEmoji = project.shoot_type?.toLowerCase().includes('outdoor') ? '🌳' : '🏠';
+    const scorePercent = Math.round(project.score * 100);
+    const scoreColor = scorePercent >= 75 ? 'bg-green-500' : scorePercent >= 50 ? 'bg-yellow-400' : 'bg-orange-400';
+
+    // Best snippet
+    let snippet = '';
+    if (hasSearch && project.matchedFields.length > 0) {
+      const bestField = project.matchedFields.find(f => f === 'notes' || f === 'how to replicate' || f === 'why viral') || project.matchedFields[0];
+      const fieldMap = { 'notes': project.production_notes, 'why viral': project.why_viral, 'how to replicate': project.how_to_replicate };
+      const fieldText = fieldMap[bestField] || '';
+      if (fieldText) {
+        const tokenIdx = tokens.reduce((best, t) => {
+          const idx = fieldText.toLowerCase().indexOf(t);
+          return idx !== -1 && (best === -1 || idx < best) ? idx : best;
+        }, -1);
+        const start = Math.max(0, tokenIdx - 20);
+        const end = Math.min(fieldText.length, tokenIdx + 80);
+        snippet = (start > 0 ? '...' : '') + fieldText.slice(start, end) + (end < fieldText.length ? '...' : '');
+      }
+    }
+
+    return `
+      <div class="animate-in bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+        <div class="p-4">
+          <div class="flex items-start gap-3 mb-3">
+            <div class="w-14 h-14 rounded-xl flex items-center justify-center text-2xl shrink-0" style="background:${bg}">
+              ${emoji}
+            </div>
+            <div class="flex-1 min-w-0">
+              <h3 class="font-semibold text-gray-900 truncate">${highlight(project.title, tokens)}</h3>
+              <p class="text-sm text-gray-400 mt-0.5">Script by ${highlight(project.full_name, tokens)}</p>
+              <p class="text-xs text-gray-400 font-mono mt-0.5">${project.content_id}</p>
+              <div class="flex items-center gap-2 mt-2 flex-wrap">
+                <span class="badge chip">📸 Instagram</span>
+                <span class="badge chip">${shootEmoji} ${highlight(project.shoot_type, tokens)}</span>
+                ${project.priority === 'HIGH' ? '<span class="badge bg-red-50 text-red-600">🔥 High</span>' : ''}
+              </div>
+            </div>
+          </div>
+
+          ${hasSearch && snippet ? `
+          <div class="mb-3 px-3 py-2 bg-amber-50 rounded-lg border border-amber-100">
+            <p class="text-[10px] text-amber-600 font-medium uppercase mb-1">Matched in: ${project.matchedFields.join(', ')}</p>
+            <p class="text-xs text-gray-700 leading-relaxed">${highlight(snippet, tokens)}</p>
+          </div>` : ''}
+
+          ${hasSearch ? `
+          <div class="flex items-center gap-2 mb-3">
+            <span class="text-[10px] text-gray-500">Relevance:</span>
+            <div class="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+              <div class="h-full ${scoreColor} rounded-full" style="width:${scorePercent}%"></div>
+            </div>
+            <span class="text-[10px] text-gray-500">${scorePercent}%</span>
+          </div>` : ''}
+
+          <div class="flex gap-2">
+            <button class="h-10 px-4 flex items-center justify-center gap-1.5 bg-gray-100 rounded-lg text-sm font-medium text-gray-700">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke-width="2"/><circle cx="12" cy="12" r="3" stroke-width="2"/></svg>
+              View
+            </button>
+            <button class="h-10 px-4 flex items-center justify-center bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700">
+              Skip
+            </button>
+            <button class="flex-1 h-10 flex items-center justify-center bg-green-500 rounded-lg text-sm font-medium text-white">
+              Pick Project
+            </button>
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function filterVgProjects(q) {
+  vgQuery = q;
+  document.getElementById('vg-clear').classList.toggle('hidden', !q);
+  renderVgCards();
+}
+
+function clearVgSearch() {
+  vgQuery = '';
+  document.getElementById('vg-search').value = '';
+  document.getElementById('vg-clear').classList.add('hidden');
+  renderVgCards();
+}
+
+function setVgFilter(f, btn) {
+  vgFilter = f;
+  document.querySelectorAll('#screen-videographer .badge').forEach(b => {
+    b.classList.remove('active-orange');
+    b.classList.add('chip');
+  });
+  btn.classList.add('active-orange');
+  btn.classList.remove('chip');
+  renderVgCards();
+}
+
+// =====================================================================
+// VIEW SWITCHER + DEMO
+// =====================================================================
+function switchView(view) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('screen-' + view).classList.add('active');
+  event.target.classList.add('active');
+}
+
+function demoSearch(q) {
+  // Apply to whichever view is active
+  const adminActive = document.getElementById('screen-admin').classList.contains('active');
+  if (adminActive) {
+    document.getElementById('admin-search').value = q;
+    filterAdminScripts(q);
+  } else {
+    document.getElementById('vg-search').value = q;
+    filterVgProjects(q);
+  }
+}
+
+function formatTimeAgo(dateString) {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffMs = now - date;
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  return `${diffDays}d ago`;
+}
+
+// Init on load
+renderAdminCards();
+renderVgCards();
+</script>
+</body>
+</html>

@@ -1032,6 +1032,71 @@ export const adminService = {
     if (error) throw error;
   },
 
+  // ─── Character Tags ────────────────────────────────────────────────────────
+
+  /**
+   * Get all active character tags
+   */
+  async getAllCharacterTags(): Promise<{ id: string; name: string; description?: string; is_active: boolean }[]> {
+    const { data, error } = await supabase
+      .from('character_tags')
+      .select('id, name, description, is_active')
+      .eq('is_active', true)
+      .order('name');
+
+    if (error) throw error;
+    return (data || []) as { id: string; name: string; description?: string; is_active: boolean }[];
+  },
+
+  /**
+   * Create a new character tag
+   */
+  async createCharacterTag(name: string, description?: string): Promise<{ id: string; name: string; description?: string; is_active: boolean }> {
+    const { data, error } = await supabase
+      .from('character_tags')
+      .insert({ name: name.trim(), description: description?.trim() || null, is_active: true })
+      .select('id, name, description, is_active')
+      .single();
+
+    if (error) throw error;
+    return data as { id: string; name: string; description?: string; is_active: boolean };
+  },
+
+  /**
+   * Delete a character tag (hard delete — also removes junction records via cascade)
+   */
+  async deleteCharacterTag(tagId: string): Promise<void> {
+    const { error } = await supabase
+      .from('character_tags')
+      .delete()
+      .eq('id', tagId);
+
+    if (error) throw error;
+  },
+
+  /**
+   * Replace all character tags for an analysis (upsert junction table)
+   */
+  async setAnalysisCharacterTags(analysisId: string, tagIds: string[]): Promise<void> {
+    // Delete existing
+    const { error: deleteError } = await supabase
+      .from('analysis_character_tags')
+      .delete()
+      .eq('analysis_id', analysisId);
+
+    if (deleteError) throw deleteError;
+
+    // Insert new if any
+    if (tagIds.length === 0) return;
+
+    const rows = tagIds.map(id => ({ analysis_id: analysisId, character_tag_id: id }));
+    const { error: insertError } = await supabase
+      .from('analysis_character_tags')
+      .insert(rows);
+
+    if (insertError) throw insertError;
+  },
+
   /**
    * Get projects in edit review stage with production files (optimized for EditedReviewPage)
    * Avoids complex joins that cause 504 timeout

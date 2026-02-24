@@ -197,6 +197,10 @@ export interface ViralAnalysis {
   hook?: string;
   hook_voice_note_url?: string;
   why_viral?: string;
+
+  // Script content (Phase 1)
+  script_body?: string;
+  script_cta?: string;
   why_viral_voice_note_url?: string;
   how_to_replicate?: string;
   how_to_replicate_voice_note_url?: string;
@@ -420,6 +424,13 @@ export interface AnalysisFormData {
   profileId?: string;
   productionNotes?: string;
 
+  // Script content (Phase 1)
+  hookText?: string;
+  scriptBody?: string;
+  scriptCta?: string;
+  castComposition?: Partial<CastComposition>;
+  characterTagIds?: string[];
+
   // Legacy fields (kept for backwards compatibility)
   platform?: string;
   contentRating?: number;
@@ -449,7 +460,6 @@ export interface AnalysisFormData {
 
   industryId?: string;
   hookTagIds?: string[];
-  characterTagIds?: string[];
   totalPeopleInvolved?: number;
   shootPossibility?: 25 | 50 | 75 | 100;
 }
