@@ -6,7 +6,9 @@ import { ChevronLeft, Check, Loader2, X, PlusCircle } from 'lucide-react';
 import { analysesService } from '@/services/analysesService';
 import { videographerService } from '@/services/videographerService';
 import { useAuth } from '@/hooks/useAuth';
-import type { AnalysisFormData } from '@/types';
+import CastCompositionPicker from '@/components/CastCompositionPicker';
+import CharacterTagSelector from '@/components/CharacterTagSelector';
+import type { AnalysisFormData, CharacterTag } from '@/types';
 import toast from 'react-hot-toast';
 
 const SHOOT_TYPES = ['Indoor', 'Outdoor', 'Both'];
@@ -19,12 +21,18 @@ const INITIAL_FORM_DATA: AnalysisFormData = {
   shootType: '',
   creatorName: '',
   worksWithoutAudio: '',
+  hookText: '',
+  scriptBody: '',
+  scriptCta: '',
+  castComposition: {},
+  characterTagIds: [],
 };
 
 export default function VideographerNewScriptPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [formData, setFormData] = useState<AnalysisFormData>(INITIAL_FORM_DATA);
+  const [characterTags, setCharacterTags] = useState<CharacterTag[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [isTrustedWriter, setIsTrustedWriter] = useState(false);
 
@@ -83,7 +91,10 @@ export default function VideographerNewScriptPage() {
 
     try {
       setSubmitting(true);
-      const created = await analysesService.createAnalysis(formData);
+      const created = await analysesService.createAnalysis({
+        ...formData,
+        characterTagIds: characterTags.map(t => t.id),
+      });
 
       if (isTrustedWriter) {
         // Auto-approved! Show "Want to shoot this?" modal
@@ -311,6 +322,83 @@ export default function VideographerNewScriptPage() {
             className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-videographer focus:border-videographer resize-none"
           />
         </div>
+
+        {/* ── SCRIPT ────────────────────────────────── */}
+        <div className="h-px bg-gray-200" />
+
+        <div className="bg-yellow-50 border-2 border-dashed border-yellow-300 rounded-xl p-4 space-y-4">
+          <p className="text-xs font-bold text-yellow-800 uppercase tracking-wide">
+            ✨ Script
+          </p>
+
+          {/* Hook */}
+          <div>
+            <label className="block text-xs font-semibold text-gray-900 mb-1">
+              🎣 Hook
+            </label>
+            <p className="text-[11px] text-gray-500 mb-1.5">
+              The opening line that stops the scroll
+            </p>
+            <textarea
+              value={formData.hookText || ''}
+              onChange={(e) => updateField('hookText', e.target.value)}
+              placeholder="E.g. Did you know 90% of people fail because of THIS one mistake?"
+              rows={2}
+              className="w-full px-3 py-2 border-2 border-yellow-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 resize-none"
+            />
+          </div>
+
+          {/* Body */}
+          <div>
+            <label className="block text-xs font-semibold text-gray-900 mb-1">
+              📝 Body / Script
+            </label>
+            <p className="text-[11px] text-gray-500 mb-1.5">
+              Step-by-step content for the video
+            </p>
+            <textarea
+              value={formData.scriptBody || ''}
+              onChange={(e) => updateField('scriptBody', e.target.value)}
+              placeholder={`Step 1: Open with the hook visual\nStep 2: Show the problem\nStep 3: Reveal the solution\nStep 4: End with proof/result`}
+              rows={5}
+              className="w-full px-3 py-2 border-2 border-yellow-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 resize-none"
+            />
+          </div>
+
+          {/* CTA */}
+          <div>
+            <label className="block text-xs font-semibold text-gray-900 mb-1">
+              📣 CTA
+            </label>
+            <p className="text-[11px] text-gray-500 mb-1.5">
+              Call to action at the end
+            </p>
+            <textarea
+              value={formData.scriptCta || ''}
+              onChange={(e) => updateField('scriptCta', e.target.value)}
+              placeholder="E.g. Follow for more tips like this every day"
+              rows={2}
+              className="w-full px-3 py-2 border-2 border-yellow-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 resize-none"
+            />
+          </div>
+        </div>
+
+        {/* ── CAST ──────────────────────────────────── */}
+        <div className="h-px bg-gray-200" />
+
+        <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wide">
+          Cast & Characters
+        </p>
+
+        <CastCompositionPicker
+          value={formData.castComposition || {}}
+          onChange={(cast) => updateField('castComposition', cast)}
+        />
+
+        <CharacterTagSelector
+          value={characterTags}
+          onChange={setCharacterTags}
+        />
 
         {/* Submit Button */}
         <button

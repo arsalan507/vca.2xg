@@ -42,6 +42,7 @@ function pillColor(name: string) {
 
 export default function CharacterTagSelector({ analysisId, value, onChange, readOnly = false }: Props) {
   const [open, setOpen] = useState(false);
+  const [openUpward, setOpenUpward] = useState(false);
   const [allTags, setAllTags] = useState<Tag[]>([]);
   const [loadingTags, setLoadingTags] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -57,6 +58,14 @@ export default function CharacterTagSelector({ analysisId, value, onChange, read
 
   const panelRef = useRef<HTMLDivElement>(null);
   const selectedIds = new Set(value.map(t => t.id));
+
+  const handleToggle = () => {
+    if (!open && panelRef.current) {
+      const rect = panelRef.current.getBoundingClientRect();
+      setOpenUpward(window.innerHeight - rect.bottom < 280);
+    }
+    setOpen(prev => !prev);
+  };
 
   // Load tags when panel opens
   useEffect(() => {
@@ -193,7 +202,7 @@ export default function CharacterTagSelector({ analysisId, value, onChange, read
       {/* Selected pills + open button */}
       <button
         type="button"
-        onClick={() => setOpen(prev => !prev)}
+        onClick={handleToggle}
         className={`w-full min-h-[42px] flex flex-wrap items-center gap-1.5 px-3 py-2 rounded-xl border-2 text-left transition-colors ${
           open ? 'border-purple-500 bg-purple-50' : 'border-gray-200 bg-white hover:border-gray-300'
         }`}
@@ -224,9 +233,12 @@ export default function CharacterTagSelector({ analysisId, value, onChange, read
         </span>
       </button>
 
-      {/* Dropdown panel */}
+      {/* Dropdown panel — opens upward when near bottom of viewport */}
       {open && (
-        <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg flex flex-col overflow-hidden" style={{ maxHeight: '260px' }}>
+        <div
+          className={`absolute z-50 left-0 right-0 bg-white border border-gray-200 rounded-xl shadow-lg flex flex-col overflow-hidden ${openUpward ? 'bottom-full mb-1' : 'top-full mt-1'}`}
+          style={{ maxHeight: '260px' }}
+        >
           {/* Tag list — scrolls within the capped panel */}
           <div className="overflow-y-auto flex-1 min-h-0 overscroll-contain touch-pan-y" style={{ WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
             {loadingTags ? (
