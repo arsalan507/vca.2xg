@@ -202,8 +202,6 @@ export interface ViralAnalysis {
   script_body?: string;
   script_cta?: string;
   why_viral_voice_note_url?: string;
-  how_to_replicate?: string;
-  how_to_replicate_voice_note_url?: string;
   target_emotion: string;
   expected_outcome: string;
 
@@ -211,58 +209,15 @@ export interface ViralAnalysis {
   status: 'PENDING' | 'APPROVED' | 'REJECTED';
   production_stage?: ProductionStage;
 
-  // Level 1: Basic Info
+  // Basic Info
   platform?: string;
   content_type?: string;
   shoot_type?: string;
-  characters_involved?: string;
   creator_name?: string;
-  unusual_element?: string;
-  works_without_audio?: string;
-  content_rating?: number;
-  replication_strength?: number;
 
-  // Level 2: Emotional & Physical Reactions
-  body_reactions?: string[];
-  emotion_first_6_sec?: string;
-  challenged_belief?: string;
-  emotional_identity_impact?: string[];
-  if_he_can_why_cant_you?: string;
-  feel_like_commenting?: string;
-  read_comments?: string;
-  sharing_number?: number;
-  video_action?: string;
-
-  // Level 2: Production Details
+  // Production Details
   industry_id?: string;
   profile_id?: string;
-  total_people_involved?: number;
-  shoot_possibility?: 25 | 50 | 75 | 100;
-
-  // Level 3: Hook Study
-  stop_feel?: string;
-  stop_feel_explanation?: string;
-  stop_feel_audio_url?: string;
-  immediate_understanding?: string;
-  immediate_understanding_audio_url?: string;
-  hook_carrier?: string;
-  hook_carrier_audio_url?: string;
-  hook_without_audio?: string;
-  hook_without_audio_recording_url?: string;
-  audio_alone_stops_scroll?: string;
-  audio_alone_stops_scroll_recording_url?: string;
-  dominant_emotion_first_6?: string;
-  dominant_emotion_first_6_audio_url?: string;
-  understanding_by_second_6?: string;
-  understanding_by_second_6_audio_url?: string;
-  content_rating_level_3?: number;
-
-  // Level 3: Production Planning
-  on_screen_text_hook?: string;
-  our_idea_audio_url?: string;
-  shoot_location?: string;
-  planning_date?: string;
-  additional_requirements?: string;
 
   // System fields
   content_id?: string;
@@ -415,53 +370,30 @@ export interface ProductionFile {
 // ============================================
 
 export interface AnalysisFormData {
-  // Core fields (matching production frontend)
+  // Core fields
   referenceUrl: string;
   title: string;
   shootType: string;
   creatorName: string;
-  worksWithoutAudio: string;
   profileId?: string;
   productionNotes?: string;
 
-  // Script content (Phase 1)
+  // Script content
   hookText?: string;
   scriptBody?: string;
   scriptCta?: string;
   castComposition?: Partial<CastComposition>;
   characterTagIds?: string[];
 
-  // Legacy fields (kept for backwards compatibility)
+  // Additional fields
   platform?: string;
-  contentRating?: number;
   whyViral?: string;
-  howToReplicate?: string;
   targetEmotion?: string;
-  replicationStrength?: number;
   hookVoiceNote?: Blob | null;
   whyViralVoiceNote?: Blob | null;
-  howToReplicateVoiceNote?: Blob | null;
-
-  // Extended fields (optional)
   contentType?: string;
-  charactersInvolved?: string;
-  unusualElement?: string;
-
-  // Level 2 fields
-  bodyReactions?: string[];
-  emotionFirst6Sec?: string;
-  challengedBelief?: string;
-  emotionalIdentityImpact?: string[];
-  ifHeCanWhyCantYou?: string;
-  feelLikeCommenting?: string;
-  readComments?: string;
-  sharingNumber?: number;
-  videoAction?: string;
-
   industryId?: string;
   hookTagIds?: string[];
-  totalPeopleInvolved?: number;
-  shootPossibility?: 25 | 50 | 75 | 100;
 }
 
 // ============================================

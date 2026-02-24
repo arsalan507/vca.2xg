@@ -37,6 +37,13 @@ export interface MarkAsPostedData {
 // Edited file types for video preview
 const EDITED_FILE_TYPES = ['EDITED_VIDEO', 'FINAL_VIDEO', 'edited-video', 'final-video'];
 
+// Minimal columns for card/list display — excludes heavy text fields like script_body, audio URLs, etc.
+// Posting pages also need posting-specific columns
+const CARD_COLS = `id, title, content_id, platform, shoot_type, production_stage, priority, status,
+  created_at, deadline, profile_id, industry_id, cast_composition, content_type, is_dissolved`;
+const POSTING_COLS = `${CARD_COLS}, posting_platform, posting_caption, posting_heading, posting_hashtags,
+  scheduled_post_time, posted_url, posted_at, post_views, post_likes, post_comments`;
+
 export const postingManagerService = {
   /**
    * Get projects ready to post (READY_TO_POST stage)
@@ -45,7 +52,7 @@ export const postingManagerService = {
     const { data, error } = await supabase
       .from('viral_analyses')
       .select(`
-        *,
+        ${POSTING_COLS},
         industry:industries(id, name, short_code),
         profile:profile_list(id, name, platform),
         profiles:user_id(email, full_name, avatar_url),
@@ -64,12 +71,12 @@ export const postingManagerService = {
 
     const projects = (data || []) as any[];
 
-    // Fetch production files separately (PostgREST schema cache missing FK)
+    // Fetch production files (minimal: need file_type, is_deleted, thumbnail_url for video preview)
     if (projects.length > 0) {
       const projectIds = projects.map((p: any) => p.id);
       const { data: allFiles } = await supabase
         .from('production_files')
-        .select('*')
+        .select('id, analysis_id, file_type, is_deleted, thumbnail_url, file_url')
         .in('analysis_id', projectIds);
 
       const filesByAnalysis = new Map<string, any[]>();
@@ -101,7 +108,7 @@ export const postingManagerService = {
     let query = supabase
       .from('viral_analyses')
       .select(`
-        *,
+        ${POSTING_COLS},
         industry:industries(id, name, short_code),
         profile:profile_list(id, name, platform),
         profiles:user_id(email, full_name, avatar_url),
@@ -144,7 +151,7 @@ export const postingManagerService = {
     const { data, error } = await supabase
       .from('viral_analyses')
       .select(`
-        *,
+        ${POSTING_COLS},
         industry:industries(id, name, short_code),
         profile:profile_list(id, name, platform),
         profiles:user_id(email, full_name, avatar_url),

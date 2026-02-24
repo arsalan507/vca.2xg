@@ -373,11 +373,6 @@ export default function PendingPage() {
                     <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">
                       {script.shoot_type === 'outdoor' ? '🌳' : '🏠'} {script.shoot_type || 'Indoor'}
                     </span>
-                    {script.content_rating && (
-                      <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">
-                        ⭐ {script.content_rating}
-                      </span>
-                    )}
                   </div>
 
                   {!bulkMode && (

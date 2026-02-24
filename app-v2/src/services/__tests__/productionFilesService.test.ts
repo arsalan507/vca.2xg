@@ -290,28 +290,6 @@ describe('productionFilesService', () => {
   });
 
   // ========================================
-  // updateDriveUrls
-  // ========================================
-  describe('updateDriveUrls', () => {
-    it('should update drive URLs on the analysis', async () => {
-      fromResultsQueue['viral_analyses'] = [{ data: null, error: null }];
-
-      await expect(
-        productionFilesService.updateDriveUrls('a1', {
-          raw_footage_drive_url: 'https://drive.google.com/folder/raw',
-          edited_video_drive_url: 'https://drive.google.com/folder/edited',
-        })
-      ).resolves.toBeUndefined();
-    });
-
-    it('should throw on error', async () => {
-      fromResultsQueue['viral_analyses'] = [{ data: null, error: { message: 'Update failed' } }];
-
-      await expect(productionFilesService.updateDriveUrls('a1', {})).rejects.toEqual({ message: 'Update failed' });
-    });
-  });
-
-  // ========================================
   // approveFile / rejectFile
   // ========================================
   describe('approveFile', () => {

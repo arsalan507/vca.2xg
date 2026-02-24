@@ -157,11 +157,6 @@ export default function ScriptDetailPage() {
           <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">
             {script.shoot_type === 'outdoor' ? '🌳' : '🏠'} {script.shoot_type || 'Indoor'}
           </span>
-          {script.content_rating && (
-            <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">
-              ⭐ {script.content_rating}/10
-            </span>
-          )}
         </div>
 
         {/* Reference URL */}
@@ -240,23 +235,6 @@ export default function ScriptDetailPage() {
             {script.why_viral_voice_note_url && (
               <button
                 onClick={() => playAudio(script.why_viral_voice_note_url)}
-                className="mt-2 flex items-center gap-2 text-blue-500 text-sm"
-              >
-                <Play className="w-4 h-4" />
-                Play Voice Note
-              </button>
-            )}
-          </div>
-
-          {/* How to Replicate */}
-          <div className="bg-white border border-gray-200 rounded-xl p-4">
-            <h3 className="text-sm font-medium text-gray-700 mb-2">How To Replicate</h3>
-            <p className="text-gray-900 text-sm whitespace-pre-wrap">
-              {script.how_to_replicate || 'Not specified'}
-            </p>
-            {script.how_to_replicate_voice_note_url && (
-              <button
-                onClick={() => playAudio(script.how_to_replicate_voice_note_url)}
                 className="mt-2 flex items-center gap-2 text-blue-500 text-sm"
               >
                 <Play className="w-4 h-4" />

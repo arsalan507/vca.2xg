@@ -722,14 +722,6 @@ export default function AvailablePage() {
                 </div>
               )}
 
-              {/* How to Replicate */}
-              {currentProject.how_to_replicate && (
-                <div className="mb-4">
-                  <p className="text-white/50 text-xs uppercase tracking-wide mb-1">How to Replicate</p>
-                  <p className="text-white text-sm line-clamp-3">{currentProject.how_to_replicate}</p>
-                </div>
-              )}
-
               {/* Action Buttons */}
               <div className="flex gap-3">
                 <button

@@ -269,11 +269,6 @@ export default function MyScriptsPage() {
                     <span className="text-xs bg-gray-50 text-gray-600 px-2.5 py-1.5 rounded-lg font-medium">
                       {script.shoot_type === 'outdoor' ? '🌳' : '🏠'} {script.shoot_type || 'Indoor'}
                     </span>
-                    {script.content_rating && (
-                      <span className="text-xs bg-amber-50 text-amber-600 px-2.5 py-1.5 rounded-lg font-medium">
-                        ⭐ {script.content_rating}
-                      </span>
-                    )}
                   </div>
                 </Link>
               </motion.div>

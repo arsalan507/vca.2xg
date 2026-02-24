@@ -266,16 +266,6 @@ export default function EditorProjectDetailPage() {
               </div>
             )}
 
-            {/* How To Replicate */}
-            {project.how_to_replicate && (
-              <div className="p-4 rounded-xl bg-green-50 border border-green-200">
-                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
-                  How To Replicate
-                </h3>
-                <p className="text-gray-800 whitespace-pre-wrap">{project.how_to_replicate}</p>
-              </div>
-            )}
-
             {/* Voice Notes */}
             <div className="space-y-2">
               <h3 className="text-sm font-semibold text-gray-700">Voice Notes</h3>
@@ -307,21 +297,7 @@ export default function EditorProjectDetailPage() {
                   </div>
                 </button>
               )}
-              {project.how_to_replicate_voice_note_url && (
-                <button
-                  onClick={() => playVoiceNote(project.how_to_replicate_voice_note_url!, 'howTo')}
-                  className="w-full flex items-center gap-3 p-3 bg-white rounded-lg border border-gray-100 text-left"
-                >
-                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                    {playingAudio === 'howTo' ? <Pause className="w-4 h-4 text-primary" /> : <Play className="w-4 h-4 text-primary ml-0.5" />}
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-medium text-gray-900">Replication Steps</p>
-                    <p className="text-sm text-gray-500">{playingAudio === 'howTo' ? 'Playing...' : 'Tap to play'}</p>
-                  </div>
-                </button>
-              )}
-              {!project.hook_voice_note_url && !project.why_viral_voice_note_url && !project.how_to_replicate_voice_note_url && (
+              {!project.hook_voice_note_url && !project.why_viral_voice_note_url && (
                 <p className="text-sm text-gray-400">No voice notes available</p>
               )}
             </div>

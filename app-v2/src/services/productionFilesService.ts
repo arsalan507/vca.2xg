@@ -161,25 +161,6 @@ export const productionFilesService = {
   },
 
   /**
-   * Update analysis Google Drive URLs
-   */
-  async updateDriveUrls(
-    analysisId: string,
-    urls: {
-      raw_footage_drive_url?: string;
-      edited_video_drive_url?: string;
-      final_video_url?: string;
-    }
-  ): Promise<void> {
-    const { error } = await supabase
-      .from('viral_analyses')
-      .update(urls)
-      .eq('id', analysisId);
-
-    if (error) throw error;
-  },
-
-  /**
    * Approve a file
    */
   async approveFile(fileId: string, reviewNotes?: string): Promise<ProductionFile> {

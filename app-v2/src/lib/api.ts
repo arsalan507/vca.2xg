@@ -40,6 +40,10 @@ let _refreshToken: string | null = null;
 let _user: AuthUser | null = null;
 let _authChangeCallbacks: Array<(event: string, session: AuthSession | null) => void> = [];
 
+// auth.getUser() validation cache — avoid hitting /api/auth/me on every service call
+let _lastValidatedAt = 0;
+const AUTH_CACHE_TTL_MS = 60_000; // 60 seconds — re-validate at most once per minute
+
 function _loadSession(): void {
   try {
     const stored = localStorage.getItem('auth_session');
@@ -103,6 +107,7 @@ export async function fetchWithAuth(url: string, options: RequestInit = {}): Pro
 export const auth = {
   saveSession(session: AuthSession) {
     _saveSession(session);
+    _lastValidatedAt = Date.now(); // freshly signed in — no need to re-validate immediately
     _notifyAuthChange('SIGNED_IN', session);
   },
 
@@ -110,6 +115,7 @@ export const auth = {
     // Clear session IMMEDIATELY so the UI updates without waiting for the network.
     // Fire the backend logout in the background — it's just server-side cleanup.
     const tokenToRevoke = _accessToken;
+    _lastValidatedAt = 0;
     _saveSession(null);
     _notifyAuthChange('SIGNED_OUT', null);
     if (tokenToRevoke) {
@@ -130,6 +136,11 @@ export const auth = {
       return { data: { user: null }, error: null };
     }
 
+    // Return cached user if recently validated (avoids hitting /api/auth/me on every service call)
+    if (_user && Date.now() - _lastValidatedAt < AUTH_CACHE_TTL_MS) {
+      return { data: { user: _user }, error: null };
+    }
+
     // Validate the token with the backend (prevents using expired sessions)
     try {
       const response = await fetch(`${BACKEND_URL}/api/auth/me`, {
@@ -137,10 +148,11 @@ export const auth = {
       });
 
       if (response.ok) {
-        // Token is valid, return cached user
+        _lastValidatedAt = Date.now();
         return { data: { user: _user }, error: null };
       } else {
         // Token invalid/expired - clear session
+        _lastValidatedAt = 0;
         _saveSession(null);
         _notifyAuthChange('SIGNED_OUT', null);
         return { data: { user: null }, error: null };

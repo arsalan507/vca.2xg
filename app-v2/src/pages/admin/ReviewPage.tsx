@@ -212,14 +212,6 @@ export default function ReviewPage() {
           </p>
         </div>
 
-        {/* How to Replicate */}
-        <div className="mb-4">
-          <p className="text-xs font-semibold text-gray-500 uppercase mb-1">How to Replicate</p>
-          <p className="text-sm text-gray-700 leading-relaxed">
-            {script.how_to_replicate || 'Not specified'}
-          </p>
-        </div>
-
         {/* Hook */}
         {script.hook && (
           <div className="mb-3 p-3 rounded-xl bg-amber-50 border border-amber-200">

@@ -79,17 +79,13 @@ export default function ProductionPage() {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [combinedStats, planningProjects, shootingProjects, editingProjects, readyForEditProjects, editReviewProjects, readyToPostProjects] = await Promise.all([
+      // 2 requests instead of 7-8: one for counts, one for all approved projects
+      const [combinedStats, projects] = await Promise.all([
         adminService.getDashboardAndQueueStats(),
-        adminService.getAnalysesByStage('planning'),
-        adminService.getAnalysesByStage('shooting'),
-        adminService.getAnalysesByStage('editing'),
-        adminService.getAnalysesByStage('ready_for_edit'),
-        adminService.getAnalysesByStage('edit_review'),
-        adminService.getAnalysesByStage('ready_to_post'),
+        adminService.getAllApprovedAnalyses(),
       ]);
       setStats(combinedStats.queue);
-      setAllProjects([...planningProjects, ...shootingProjects, ...readyForEditProjects, ...editingProjects, ...editReviewProjects, ...readyToPostProjects]);
+      setAllProjects(projects);
     } catch (error) {
       console.error('Failed to load data:', error);
       toast.error('Failed to load production data');

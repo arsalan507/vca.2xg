@@ -32,6 +32,10 @@ const RAW_FILE_TYPES = ['RAW_FOOTAGE', 'A_ROLL', 'B_ROLL', 'HOOK', 'BODY', 'CTA'
 // Edited file types that indicate editing is complete
 const EDITED_FILE_TYPES = ['EDITED_VIDEO', 'FINAL_VIDEO', 'edited-video', 'final-video'];
 
+// Minimal columns for card/list display — excludes heavy text fields like script_body, audio URLs, etc.
+const CARD_COLS = `id, title, content_id, platform, shoot_type, production_stage, priority, status,
+  created_at, deadline, profile_id, industry_id, cast_composition, content_type, is_dissolved`;
+
 export const editorService = {
   /**
    * Get available projects in READY_FOR_EDIT stage
@@ -41,7 +45,7 @@ export const editorService = {
     const { data, error } = await supabase
       .from('viral_analyses')
       .select(`
-        *,
+        ${CARD_COLS},
         industry:industries(id, name, short_code),
         profile:profile_list(id, name, platform),
         profiles:user_id(email, full_name, avatar_url),
@@ -60,11 +64,11 @@ export const editorService = {
     const projects = (data || []) as any[];
     if (projects.length === 0) return [];
 
-    // Fetch production files separately (PostgREST embedded query doesn't work)
+    // Fetch production files (minimal: only need file_type + is_deleted for raw footage check)
     const projectIds = projects.map((p: any) => p.id);
     const { data: allFiles } = await supabase
       .from('production_files')
-      .select('*')
+      .select('id, analysis_id, file_type, is_deleted')
       .in('analysis_id', projectIds);
 
     const filesByAnalysis = new Map<string, any[]>();
@@ -135,12 +139,10 @@ export const editorService = {
 
     const analysisIds = assignmentsList.map((a) => a.analysis_id);
 
-    // Fetch projects and production files in parallel
+    // Fetch projects (minimal columns) and file metadata in parallel
     const [projectsResult, filesResult] = await Promise.all([
-      supabase
-        .from('viral_analyses')
-        .select(`
-          *,
+      supabase.from('viral_analyses').select(`
+          ${CARD_COLS},
           industry:industries(id, name, short_code),
           profile:profile_list(id, name, platform),
           profiles:user_id(email, full_name, avatar_url),
@@ -152,9 +154,8 @@ export const editorService = {
         .in('id', analysisIds)
         .order('priority', { ascending: false })
         .order('created_at', { ascending: false }),
-      supabase
-        .from('production_files')
-        .select('*')
+      supabase.from('production_files')
+        .select('id, analysis_id, file_type, is_deleted')
         .in('analysis_id', analysisIds),
     ]);
 
@@ -167,8 +168,7 @@ export const editorService = {
       filesByAnalysis.set(file.analysis_id, existing);
     }
 
-    const projectList = (projectsResult.data || []) as any[];
-    return projectList.map((project: any) => ({
+    return ((projectsResult.data || []) as any[]).map((project: any) => ({
       ...project,
       email: project.profiles?.email,
       full_name: project.profiles?.full_name,
@@ -286,12 +286,10 @@ export const editorService = {
       // Stats: get my skipped projects
       supabase.from('project_skips').select('analysis_id')
         .eq('user_id', user.id).eq('role', 'EDITOR'),
-      // Projects: full data
+      // Projects (minimal columns)
       myIds.length > 0
-        ? supabase
-            .from('viral_analyses')
-            .select(`
-              *,
+        ? supabase.from('viral_analyses').select(`
+              ${CARD_COLS},
               industry:industries(id, name, short_code),
               profile:profile_list(id, name, platform),
               profiles:user_id(email, full_name, avatar_url),
@@ -304,9 +302,9 @@ export const editorService = {
             .order('priority', { ascending: false })
             .order('created_at', { ascending: false })
         : Promise.resolve({ data: [], error: null }),
-      // Files for all projects
+      // Files (minimal: file_type + is_deleted for list display)
       myIds.length > 0
-        ? supabase.from('production_files').select('*').in('analysis_id', myIds)
+        ? supabase.from('production_files').select('id, analysis_id, file_type, is_deleted').in('analysis_id', myIds)
         : Promise.resolve({ data: [], error: null }),
     ]);
 

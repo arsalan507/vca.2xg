@@ -407,7 +407,7 @@ export default function ProjectDetailPage() {
             )}
 
             {/* Voice Notes */}
-            {(project.hook_voice_note_url || project.why_viral_voice_note_url || project.how_to_replicate_voice_note_url) && (
+            {(project.hook_voice_note_url || project.why_viral_voice_note_url) && (
               <div className="space-y-2">
                 <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wide">Voice Notes</h3>
                 {project.hook_voice_note_url && (
@@ -435,20 +435,6 @@ export default function ProjectDetailPage() {
                     <div className="flex-1">
                       <p className="font-medium text-gray-900">Why Viral</p>
                       <p className="text-sm text-gray-500">{playingAudio === 'whyViral' ? 'Playing...' : 'Tap to play'}</p>
-                    </div>
-                  </button>
-                )}
-                {project.how_to_replicate_voice_note_url && (
-                  <button
-                    onClick={() => playVoiceNote(project.how_to_replicate_voice_note_url!, 'howTo')}
-                    className="w-full flex items-center gap-3 p-3 bg-white rounded-lg border border-gray-100 text-left"
-                  >
-                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                      {playingAudio === 'howTo' ? <Pause className="w-4 h-4 text-primary" /> : <Play className="w-4 h-4 text-primary ml-0.5" />}
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-medium text-gray-900">Replication Steps</p>
-                      <p className="text-sm text-gray-500">{playingAudio === 'howTo' ? 'Playing...' : 'Tap to play'}</p>
                     </div>
                   </button>
                 )}

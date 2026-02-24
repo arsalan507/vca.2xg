@@ -10,14 +10,12 @@ import type { AnalysisFormData, CharacterTag } from '@/types';
 import toast from 'react-hot-toast';
 
 const SHOOT_TYPES = ['Indoor', 'Outdoor', 'Both'];
-const YES_NO_MAYBE = ['Yes', 'No', 'Maybe'];
 
 const INITIAL_FORM_DATA: AnalysisFormData = {
   referenceUrl: '',
   title: '',
   shootType: '',
   creatorName: '',
-  worksWithoutAudio: '',
   hookText: '',
   scriptBody: '',
   scriptCta: '',
@@ -166,29 +164,6 @@ export default function AdminNewScriptPage() {
             placeholder="@username or channel name"
             className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           />
-        </div>
-
-        {/* Works Without Audio */}
-        <div>
-          <label className="block text-xs font-semibold text-gray-900 mb-1.5">
-            Works Without Audio?
-          </label>
-          <div className="flex gap-2">
-            {YES_NO_MAYBE.map((option) => (
-              <button
-                key={option}
-                type="button"
-                onClick={() => updateField('worksWithoutAudio', option)}
-                className={`px-4 py-2 rounded-full font-medium text-xs transition-all active:scale-95 ${
-                  formData.worksWithoutAudio === option
-                    ? 'bg-blue-500 text-white'
-                    : 'bg-gray-100 text-gray-700'
-                }`}
-              >
-                {option}
-              </button>
-            ))}
-          </div>
         </div>
 
         {/* Notes for Team */}

@@ -195,16 +195,12 @@ export const analysesService = {
     // Upload voice notes if provided
     let hookVoiceUrl = '';
     let whyViralVoiceUrl = '';
-    let howToReplicateVoiceUrl = '';
 
     if (formData.hookVoiceNote) {
       hookVoiceUrl = await this.uploadVoiceNote(user.id, formData.hookVoiceNote, 'hook');
     }
     if (formData.whyViralVoiceNote) {
       whyViralVoiceUrl = await this.uploadVoiceNote(user.id, formData.whyViralVoiceNote, 'why_viral');
-    }
-    if (formData.howToReplicateVoiceNote) {
-      howToReplicateVoiceUrl = await this.uploadVoiceNote(user.id, formData.howToReplicateVoiceNote, 'how_to_replicate');
     }
 
     const { data, error } = await supabase
@@ -214,17 +210,16 @@ export const analysesService = {
         status: isTrustedWriter ? 'APPROVED' : 'PENDING',
         production_stage: isTrustedWriter ? 'PLANNING' : null,
 
-        // Core fields (matching production frontend)
+        // Core fields
         reference_url: formData.referenceUrl || null,
         title: formData.title || null,
         shoot_type: formData.shootType || null,
         creator_name: formData.creatorName || null,
-        works_without_audio: formData.worksWithoutAudio || null,
 
         // Notes for team
         production_notes: formData.productionNotes ? `[Script Writer Notes]\n${formData.productionNotes}` : null,
 
-        // Script content (Phase 1)
+        // Script content
         hook: formData.hookText || null,
         script_body: formData.scriptBody || null,
         script_cta: formData.scriptCta || null,
@@ -245,38 +240,16 @@ export const analysesService = {
         profile_id: formData.profileId || null,
         industry_id: formData.industryId || null,
 
-        // Legacy fields (for backwards compatibility)
+        // Additional fields
         platform: formData.platform || null,
-        content_rating: formData.contentRating || null,
         why_viral: formData.whyViral || '',
-        how_to_replicate: formData.howToReplicate || '',
         target_emotion: formData.targetEmotion || 'Not specified',
         expected_outcome: 'Not specified',
-        replication_strength: formData.replicationStrength || null,
+        content_type: formData.contentType || null,
 
         // Voice notes
         hook_voice_note_url: hookVoiceUrl || null,
         why_viral_voice_note_url: whyViralVoiceUrl || null,
-        how_to_replicate_voice_note_url: howToReplicateVoiceUrl || null,
-
-        // Optional extended fields
-        content_type: formData.contentType || null,
-        characters_involved: formData.charactersInvolved || null,
-        unusual_element: formData.unusualElement || null,
-
-        // Level 2 fields
-        body_reactions: formData.bodyReactions || [],
-        emotion_first_6_sec: formData.emotionFirst6Sec || null,
-        challenged_belief: formData.challengedBelief || null,
-        emotional_identity_impact: formData.emotionalIdentityImpact || [],
-        if_he_can_why_cant_you: formData.ifHeCanWhyCantYou || null,
-        feel_like_commenting: formData.feelLikeCommenting || null,
-        read_comments: formData.readComments || null,
-        sharing_number: formData.sharingNumber || null,
-        video_action: formData.videoAction || null,
-
-        total_people_involved: formData.totalPeopleInvolved || null,
-        shoot_possibility: formData.shootPossibility || null,
       })
       .select('*')
       .single();
@@ -332,16 +305,12 @@ export const analysesService = {
     // Upload new voice notes if provided
     let hookVoiceUrl: string | undefined;
     let whyViralVoiceUrl: string | undefined;
-    let howToReplicateVoiceUrl: string | undefined;
 
     if (formData.hookVoiceNote) {
       hookVoiceUrl = await this.uploadVoiceNote(user.id, formData.hookVoiceNote, 'hook');
     }
     if (formData.whyViralVoiceNote) {
       whyViralVoiceUrl = await this.uploadVoiceNote(user.id, formData.whyViralVoiceNote, 'why_viral');
-    }
-    if (formData.howToReplicateVoiceNote) {
-      howToReplicateVoiceUrl = await this.uploadVoiceNote(user.id, formData.howToReplicateVoiceNote, 'how_to_replicate');
     }
 
     const updateData: Record<string, unknown> = {};
@@ -351,16 +320,12 @@ export const analysesService = {
     if (formData.title !== undefined) updateData.title = formData.title;
     if (formData.platform !== undefined) updateData.platform = formData.platform;
     if (formData.shootType !== undefined) updateData.shoot_type = formData.shootType;
-    if (formData.contentRating !== undefined) updateData.content_rating = formData.contentRating;
     if (formData.whyViral !== undefined) updateData.why_viral = formData.whyViral;
-    if (formData.howToReplicate !== undefined) updateData.how_to_replicate = formData.howToReplicate;
     if (formData.targetEmotion !== undefined) updateData.target_emotion = formData.targetEmotion;
-    if (formData.replicationStrength !== undefined) updateData.replication_strength = formData.replicationStrength;
 
     // Voice note URLs
     if (hookVoiceUrl) updateData.hook_voice_note_url = hookVoiceUrl;
     if (whyViralVoiceUrl) updateData.why_viral_voice_note_url = whyViralVoiceUrl;
-    if (howToReplicateVoiceUrl) updateData.how_to_replicate_voice_note_url = howToReplicateVoiceUrl;
 
     const { data, error } = await supabase
       .from('viral_analyses')

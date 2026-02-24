@@ -311,7 +311,6 @@ describe('analysesService', () => {
           title: 'Test',
           shootType: 'indoor',
           creatorName: 'Creator',
-          worksWithoutAudio: 'yes',
         })
       ).rejects.toThrow('Not authenticated');
     });
@@ -328,7 +327,6 @@ describe('analysesService', () => {
         title: 'Great Video',
         shootType: 'outdoor',
         creatorName: 'Test Creator',
-        worksWithoutAudio: 'no',
       });
 
       expect(result.id).toBe('new-1');
@@ -346,7 +344,6 @@ describe('analysesService', () => {
         title: 'Trusted Video',
         shootType: 'studio',
         creatorName: 'Trusted Creator',
-        worksWithoutAudio: 'yes',
       });
 
       expect(result.status).toBe('APPROVED');
@@ -364,7 +361,6 @@ describe('analysesService', () => {
         title: 'Test',
         shootType: 'outdoor',
         creatorName: 'Creator',
-        worksWithoutAudio: 'no',
         profileId: 'prof-1',
       });
 
@@ -386,7 +382,6 @@ describe('analysesService', () => {
         title: 'No Profile',
         shootType: 'outdoor',
         creatorName: 'Creator',
-        worksWithoutAudio: 'no',
       });
 
       expect(rpcMock).not.toHaveBeenCalled();
@@ -402,8 +397,7 @@ describe('analysesService', () => {
           title: 'Fail',
           shootType: 'outdoor',
           creatorName: 'Creator',
-          worksWithoutAudio: 'no',
-        })
+          })
       ).rejects.toEqual({ message: 'Insert failed' });
     });
 
@@ -419,7 +413,6 @@ describe('analysesService', () => {
         title: 'Test',
         shootType: 'outdoor',
         creatorName: 'Creator',
-        worksWithoutAudio: 'no',
       });
 
       expect(result.status).toBe('PENDING');

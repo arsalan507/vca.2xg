@@ -25,79 +25,51 @@ export interface PickProjectData {
   deadline?: string;
 }
 
+// Minimal columns for card/list display — excludes heavy text fields like script_body, audio URLs, etc.
+const CARD_COLS = `id, title, content_id, platform, shoot_type, production_stage, priority, status,
+  created_at, deadline, profile_id, industry_id, cast_composition, content_type, is_dissolved`;
+
 export const videographerService = {
   /**
    * Get available projects in PLANNING stage
    * These are approved scripts waiting to be picked by a videographer
    */
   async getAvailableProjects(): Promise<ViralAnalysis[]> {
-    // Define valid planning stages
     const planningStages = ['PLANNING', 'NOT_STARTED', 'PRE_PRODUCTION', 'PLANNED'];
 
-    // Run all independent queries in parallel
+    // All queries in parallel — combined planning+null stage into one OR query
     const [assignedResult, projectsResult, userResult] = await Promise.all([
-      // Get IDs of projects that already have a videographer assigned
-      supabase
-        .from('project_assignments')
-        .select('analysis_id')
-        .eq('role', 'VIDEOGRAPHER'),
-      // Fetch approved projects in planning stages (server-side filter)
-      supabase
-        .from('viral_analyses')
-        .select(`
-          *,
+      supabase.from('project_assignments').select('analysis_id').eq('role', 'VIDEOGRAPHER'),
+      supabase.from('viral_analyses').select(`
+          ${CARD_COLS},
           industry:industries(id, name, short_code),
           profile:profile_list(id, name, platform),
           profiles:user_id(email, full_name, avatar_url),
           character_tags:analysis_character_tags(character_tag:character_tags(id, name, is_active))
         `)
         .eq('status', 'APPROVED')
-        .in('production_stage', planningStages)
+        .or(`production_stage.in.(${planningStages.join(',')}),production_stage.is.null`)
         .order('priority', { ascending: false })
         .order('created_at', { ascending: false }),
-      // Get current user for skips
       auth.getUser(),
     ]);
 
     if (projectsResult.error) throw projectsResult.error;
 
-    const assignedList = (assignedResult.data || []) as { analysis_id: string }[];
-    const assignedIds = new Set(assignedList.map((a) => a.analysis_id));
-
-    // Also fetch projects with NULL production_stage (not yet set)
-    const { data: nullStageData } = await supabase
-      .from('viral_analyses')
-      .select(`
-        *,
-        industry:industries(id, name, short_code),
-        profile:profile_list(id, name, platform),
-        profiles:user_id(email, full_name, avatar_url),
-        character_tags:analysis_character_tags(character_tag:character_tags(id, name, is_active))
-      `)
-      .eq('status', 'APPROVED')
-      .is('production_stage', null)
-      .order('priority', { ascending: false })
-      .order('created_at', { ascending: false });
-
-    const projects = [...(Array.isArray(projectsResult.data) ? projectsResult.data : []), ...(Array.isArray(nullStageData) ? nullStageData : [])] as any[];
-
-    // Filter out projects that already have a videographer
-    const availableProjects = projects.filter((project: any) => !assignedIds.has(project.id));
+    const assignedIds = new Set(((assignedResult.data || []) as { analysis_id: string }[]).map(a => a.analysis_id));
 
     // Get skipped projects
     const user = userResult.data?.user;
     let skippedIds = new Set<string>();
     if (user) {
       const { data: skips } = await supabase
-        .from('project_skips')
-        .select('analysis_id')
-        .eq('user_id', user.id)
-        .eq('role', 'VIDEOGRAPHER');
+        .from('project_skips').select('analysis_id')
+        .eq('user_id', user.id).eq('role', 'VIDEOGRAPHER');
       skippedIds = new Set(Array.isArray(skips) ? skips.map((s: any) => s.analysis_id) : []);
     }
 
-    return availableProjects
-      .filter((p: any) => !skippedIds.has(p.id))
+    return ((projectsResult.data || []) as any[])
+      .filter((p: any) => !assignedIds.has(p.id) && !skippedIds.has(p.id))
       .map((project: any) => ({
         ...project,
         email: project.profiles?.email,
@@ -114,7 +86,6 @@ export const videographerService = {
     const { data: { user } } = await auth.getUser();
     if (!user) throw new Error('Not authenticated');
 
-    // Get my assignments as videographer
     const { data: assignments, error: assignError } = await supabase
       .from('project_assignments')
       .select('analysis_id')
@@ -127,13 +98,10 @@ export const videographerService = {
 
     const analysisIds = assignmentsList.map((a) => a.analysis_id);
 
-    // Fetch projects and production files in parallel
-    // (PostgREST embedded query production_files(*) returns undefined — schema cache missing FK)
+    // Fetch projects (minimal columns) and file counts in parallel
     const [projectsResult, filesResult] = await Promise.all([
-      supabase
-        .from('viral_analyses')
-        .select(`
-          *,
+      supabase.from('viral_analyses').select(`
+          ${CARD_COLS},
           industry:industries(id, name, short_code),
           profile:profile_list(id, name, platform),
           profiles:user_id(email, full_name, avatar_url),
@@ -146,15 +114,14 @@ export const videographerService = {
         .in('id', analysisIds)
         .order('priority', { ascending: false })
         .order('created_at', { ascending: false }),
-      supabase
-        .from('production_files')
-        .select('*')
+      // Only fetch fields needed for file count display (not full file data)
+      supabase.from('production_files')
+        .select('id, analysis_id, is_deleted')
         .in('analysis_id', analysisIds),
     ]);
 
     if (projectsResult.error) throw projectsResult.error;
 
-    // Group files by analysis_id
     const filesByAnalysis = new Map<string, any[]>();
     for (const file of (filesResult.data || []) as any[]) {
       const existing = filesByAnalysis.get(file.analysis_id) || [];
@@ -162,8 +129,7 @@ export const videographerService = {
       filesByAnalysis.set(file.analysis_id, existing);
     }
 
-    const projectList = (projectsResult.data || []) as any[];
-    return projectList.map((project: any) => ({
+    return ((projectsResult.data || []) as any[]).map((project: any) => ({
       ...project,
       email: project.profiles?.email,
       full_name: project.profiles?.full_name,
@@ -185,7 +151,7 @@ export const videographerService = {
     const { data, error } = await supabase
       .from('viral_analyses')
       .select(`
-        *,
+        ${CARD_COLS},
         industry:industries(id, name, short_code),
         profile:profile_list(id, name, platform)
       `)
@@ -268,8 +234,10 @@ export const videographerService = {
   },
 
   /**
-   * Get homepage data in a single optimized call (stats + projects + scripts + available)
-   * Avoids duplicate project_assignments and auth.getUser() queries
+   * Get homepage data in a single optimized call (stats + projects + scripts + available).
+   * Uses minimal column selection (CARD_COLS) instead of * to avoid fetching ~80 heavy text columns.
+   * Skips production_files (not displayed on homepage).
+   * Combines two available queries into one with OR filter.
    */
   async getHomepageData(): Promise<{
     stats: VideographerStats;
@@ -280,66 +248,43 @@ export const videographerService = {
     const planningStages = ['PLANNING', 'NOT_STARTED', 'PRE_PRODUCTION', 'PLANNED'];
     const completedStages = ['READY_FOR_EDIT', 'EDITING', 'EDIT_REVIEW', 'READY_TO_POST', 'POSTED'];
 
-    // 1. Single auth call + single assignments fetch
+    // Round 1: Cached auth (~0ms after first validation)
     const { data: { user } } = await auth.getUser();
     if (!user) throw new Error('Not authenticated');
 
-    const [myAssignments, allVidAssignments] = await Promise.all([
+    // Round 2: Assignments + lightweight queries that don't depend on myIds (all parallel)
+    const [myAssignments, allVidAssignments, myScriptsResult, availableResult, skipsResult] = await Promise.all([
       supabase.from('project_assignments').select('analysis_id')
         .eq('user_id', user.id).eq('role', 'VIDEOGRAPHER'),
       supabase.from('project_assignments').select('analysis_id')
         .eq('role', 'VIDEOGRAPHER'),
-    ]);
-
-    const myIds = ((myAssignments.data || []) as { analysis_id: string }[]).map(a => a.analysis_id);
-    const allAssignedIds = new Set(((allVidAssignments.data || []) as { analysis_id: string }[]).map(a => a.analysis_id));
-
-    // 2. Run all data fetches in parallel
-    const [
-      myProjectsResult, myFilesResult, myScriptsResult,
-      availableResult, availableNullResult, skipsResult,
-    ] = await Promise.all([
-      // My projects (full data)
-      myIds.length > 0
-        ? supabase.from('viral_analyses').select(`
-            *, industry:industries(id, name, short_code),
-            profile:profile_list(id, name, platform),
-            profiles:user_id(email, full_name, avatar_url),
-            assignments:project_assignments(id, role, user:profiles!project_assignments_user_id_fkey(id, email, full_name, avatar_url))
-          `).in('id', myIds).order('priority', { ascending: false }).order('created_at', { ascending: false })
-        : Promise.resolve({ data: [], error: null }),
-      // Files for my projects
-      myIds.length > 0
-        ? supabase.from('production_files').select('*').in('analysis_id', myIds)
-        : Promise.resolve({ data: [], error: null }),
-      // My scripts
+      // My scripts (minimal columns, no script_body)
       supabase.from('viral_analyses').select(`
-        *, industry:industries(id, name, short_code), profile:profile_list(id, name, platform)
+        ${CARD_COLS}, profile:profile_list(id, name, platform)
       `).eq('user_id', user.id).order('created_at', { ascending: false }),
-      // Available projects (planning stages)
+      // Available projects (combined OR — one query instead of two, minimal columns)
       supabase.from('viral_analyses').select(`
-        *, industry:industries(id, name, short_code), profile:profile_list(id, name, platform),
+        ${CARD_COLS}, profile:profile_list(id, name, platform),
         profiles:user_id(email, full_name, avatar_url)
-      `).eq('status', 'APPROVED').in('production_stage', planningStages)
-        .order('priority', { ascending: false }).order('created_at', { ascending: false }),
-      // Available projects (null stage)
-      supabase.from('viral_analyses').select(`
-        *, industry:industries(id, name, short_code), profile:profile_list(id, name, platform),
-        profiles:user_id(email, full_name, avatar_url)
-      `).eq('status', 'APPROVED').is('production_stage', null)
+      `).eq('status', 'APPROVED')
+        .or(`production_stage.in.(${planningStages.join(',')}),production_stage.is.null`)
         .order('priority', { ascending: false }).order('created_at', { ascending: false }),
       // Skipped projects
       supabase.from('project_skips').select('analysis_id')
         .eq('user_id', user.id).eq('role', 'VIDEOGRAPHER'),
     ]);
 
-    // Build my projects with files
-    const filesByAnalysis = new Map<string, any[]>();
-    for (const file of (myFilesResult.data || []) as any[]) {
-      const existing = filesByAnalysis.get(file.analysis_id) || [];
-      existing.push(file);
-      filesByAnalysis.set(file.analysis_id, existing);
-    }
+    const myIds = ((myAssignments.data || []) as { analysis_id: string }[]).map(a => a.analysis_id);
+    const allAssignedIds = new Set(((allVidAssignments.data || []) as { analysis_id: string }[]).map(a => a.analysis_id));
+
+    // Round 3: Only the query that depends on myIds (minimal columns, NO production_files)
+    const myProjectsResult = myIds.length > 0
+      ? await supabase.from('viral_analyses').select(`
+          ${CARD_COLS}, profile:profile_list(id, name, platform),
+          profiles:user_id(email, full_name, avatar_url),
+          assignments:project_assignments(id, role, user:profiles!project_assignments_user_id_fkey(id, email, full_name, avatar_url))
+        `).in('id', myIds).order('priority', { ascending: false }).order('created_at', { ascending: false })
+      : { data: [], error: null };
 
     const projects = ((myProjectsResult.data || []) as any[]).map((project: any) => ({
       ...project,
@@ -348,16 +293,11 @@ export const videographerService = {
       avatar_url: project.profiles?.avatar_url,
       videographer: project.assignments?.find((a: any) => a.role === 'VIDEOGRAPHER')?.user,
       editor: project.assignments?.find((a: any) => a.role === 'EDITOR')?.user,
-      production_files: filesByAnalysis.get(project.id) || [],
     })) as ViralAnalysis[];
 
     // Build available projects (filter out assigned + skipped)
     const skippedIds = new Set(((skipsResult.data || []) as any[]).map((s: any) => s.analysis_id));
-    const allAvailable = [
-      ...((availableResult.data || []) as any[]),
-      ...((availableNullResult.data || []) as any[]),
-    ];
-    const available = allAvailable
+    const available = ((availableResult.data || []) as any[])
       .filter((p: any) => !allAssignedIds.has(p.id) && !skippedIds.has(p.id))
       .map((project: any) => ({
         ...project,

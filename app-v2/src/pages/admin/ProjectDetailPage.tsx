@@ -388,22 +388,6 @@ export default function ProjectDetailPage() {
             <p className="text-sm text-gray-600">{project.why_viral || 'Not provided'}</p>
           </div>
 
-          {/* How To Replicate */}
-          <div className="bg-white border border-gray-200 rounded-xl p-4">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-medium text-gray-700">How To Replicate</h3>
-              {project.how_to_replicate_voice_note_url && (
-                <button
-                  onClick={() => playVoiceNote(project.how_to_replicate_voice_note_url!, 'howToReplicate')}
-                  className="p-1.5 rounded-full bg-purple-100 text-purple-600"
-                >
-                  {playingAudio === 'howToReplicate' ? <Pause className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-                </button>
-              )}
-            </div>
-            <p className="text-sm text-gray-600 whitespace-pre-wrap">{project.how_to_replicate || 'Not provided'}</p>
-          </div>
-
           {/* Hook Voice Note */}
           {project.hook_voice_note_url && (
             <div className="bg-white border border-gray-200 rounded-xl p-4">
@@ -473,10 +457,6 @@ export default function ProjectDetailPage() {
                 <span className="text-gray-900 capitalize">{project.target_emotion || 'Not set'}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-500">Content Rating</span>
-                <span className="text-gray-900">{project.content_rating || 'Not rated'}</span>
-              </div>
-              <div className="flex justify-between">
                 <span className="text-gray-500">Submitted By</span>
                 <span className="text-gray-900">{project.full_name || project.email}</span>
               </div>
@@ -542,20 +522,7 @@ export default function ProjectDetailPage() {
                     )}
                   </h3>
                   {renderFileList(rawFiles) || (
-                    (project as any).raw_file_url || (project as any).raw_footage_drive_url ? (
-                      <a
-                        href={(project as any).raw_file_url || (project as any).raw_footage_drive_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-2 text-purple-600 text-sm bg-purple-50 px-3 py-2 rounded-lg"
-                      >
-                        <FileVideo className="w-4 h-4" />
-                        <span className="flex-1">View Raw Footage</span>
-                        <Download className="w-4 h-4" />
-                      </a>
-                    ) : (
-                      <p className="text-sm text-gray-400">No raw footage uploaded yet</p>
-                    )
+                    <p className="text-sm text-gray-400">No raw footage uploaded yet</p>
                   )}
                 </div>
 
@@ -570,20 +537,7 @@ export default function ProjectDetailPage() {
                   </h3>
                   {(() => {
                     if (editedFiles.length === 0) {
-                      return (project as any).edited_file_url || (project as any).edited_video_drive_url ? (
-                        <a
-                          href={(project as any).edited_file_url || (project as any).edited_video_drive_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-2 text-purple-600 text-sm bg-purple-50 px-3 py-2 rounded-lg"
-                        >
-                          <FileVideo className="w-4 h-4" />
-                          <span className="flex-1">View Edited Video</span>
-                          <Download className="w-4 h-4" />
-                        </a>
-                      ) : (
-                        <p className="text-sm text-gray-400">No edited video uploaded yet</p>
-                      );
+                      return <p className="text-sm text-gray-400">No edited video uploaded yet</p>;
                     }
 
                     const sortedEdited = [...editedFiles].sort((a: any, b: any) =>
