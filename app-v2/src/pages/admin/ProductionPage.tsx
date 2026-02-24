@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ChevronLeft, Loader2, Folder } from 'lucide-react';
+import { ChevronLeft, Loader2, Folder, Search, X, CheckSquare, Square } from 'lucide-react';
 import { adminService, type QueueStats } from '@/services/adminService';
+import { smartSearch } from '@/lib/smartSearch';
 import type { ViralAnalysis } from '@/types';
 import toast from 'react-hot-toast';
 
@@ -71,6 +72,9 @@ export default function ProductionPage() {
   const [stats, setStats] = useState<QueueStats | null>(null);
   const [allProjects, setAllProjects] = useState<ViralAnalysis[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [bulkMode, setBulkMode] = useState(false);
+  const [selectedProjects, setSelectedProjects] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     loadData();
@@ -94,10 +98,31 @@ export default function ProductionPage() {
     }
   };
 
+  // Bulk select helpers
+  const toggleBulkMode = () => {
+    setBulkMode(!bulkMode);
+    setSelectedProjects(new Set());
+  };
+
+  const toggleProject = (projectId: string) => {
+    const newSelection = new Set(selectedProjects);
+    if (newSelection.has(projectId)) {
+      newSelection.delete(projectId);
+    } else {
+      newSelection.add(projectId);
+    }
+    setSelectedProjects(newSelection);
+  };
+
+  // Apply smart search to all projects
+  const searchedProjects = searchQuery.trim()
+    ? smartSearch(searchQuery, allProjects)
+    : allProjects;
+
   const getProjectsBySection = (sectionId: string) => {
     const section = STAGE_SECTIONS.find(s => s.id === sectionId);
     if (!section) return [];
-    return allProjects.filter(p => {
+    return searchedProjects.filter(p => {
       const stage = p.production_stage || '';
       if (sectionId === 'planning' && !stage) return true; // null stage = planning
       return section.stages.includes(stage);
@@ -168,7 +193,7 @@ export default function ProductionPage() {
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex items-center gap-3 mb-6"
+        className="flex items-center gap-3 mb-4"
       >
         <Link
           to="/admin"
@@ -176,11 +201,85 @@ export default function ProductionPage() {
         >
           <ChevronLeft className="w-5 h-5" />
         </Link>
-        <div>
+        <div className="flex-1">
           <h1 className="text-xl font-semibold text-gray-900">Production</h1>
           <p className="text-sm text-gray-500">{totalPipeline} projects in pipeline</p>
         </div>
+        <button
+          onClick={toggleBulkMode}
+          className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-1 ${
+            bulkMode
+              ? 'bg-purple-500 text-white'
+              : 'bg-gray-100 text-gray-700'
+          }`}
+        >
+          {bulkMode ? (
+            <>
+              <CheckSquare className="w-4 h-4" />
+              Cancel
+            </>
+          ) : (
+            <>
+              <Square className="w-4 h-4" />
+              Select
+            </>
+          )}
+        </button>
       </motion.div>
+
+      {/* Bulk Action Bar */}
+      {bulkMode && (
+        <div className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-200 px-4 py-3 shadow-sm">
+          <div className="max-w-mobile mx-auto flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <span className="text-sm font-semibold text-gray-700">
+                {selectedProjects.size} selected
+              </span>
+              <button
+                onClick={() => setSelectedProjects(new Set())}
+                className="text-xs text-gray-500 font-medium"
+              >
+                Clear
+              </button>
+            </div>
+            <button
+              onClick={toggleBulkMode}
+              className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm font-medium"
+            >
+              Done
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Smart Search Bar */}
+      {!bulkMode && (
+        <div className="mb-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search — title, content ID, crew, shoot type…"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-9 pr-9 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+          {searchQuery.trim() && (
+            <p className="text-xs text-purple-700 bg-purple-50 rounded-lg px-3 py-1.5 mt-2">
+              🔍 {searchedProjects.length} result{searchedProjects.length !== 1 ? 's' : ''} for "{searchQuery}"
+            </p>
+          )}
+        </div>
+      )}
 
       {/* Stats Cards */}
       <motion.div
@@ -220,7 +319,7 @@ export default function ProductionPage() {
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
-        className="flex gap-2 mb-6 overflow-x-auto hide-scrollbar -mx-4 px-4"
+        className={`flex gap-2 mb-6 overflow-x-auto hide-scrollbar -mx-4 px-4 ${bulkMode ? 'mt-14' : ''}`}
       >
         <button
           onClick={() => setFilter('all')}
@@ -327,60 +426,85 @@ export default function ProductionPage() {
                 const assigneeRole = project.videographer ? 'Videographer' :
                   project.editor ? 'Editor' :
                   project.posting_manager ? 'Posting Manager' : null;
+                const isSelected = selectedProjects.has(project.id);
 
-                return (
-                  <Link
-                    key={project.id}
-                    to={`/admin/project/${project.id}`}
-                    className="block bg-white rounded-xl p-4 border border-gray-100 active:bg-gray-50"
-                  >
-                    {/* Title and Badge */}
-                    <div className="flex items-start justify-between mb-2">
-                      <h3 className="font-semibold text-gray-900 flex-1 truncate pr-2">
-                        {project.title || 'Untitled Project'}
-                      </h3>
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${section.bgColor} ${section.textColor} whitespace-nowrap`}>
-                        {section.label.split(' ')[0]}
-                      </span>
-                    </div>
+                const cardContent = (
+                  <div className={`relative bg-white rounded-xl p-4 border-2 transition-all ${
+                    isSelected ? 'border-purple-500 bg-purple-50' : 'border-gray-100'
+                  }`}>
+                    {/* Bulk checkbox */}
+                    {bulkMode && (
+                      <button
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleProject(project.id); }}
+                        className="absolute top-3 left-3 z-10 w-8 h-8 flex items-center justify-center bg-white rounded-lg border-2 border-gray-300"
+                      >
+                        {isSelected ? (
+                          <CheckSquare className="w-5 h-5 text-purple-500" />
+                        ) : (
+                          <Square className="w-5 h-5 text-gray-400" />
+                        )}
+                      </button>
+                    )}
 
-                    {/* Content ID and Time */}
-                    <p className="text-sm text-gray-500 mb-2">
-                      {project.content_id || 'No ID'} • {formatTimeAgo(project.created_at)}
-                    </p>
-
-                    {/* Platform and Files */}
-                    <div className="flex gap-2 mb-3">
-                      <span className="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 rounded-full text-xs text-gray-600">
-                        {platform.emoji} {platform.label}
-                      </span>
-                      <span className="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 rounded-full text-xs text-gray-600">
-                        <Folder className="w-3 h-3" />
-                        {project.files_count || 0} files
-                      </span>
-                    </div>
-
-                    {/* Progress Bar */}
-                    <div className="h-2 bg-gray-100 rounded-full overflow-hidden mb-3">
-                      <div
-                        className={`h-full ${section.color} rounded-full transition-all`}
-                        style={{ width: `${getStageProgress(project.production_stage)}%` }}
-                      />
-                    </div>
-
-                    {/* Assignee */}
-                    {assignee ? (
-                      <div className="flex items-center gap-2">
-                        <div className={`w-8 h-8 rounded-full ${section.color} flex items-center justify-center text-white text-xs font-semibold`}>
-                          {getInitials(assignee.full_name, assignee.email)}
-                        </div>
-                        <span className="text-sm text-gray-600">
-                          {assignee.full_name || assignee.email} ({assigneeRole})
+                    <div className={bulkMode ? 'pl-10' : ''}>
+                      {/* Title and Badge */}
+                      <div className="flex items-start justify-between mb-2">
+                        <h3 className="font-semibold text-gray-900 flex-1 truncate pr-2">
+                          {project.title || 'Untitled Project'}
+                        </h3>
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${section.bgColor} ${section.textColor} whitespace-nowrap`}>
+                          {section.label.split(' ')[0]}
                         </span>
                       </div>
-                    ) : (
-                      <p className="text-sm text-gray-400">No assignee yet</p>
-                    )}
+
+                      {/* Content ID and Time */}
+                      <p className="text-sm text-gray-500 mb-2">
+                        {project.content_id || 'No ID'} • {formatTimeAgo(project.created_at)}
+                      </p>
+
+                      {/* Platform and Files */}
+                      <div className="flex gap-2 mb-3">
+                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 rounded-full text-xs text-gray-600">
+                          {platform.emoji} {platform.label}
+                        </span>
+                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 rounded-full text-xs text-gray-600">
+                          <Folder className="w-3 h-3" />
+                          {project.files_count || 0} files
+                        </span>
+                      </div>
+
+                      {/* Progress Bar */}
+                      <div className="h-2 bg-gray-100 rounded-full overflow-hidden mb-3">
+                        <div
+                          className={`h-full ${section.color} rounded-full transition-all`}
+                          style={{ width: `${getStageProgress(project.production_stage)}%` }}
+                        />
+                      </div>
+
+                      {/* Assignee */}
+                      {assignee ? (
+                        <div className="flex items-center gap-2">
+                          <div className={`w-8 h-8 rounded-full ${section.color} flex items-center justify-center text-white text-xs font-semibold`}>
+                            {getInitials(assignee.full_name, assignee.email)}
+                          </div>
+                          <span className="text-sm text-gray-600">
+                            {assignee.full_name || assignee.email} ({assigneeRole})
+                          </span>
+                        </div>
+                      ) : (
+                        <p className="text-sm text-gray-400">No assignee yet</p>
+                      )}
+                    </div>
+                  </div>
+                );
+
+                return bulkMode ? (
+                  <div key={project.id} onClick={() => toggleProject(project.id)} className="cursor-pointer">
+                    {cardContent}
+                  </div>
+                ) : (
+                  <Link key={project.id} to={`/admin/project/${project.id}`} className="block active:bg-gray-50">
+                    {cardContent}
                   </Link>
                 );
               })}
