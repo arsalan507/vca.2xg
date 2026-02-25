@@ -16,7 +16,6 @@ import {
   Loader2,
   Mic,
   FileVideo,
-  Download,
   RotateCcw,
   SkipForward,
   Trash2,
@@ -373,20 +372,22 @@ export default function ProjectDetailPage() {
           )}
 
           {/* Why Viral */}
-          <div className="bg-white border border-gray-200 rounded-xl p-4">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-medium text-gray-700">Why It's Viral</h3>
-              {project.why_viral_voice_note_url && (
-                <button
-                  onClick={() => playVoiceNote(project.why_viral_voice_note_url!, 'whyViral')}
-                  className="p-1.5 rounded-full bg-purple-100 text-purple-600"
-                >
-                  {playingAudio === 'whyViral' ? <Pause className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-                </button>
-              )}
+          {project.why_viral && (
+            <div className="bg-white border border-gray-200 rounded-xl p-4">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-sm font-medium text-gray-700">Why It's Viral</h3>
+                {project.why_viral_voice_note_url && (
+                  <button
+                    onClick={() => playVoiceNote(project.why_viral_voice_note_url!, 'whyViral')}
+                    className="p-1.5 rounded-full bg-purple-100 text-purple-600"
+                  >
+                    {playingAudio === 'whyViral' ? <Pause className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+                  </button>
+                )}
+              </div>
+              <p className="text-sm text-gray-600">{project.why_viral}</p>
             </div>
-            <p className="text-sm text-gray-600">{project.why_viral || 'Not provided'}</p>
-          </div>
+          )}
 
           {/* Hook Voice Note */}
           {project.hook_voice_note_url && (
@@ -455,6 +456,25 @@ export default function ProjectDetailPage() {
             </div>
           )}
 
+          {/* Cast Composition */}
+          {project.cast_composition && (project.cast_composition as any).total > 0 && (
+            <div className="bg-white border border-gray-200 rounded-xl p-4">
+              <h3 className="text-sm font-medium text-gray-700 mb-3">🎬 Cast ({(project.cast_composition as any).total} people)</h3>
+              <div className="flex flex-wrap gap-2">
+                {Object.entries(project.cast_composition as unknown as Record<string, unknown>)
+                  .filter(([key, val]) => key !== 'total' && key !== 'include_owner' && typeof val === 'number' && val > 0)
+                  .map(([key, val]) => (
+                    <span key={key} className="px-3 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-700">
+                      {key.replace(/_/g, ' ')} × {val as number}
+                    </span>
+                  ))}
+                {(project.cast_composition as any).include_owner && (
+                  <span className="px-3 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-700">+ Owner</span>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Scores */}
           {project.overall_score && (
             <div className="bg-white border border-gray-200 rounded-xl p-4">
@@ -503,13 +523,15 @@ export default function ProjectDetailPage() {
                 <span className="text-gray-500">Shoot Type</span>
                 <span className="text-gray-900">{project.shoot_type === 'outdoor' ? '🌳 Outdoor' : '🏠 Indoor'}</span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-gray-500">Target Emotion</span>
-                <span className="text-gray-900 capitalize">{project.target_emotion || 'Not set'}</span>
-              </div>
+              {project.target_emotion && project.target_emotion !== 'Not Specified' && (
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Target Emotion</span>
+                  <span className="text-gray-900 capitalize">{project.target_emotion}</span>
+                </div>
+              )}
               <div className="flex justify-between">
                 <span className="text-gray-500">Submitted By</span>
-                <span className="text-gray-900">{project.full_name || project.email}</span>
+                <span className="text-gray-900">{(project as any).creator_name || project.full_name || project.email}</span>
               </div>
             </div>
           </div>

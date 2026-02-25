@@ -499,7 +499,9 @@ export default function ProjectDetailPage() {
                 { label: 'Platform', value: project.platform?.replace('_', ' ') || 'Not set' },
                 { label: 'Shoot Type', value: project.shoot_type || 'Indoor' },
                 { label: 'Priority', value: project.priority || 'Normal' },
-                { label: 'Target Emotion', value: project.target_emotion || 'Not set' },
+                ...(project.target_emotion && project.target_emotion !== 'Not Specified'
+                  ? [{ label: 'Target Emotion', value: project.target_emotion }]
+                  : []),
                 { label: 'Deadline', value: project.deadline ? new Date(project.deadline).toLocaleDateString() : 'Not set' },
               ].map((item) => (
                 <div key={item.label} className="flex items-center justify-between p-4">
@@ -508,6 +510,25 @@ export default function ProjectDetailPage() {
                 </div>
               ))}
             </div>
+
+            {/* Cast Composition */}
+            {project.cast_composition && (project.cast_composition as any).total > 0 && (
+              <div className="bg-white rounded-xl border border-gray-100 p-4">
+                <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3">🎬 Cast ({(project.cast_composition as any).total} people)</h3>
+                <div className="flex flex-wrap gap-2">
+                  {Object.entries(project.cast_composition as unknown as Record<string, unknown>)
+                    .filter(([key, val]) => key !== 'total' && key !== 'include_owner' && typeof val === 'number' && val > 0)
+                    .map(([key, val]) => (
+                      <span key={key} className="px-3 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-700">
+                        {key.replace(/_/g, ' ')} × {val as number}
+                      </span>
+                    ))}
+                  {(project.cast_composition as any).include_owner && (
+                    <span className="px-3 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-700">+ Owner</span>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

@@ -1,9 +1,11 @@
 import { useEffect, useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { Loader2, Video, Settings, LogOut, X, Check, PlusCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { videographerService, type VideographerStats } from '@/services/videographerService';
+import { queryKeys } from '@/lib/queryKeys';
 import type { ViralAnalysis } from '@/types';
 import { useAuth } from '@/hooks/useAuth';
 import toast from 'react-hot-toast';
@@ -11,17 +13,6 @@ import toast from 'react-hot-toast';
 export default function VideographerHomePage() {
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
-  const [stats, setStats] = useState<VideographerStats>({
-    activeShoots: 0,
-    totalShoots: 0,
-    scripts: 0,
-    completed: 0,
-    available: 0,
-  });
-  const [myProjects, setMyProjects] = useState<ViralAnalysis[]>([]);
-  const [myScripts, setMyScripts] = useState<ViralAnalysis[]>([]);
-  const [availableProjects, setAvailableProjects] = useState<ViralAnalysis[]>([]);
-  const [loading, setLoading] = useState(true);
   const [picking, setPicking] = useState<string | null>(null);
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -51,25 +42,18 @@ export default function VideographerHomePage() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  // React Query: all homepage data in one query
+  const { data: homepageData, isLoading: loading } = useQuery({
+    queryKey: queryKeys.videographer.homepageData(),
+    queryFn: () => videographerService.getHomepageData(),
+  });
 
-  const loadData = async () => {
-    try {
-      setLoading(true);
-      const { stats: statsData, projects, scripts, available } = await videographerService.getHomepageData();
-      setStats(statsData);
-      setMyProjects(projects);
-      setMyScripts(scripts);
-      setAvailableProjects(available);
-    } catch (error) {
-      console.error('Failed to load data:', error);
-      toast.error('Failed to load data');
-    } finally {
-      setLoading(false);
-    }
+  const stats: VideographerStats = homepageData?.stats ?? {
+    activeShoots: 0, totalShoots: 0, scripts: 0, completed: 0, available: 0,
   };
+  const myProjects: ViralAnalysis[] = homepageData?.projects ?? [];
+  const myScripts: ViralAnalysis[] = homepageData?.scripts ?? [];
+  const availableProjects: ViralAnalysis[] = homepageData?.available ?? [];
 
   const openProfileModal = async (projectId: string) => {
     setProfileModalProjectId(projectId);

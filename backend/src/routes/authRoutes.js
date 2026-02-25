@@ -4,17 +4,13 @@
  */
 
 const express = require('express');
-const { Pool } = require('pg');
+const pool = require('../db');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const router = express.Router();
 
 const POSTGREST_JWT_SECRET = process.env.JWT_SECRET;
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
-
-const pool = process.env.DATABASE_URL ? new Pool({
-  connectionString: process.env.DATABASE_URL,
-}) : null;
 
 // Simple in-memory rate limiter for PIN attempts
 const pinAttempts = new Map(); // key: email/ip -> { count, resetAt }

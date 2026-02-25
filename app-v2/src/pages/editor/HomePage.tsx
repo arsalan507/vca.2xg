@@ -1,11 +1,12 @@
 import { useEffect, useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { FolderOpen, Clock, CheckCircle, Scissors, Loader2, Sparkles, Settings, LogOut } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { editorService, type EditorStats } from '@/services/editorService';
+import { queryKeys } from '@/lib/queryKeys';
 import { useAuth } from '@/hooks/useAuth';
 import type { ViralAnalysis } from '@/types';
-import toast from 'react-hot-toast';
 
 // Helper to check if project is "new" (assigned within last 24 hours)
 const isNewAssignment = (project: ViralAnalysis) => {
@@ -26,9 +27,6 @@ const getEditingProgress = (project: ViralAnalysis): number => {
 export default function EditorHomePage() {
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
-  const [stats, setStats] = useState<EditorStats>({ inProgress: 0, available: 0, completed: 0 });
-  const [myProjects, setMyProjects] = useState<ViralAnalysis[]>([]);
-  const [loading, setLoading] = useState(true);
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -54,23 +52,14 @@ export default function EditorHomePage() {
     signOut(); // clears session instantly — ProtectedRoute redirects to /login automatically
   };
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  // React Query: all homepage data in one query
+  const { data: homepageData, isLoading: loading } = useQuery({
+    queryKey: queryKeys.editor.homepageData(),
+    queryFn: () => editorService.getHomepageData(),
+  });
 
-  const loadData = async () => {
-    try {
-      setLoading(true);
-      const { stats: statsData, projects: projectsData } = await editorService.getHomepageData();
-      setStats(statsData);
-      setMyProjects(projectsData);
-    } catch (error) {
-      console.error('Failed to load data:', error);
-      toast.error('Failed to load data');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const stats: EditorStats = homepageData?.stats ?? { inProgress: 0, available: 0, completed: 0 };
+  const myProjects: ViralAnalysis[] = homepageData?.projects ?? [];
 
   const editingProjects = myProjects.filter((p) => p.production_stage === 'EDITING');
   const completedProjects = myProjects.filter((p) =>

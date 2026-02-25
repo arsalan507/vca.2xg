@@ -256,9 +256,37 @@ export default function EditorProjectDetailPage() {
         {/* Tab Content */}
         {activeTab === 'script' && (
           <div className="space-y-4 animate-fade-in">
+            {/* Script Content */}
+            {project.hook && (
+              <div className="p-4 rounded-xl bg-amber-50 border border-amber-200">
+                <h3 className="text-xs font-bold text-amber-700 uppercase tracking-wide mb-2">
+                  🎣 Hook
+                </h3>
+                <p className="text-gray-800 text-sm leading-relaxed">{project.hook}</p>
+              </div>
+            )}
+
+            {project.script_body && (
+              <div className="p-4 rounded-xl bg-green-50 border border-green-200">
+                <h3 className="text-xs font-bold text-green-700 uppercase tracking-wide mb-2">
+                  📝 Body / Script
+                </h3>
+                <p className="text-gray-800 text-sm whitespace-pre-wrap leading-relaxed">{project.script_body}</p>
+              </div>
+            )}
+
+            {project.script_cta && (
+              <div className="p-4 rounded-xl bg-red-50 border border-red-200">
+                <h3 className="text-xs font-bold text-red-700 uppercase tracking-wide mb-2">
+                  📣 CTA
+                </h3>
+                <p className="text-gray-800 text-sm leading-relaxed">{project.script_cta}</p>
+              </div>
+            )}
+
             {/* Why Viral */}
             {project.why_viral && (
-              <div className="p-4 rounded-xl bg-red-50 border border-red-200">
+              <div className="p-4 rounded-xl bg-purple-50 border border-purple-200">
                 <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
                   Why It's Viral
                 </h3>
@@ -266,41 +294,58 @@ export default function EditorProjectDetailPage() {
               </div>
             )}
 
+            {/* Character Tags */}
+            {(project as any).character_tags?.length > 0 && (
+              <div className="p-4 rounded-xl bg-white border border-gray-200">
+                <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3">🎭 Characters</h3>
+                <div className="flex flex-wrap gap-2">
+                  {(project as any).character_tags.map((tag: any) => (
+                    <span
+                      key={tag.id}
+                      className="px-3 py-1 rounded-full text-xs font-medium text-white"
+                      style={{ backgroundColor: tag.color || '#6B7280' }}
+                    >
+                      {tag.name}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Voice Notes */}
-            <div className="space-y-2">
-              <h3 className="text-sm font-semibold text-gray-700">Voice Notes</h3>
-              {project.hook_voice_note_url && (
-                <button
-                  onClick={() => playVoiceNote(project.hook_voice_note_url!, 'hook')}
-                  className="w-full flex items-center gap-3 p-3 bg-white rounded-lg border border-gray-100 text-left"
-                >
-                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                    {playingAudio === 'hook' ? <Pause className="w-4 h-4 text-primary" /> : <Play className="w-4 h-4 text-primary ml-0.5" />}
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-medium text-gray-900">Hook Explanation</p>
-                    <p className="text-sm text-gray-500">{playingAudio === 'hook' ? 'Playing...' : 'Tap to play'}</p>
-                  </div>
-                </button>
-              )}
-              {project.why_viral_voice_note_url && (
-                <button
-                  onClick={() => playVoiceNote(project.why_viral_voice_note_url!, 'whyViral')}
-                  className="w-full flex items-center gap-3 p-3 bg-white rounded-lg border border-gray-100 text-left"
-                >
-                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                    {playingAudio === 'whyViral' ? <Pause className="w-4 h-4 text-primary" /> : <Play className="w-4 h-4 text-primary ml-0.5" />}
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-medium text-gray-900">Why Viral</p>
-                    <p className="text-sm text-gray-500">{playingAudio === 'whyViral' ? 'Playing...' : 'Tap to play'}</p>
-                  </div>
-                </button>
-              )}
-              {!project.hook_voice_note_url && !project.why_viral_voice_note_url && (
-                <p className="text-sm text-gray-400">No voice notes available</p>
-              )}
-            </div>
+            {(project.hook_voice_note_url || project.why_viral_voice_note_url) && (
+              <div className="space-y-2">
+                <h3 className="text-sm font-semibold text-gray-700">Voice Notes</h3>
+                {project.hook_voice_note_url && (
+                  <button
+                    onClick={() => playVoiceNote(project.hook_voice_note_url!, 'hook')}
+                    className="w-full flex items-center gap-3 p-3 bg-white rounded-lg border border-gray-100 text-left"
+                  >
+                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                      {playingAudio === 'hook' ? <Pause className="w-4 h-4 text-primary" /> : <Play className="w-4 h-4 text-primary ml-0.5" />}
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-medium text-gray-900">Hook Explanation</p>
+                      <p className="text-sm text-gray-500">{playingAudio === 'hook' ? 'Playing...' : 'Tap to play'}</p>
+                    </div>
+                  </button>
+                )}
+                {project.why_viral_voice_note_url && (
+                  <button
+                    onClick={() => playVoiceNote(project.why_viral_voice_note_url!, 'whyViral')}
+                    className="w-full flex items-center gap-3 p-3 bg-white rounded-lg border border-gray-100 text-left"
+                  >
+                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                      {playingAudio === 'whyViral' ? <Pause className="w-4 h-4 text-primary" /> : <Play className="w-4 h-4 text-primary ml-0.5" />}
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-medium text-gray-900">Why Viral</p>
+                      <p className="text-sm text-gray-500">{playingAudio === 'whyViral' ? 'Playing...' : 'Tap to play'}</p>
+                    </div>
+                  </button>
+                )}
+              </div>
+            )}
 
             {/* Script Writer Notes */}
             {project.production_notes && (
@@ -309,6 +354,14 @@ export default function EditorProjectDetailPage() {
                   Notes from Writer
                 </h3>
                 <p className="text-gray-800 whitespace-pre-wrap text-sm">{project.production_notes}</p>
+              </div>
+            )}
+
+            {/* No script content fallback */}
+            {!project.hook && !project.script_body && !project.script_cta && !project.why_viral && !project.production_notes && (
+              <div className="text-center py-8 bg-gray-50 rounded-xl">
+                <FileText className="w-10 h-10 text-gray-300 mx-auto mb-2" />
+                <p className="text-sm text-gray-400">No script content available</p>
               </div>
             )}
           </div>

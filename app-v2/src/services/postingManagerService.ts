@@ -192,35 +192,35 @@ export const postingManagerService = {
     const startOfWeek = new Date(now.getFullYear(), now.getMonth(), now.getDate() - now.getDay()).toISOString();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
 
-    // Ready to post count
-    const { count: readyToPost } = await supabase
-      .from('viral_analyses')
-      .select('id', { count: 'exact', head: true })
-      .eq('status', 'APPROVED')
-      .eq('production_stage', 'READY_TO_POST');
-
-    // Scheduled for today
-    const { count: scheduledToday } = await supabase
-      .from('viral_analyses')
-      .select('id', { count: 'exact', head: true })
-      .eq('status', 'APPROVED')
-      .eq('production_stage', 'READY_TO_POST')
-      .gte('scheduled_post_time', startOfDay)
-      .lt('scheduled_post_time', endOfDay);
-
-    // Posted this week
-    const { count: postedThisWeek } = await supabase
-      .from('viral_analyses')
-      .select('id', { count: 'exact', head: true })
-      .eq('production_stage', 'POSTED')
-      .gte('posted_at', startOfWeek);
-
-    // Posted this month
-    const { count: postedThisMonth } = await supabase
-      .from('viral_analyses')
-      .select('id', { count: 'exact', head: true })
-      .eq('production_stage', 'POSTED')
-      .gte('posted_at', startOfMonth);
+    const [
+      { count: readyToPost },
+      { count: scheduledToday },
+      { count: postedThisWeek },
+      { count: postedThisMonth },
+    ] = await Promise.all([
+      supabase
+        .from('viral_analyses')
+        .select('id', { count: 'exact', head: true })
+        .eq('status', 'APPROVED')
+        .eq('production_stage', 'READY_TO_POST'),
+      supabase
+        .from('viral_analyses')
+        .select('id', { count: 'exact', head: true })
+        .eq('status', 'APPROVED')
+        .eq('production_stage', 'READY_TO_POST')
+        .gte('scheduled_post_time', startOfDay)
+        .lt('scheduled_post_time', endOfDay),
+      supabase
+        .from('viral_analyses')
+        .select('id', { count: 'exact', head: true })
+        .eq('production_stage', 'POSTED')
+        .gte('posted_at', startOfWeek),
+      supabase
+        .from('viral_analyses')
+        .select('id', { count: 'exact', head: true })
+        .eq('production_stage', 'POSTED')
+        .gte('posted_at', startOfMonth),
+    ]);
 
     return {
       readyToPost: readyToPost || 0,

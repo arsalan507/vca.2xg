@@ -4,28 +4,23 @@
  */
 
 const fs = require('fs');
+const fsPromises = require('fs/promises');
 const path = require('path');
 
 const VOICE_NOTES_DIR = path.resolve(process.env.VOICE_NOTES_DIR || '/data/voice-notes');
 
 class VoiceNoteService {
   constructor() {
-    this._ensureDirectory(VOICE_NOTES_DIR);
-  }
-
-  _ensureDirectory(dir) {
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-      console.log(`Created voice notes directory: ${dir}`);
+    // Sync init is fine — runs once at startup
+    if (!fs.existsSync(VOICE_NOTES_DIR)) {
+      fs.mkdirSync(VOICE_NOTES_DIR, { recursive: true });
+      console.log(`Created voice notes directory: ${VOICE_NOTES_DIR}`);
     }
   }
 
   /**
-   * Upload/save a voice note file
-   * @param {Buffer} fileBuffer - File content
-   * @param {string} filePath - Relative path (e.g. "userId/hook_123456.webm")
-   * @param {object} options - Upload options
-   * @returns {{ path: string }}
+   * Validate and resolve a relative file path against the base directory.
+   * Prevents path traversal attacks.
    */
   _validatePath(filePath) {
     const normalized = path.normalize(filePath).replace(/^(\.\.(\/|\\|$))+/, '');
@@ -39,18 +34,31 @@ class VoiceNoteService {
     return fullPath;
   }
 
+  /**
+   * Upload/save a voice note file
+   * @param {Buffer} fileBuffer - File content
+   * @param {string} filePath - Relative path (e.g. "userId/hook_123456.webm")
+   * @param {object} options - Upload options
+   * @returns {{ path: string }}
+   */
   async uploadFile(fileBuffer, filePath, options = {}) {
     const fullPath = this._validatePath(filePath);
     const dir = path.dirname(fullPath);
 
-    this._ensureDirectory(dir);
+    await fsPromises.mkdir(dir, { recursive: true });
 
     // If upsert=false and file exists, throw
-    if (!options.upsert && fs.existsSync(fullPath)) {
-      throw new Error(`File already exists: ${filePath}`);
+    if (!options.upsert) {
+      try {
+        await fsPromises.access(fullPath);
+        throw new Error(`File already exists: ${filePath}`);
+      } catch (err) {
+        if (err.message.startsWith('File already exists')) throw err;
+        // File does not exist — proceed
+      }
     }
 
-    fs.writeFileSync(fullPath, fileBuffer);
+    await fsPromises.writeFile(fullPath, fileBuffer);
     return { path: filePath };
   }
 
@@ -60,8 +68,12 @@ class VoiceNoteService {
    */
   async deleteFile(filePath) {
     const fullPath = this._validatePath(filePath);
-    if (fs.existsSync(fullPath)) {
-      fs.unlinkSync(fullPath);
+    try {
+      await fsPromises.access(fullPath);
+      await fsPromises.unlink(fullPath);
+    } catch (err) {
+      // File does not exist — nothing to delete
+      if (err.code !== 'ENOENT') throw err;
     }
   }
 
@@ -82,20 +94,26 @@ class VoiceNoteService {
    */
   async listFiles(folder) {
     const fullPath = this._validatePath(folder || '');
-    if (!fs.existsSync(fullPath)) return [];
+    try {
+      await fsPromises.access(fullPath);
+    } catch {
+      return [];
+    }
 
-    const entries = fs.readdirSync(fullPath, { withFileTypes: true });
-    return entries
-      .filter(e => e.isFile())
-      .map(e => {
-        const stat = fs.statSync(path.join(fullPath, e.name));
-        return {
+    const entries = await fsPromises.readdir(fullPath, { withFileTypes: true });
+    const results = [];
+    for (const e of entries) {
+      if (e.isFile()) {
+        const stat = await fsPromises.stat(path.join(fullPath, e.name));
+        results.push({
           name: e.name,
           size: stat.size,
           created_at: stat.birthtime.toISOString(),
           updated_at: stat.mtime.toISOString(),
-        };
-      });
+        });
+      }
+    }
+    return results;
   }
 
   /**

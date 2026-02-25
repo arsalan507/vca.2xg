@@ -1,10 +1,11 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react';
 import { Link } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { TrendingUp, Users, Settings, LogOut, UsersRound, ChevronRight } from 'lucide-react';
 import { adminService, type DashboardStats, type QueueStats } from '@/services/adminService';
+import { queryKeys } from '@/lib/queryKeys';
 import { useAuth } from '@/hooks/useAuth';
-import toast from 'react-hot-toast';
 
 interface PendingScript {
   id: string;
@@ -18,12 +19,37 @@ interface PendingScript {
 
 export default function AdminHomePage() {
   const { user, role, signOut } = useAuth();
-  const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [queueStats, setQueueStats] = useState<QueueStats | null>(null);
-  const [pendingScripts, setPendingScripts] = useState<PendingScript[]>([]);
-  const [loading, setLoading] = useState(true);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const profileMenuRef = useRef<HTMLDivElement>(null);
+
+  // React Query: dashboard + queue stats
+  const { data: combined, isLoading: statsLoading } = useQuery({
+    queryKey: queryKeys.admin.dashboardStats(),
+    queryFn: () => adminService.getDashboardAndQueueStats(),
+  });
+
+  // React Query: pending analyses
+  const { data: pendingAnalyses, isLoading: pendingLoading } = useQuery({
+    queryKey: queryKeys.admin.pendingAnalyses(),
+    queryFn: () => adminService.getPendingAnalyses().catch(() => []),
+  });
+
+  const loading = statsLoading || pendingLoading;
+  const stats: DashboardStats | null = combined?.dashboard ?? null;
+  const queueStats: QueueStats | null = combined?.queue ?? null;
+
+  // Transform pending analyses to scripts format (memoized)
+  const pendingScripts = useMemo<PendingScript[]>(() => {
+    return (pendingAnalyses || []).slice(0, 3).map((item: any) => ({
+      id: item.id,
+      title: item.title || 'Untitled Script',
+      creator: item.profiles?.full_name || item.user_id?.substring(0, 8) || 'Unknown',
+      createdAt: item.created_at,
+      platform: item.platform || 'Instagram',
+      location: item.location_type || 'Indoor',
+      score: item.viral_score || null,
+    }));
+  }, [pendingAnalyses]);
 
   // Get user's first name or email prefix
   const fullName = user?.user_metadata?.name as string | undefined
@@ -34,11 +60,6 @@ export default function AdminHomePage() {
 
   const userEmail = user?.email || 'admin@example.com';
   const userRole = role || 'Administrator';
-
-  // Load stats on mount
-  useEffect(() => {
-    loadStats();
-  }, []);
 
   // Close menu when clicking outside - must be before any early returns
   useEffect(() => {
@@ -55,36 +76,6 @@ export default function AdminHomePage() {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [showProfileMenu]);
-
-  const loadStats = async () => {
-    try {
-      setLoading(true);
-      // getDashboardAndQueueStats: 2 requests instead of the old 14 separate HEAD requests
-      const [combined, pending] = await Promise.all([
-        adminService.getDashboardAndQueueStats(),
-        adminService.getPendingAnalyses().catch(() => []),
-      ]);
-      setStats(combined.dashboard);
-      setQueueStats(combined.queue);
-
-      // Transform pending analyses to scripts format
-      const scripts: PendingScript[] = (pending || []).slice(0, 3).map((item: any) => ({
-        id: item.id,
-        title: item.title || 'Untitled Script',
-        creator: item.profiles?.full_name || item.user_id?.substring(0, 8) || 'Unknown',
-        createdAt: item.created_at,
-        platform: item.platform || 'Instagram',
-        location: item.location_type || 'Indoor',
-        score: item.viral_score || null,
-      }));
-      setPendingScripts(scripts);
-    } catch (error) {
-      console.error('Failed to load stats:', error);
-      toast.error('Failed to load stats');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleLogout = () => {
     setShowProfileMenu(false);

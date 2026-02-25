@@ -1,25 +1,16 @@
-import { useEffect, useState, useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useEffect, useState, useRef, useMemo } from 'react';
+import { Link } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { Calendar, Send, CheckCircle, Loader2, Clock, ChevronRight, Settings, LogOut } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Header from '@/components/Header';
 import { useAuth } from '@/hooks/useAuth';
 import { postingManagerService, type PostingStats } from '@/services/postingManagerService';
+import { queryKeys } from '@/lib/queryKeys';
 import type { ViralAnalysis } from '@/types';
-import toast from 'react-hot-toast';
 
 export default function PostingHomePage() {
-  const navigate = useNavigate();
   const { user, signOut } = useAuth();
-  const [stats, setStats] = useState<PostingStats>({
-    readyToPost: 0,
-    scheduledToday: 0,
-    postedThisWeek: 0,
-    postedThisMonth: 0,
-  });
-  const [readyProjects, setReadyProjects] = useState<ViralAnalysis[]>([]);
-  const [todaysSchedule, setTodaysSchedule] = useState<ViralAnalysis[]>([]);
-  const [loading, setLoading] = useState(true);
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -43,35 +34,37 @@ export default function PostingHomePage() {
     signOut(); // clears session instantly — ProtectedRoute redirects to /login automatically
   };
 
-  useEffect(() => {
-    loadData();
+  // Stable today's date range (memoized so query keys don't change on re-render)
+  const { startOfDay, endOfDay } = useMemo(() => {
+    const now = new Date();
+    return {
+      startOfDay: new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString(),
+      endOfDay: new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1).toISOString(),
+    };
   }, []);
 
-  const loadData = async () => {
-    try {
-      setLoading(true);
+  // React Query: posting stats
+  const { data: statsData, isLoading: statsLoading } = useQuery({
+    queryKey: queryKeys.posting.stats(),
+    queryFn: () => postingManagerService.getPostingStats(),
+  });
 
-      // Get today's date range
-      const now = new Date();
-      const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
-      const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1).toISOString();
+  // React Query: ready-to-post projects
+  const { data: readyData, isLoading: readyLoading } = useQuery({
+    queryKey: queryKeys.posting.readyProjects(),
+    queryFn: () => postingManagerService.getReadyToPostProjects(),
+  });
 
-      const [statsData, projectsData, scheduledData] = await Promise.all([
-        postingManagerService.getPostingStats(),
-        postingManagerService.getReadyToPostProjects(),
-        postingManagerService.getScheduledPosts(startOfDay, endOfDay),
-      ]);
+  // React Query: today's scheduled posts
+  const { data: scheduledData, isLoading: scheduledLoading } = useQuery({
+    queryKey: queryKeys.posting.scheduledPosts(startOfDay, endOfDay),
+    queryFn: () => postingManagerService.getScheduledPosts(startOfDay, endOfDay),
+  });
 
-      setStats(statsData);
-      setReadyProjects(projectsData);
-      setTodaysSchedule(scheduledData);
-    } catch (error) {
-      console.error('Failed to load data:', error);
-      toast.error('Failed to load data');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const loading = statsLoading || readyLoading || scheduledLoading;
+  const stats: PostingStats = statsData ?? { readyToPost: 0, scheduledToday: 0, postedThisWeek: 0, postedThisMonth: 0 };
+  const readyProjects: ViralAnalysis[] = readyData ?? [];
+  const todaysSchedule: ViralAnalysis[] = scheduledData ?? [];
 
   const getPlatformIcon = (platform?: string): { emoji: string; color: string } => {
     const p = (platform || '').toLowerCase();

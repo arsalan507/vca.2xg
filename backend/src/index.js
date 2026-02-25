@@ -2,17 +2,12 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-const { Pool } = require('pg');
+const pool = require('./db');
 const { verifyAuth, verifyAdmin } = require('./middleware/jwtAuth');
 const voiceNoteService = require('./services/voiceNoteService');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
-
-// PostgreSQL connection pool (only if DATABASE_URL is configured)
-const pool = process.env.DATABASE_URL ? new Pool({
-  connectionString: process.env.DATABASE_URL,
-}) : null;
 
 // Middleware - Allow multiple origins for development
 const allowedOrigins = [
@@ -257,10 +252,23 @@ app.use('/api/upload', uploadRoutes);
 
 // ─── Start Server ───────────────────────────────────────────────────────────
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`Backend server running on http://localhost:${PORT}`);
   console.log(`Health check: http://localhost:${PORT}/health`);
   console.log(`Upload endpoints: http://localhost:${PORT}/api/upload/*`);
   console.log(`Auth endpoints: http://localhost:${PORT}/api/auth/*`);
   console.log(`Storage endpoints: http://localhost:${PORT}/api/storage/*`);
 });
+
+// Graceful shutdown
+function shutdown(signal) {
+  console.log(`${signal} received. Shutting down gracefully...`);
+  server.close(() => {
+    const pool = require('./db');
+    if (pool) pool.end();
+    process.exit(0);
+  });
+  setTimeout(() => process.exit(1), 10000);
+}
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));

@@ -4,13 +4,9 @@
  */
 
 const jwt = require('jsonwebtoken');
-const { Pool } = require('pg');
+const pool = require('../db');
 
 const POSTGREST_JWT_SECRET = process.env.JWT_SECRET;
-
-const pool = process.env.DATABASE_URL ? new Pool({
-  connectionString: process.env.DATABASE_URL,
-}) : null;
 
 /**
  * Verify JWT and attach user to request

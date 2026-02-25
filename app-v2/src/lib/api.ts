@@ -91,7 +91,12 @@ export async function fetchWithAuth(url: string, options: RequestInit = {}): Pro
     headers.set('Authorization', `Bearer ${_accessToken}`);
   }
 
-  const response = await fetch(url, { ...options, headers });
+  // 30-second timeout for backend calls
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 30000);
+
+  const response = await fetch(url, { ...options, headers, signal: controller.signal });
+  clearTimeout(timeoutId);
 
   // If we get 401, session expired - user needs to log in again
   if (response.status === 401) {
@@ -533,9 +538,14 @@ class PostgRESTQueryBuilder {
     const url = this._buildUrl();
     const headers = this._buildHeaders();
 
+    // 15-second timeout for PostgREST queries
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
+
     const fetchOptions: RequestInit = {
       method: this._countOption.head ? 'HEAD' : this._method,
       headers,
+      signal: controller.signal,
     };
 
     if (this._body && (this._method === 'POST' || this._method === 'PATCH')) {
@@ -544,6 +554,7 @@ class PostgRESTQueryBuilder {
 
     try {
       const res = await fetch(url, fetchOptions);
+      clearTimeout(timeoutId);
 
       let count: number | undefined;
       const contentRange = res.headers.get('Content-Range');
@@ -592,11 +603,15 @@ class PostgRESTQueryBuilder {
 
       return { data, error: null, count };
     } catch (err) {
+      clearTimeout(timeoutId);
+      const message = err instanceof DOMException && err.name === 'AbortError'
+        ? 'Request timed out'
+        : err instanceof Error ? err.message : String(err);
       return {
         data: null,
         error: {
-          message: err instanceof Error ? err.message : String(err),
-          code: 'NETWORK_ERROR',
+          message,
+          code: err instanceof DOMException && err.name === 'AbortError' ? 'TIMEOUT' : 'NETWORK_ERROR',
         },
       };
     }
@@ -620,12 +635,18 @@ async function _rpc(fnName: string, params?: Record<string, unknown>): Promise<{
   // PostgREST auth: anon JWT for authorization
   headers['Authorization'] = `Bearer ${POSTGREST_JWT}`;
 
+  // 15-second timeout for RPC calls
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 15000);
+
   try {
     const res = await fetch(`${POSTGREST_URL}/rpc/${fnName}`, {
       method: 'POST',
       headers,
       body: JSON.stringify(params || {}),
+      signal: controller.signal,
     });
+    clearTimeout(timeoutId);
 
     if (!res.ok) {
       const errBody = await res.json().catch(() => ({}));
@@ -641,9 +662,16 @@ async function _rpc(fnName: string, params?: Record<string, unknown>): Promise<{
     const data = await res.json().catch(() => null);
     return { data, error: null };
   } catch (err) {
+    clearTimeout(timeoutId);
+    const message = err instanceof DOMException && err.name === 'AbortError'
+      ? 'Request timed out'
+      : err instanceof Error ? err.message : String(err);
     return {
       data: null,
-      error: { message: err instanceof Error ? err.message : String(err) },
+      error: {
+        message,
+        code: err instanceof DOMException && err.name === 'AbortError' ? 'TIMEOUT' : 'NETWORK_ERROR',
+      },
     };
   }
 }

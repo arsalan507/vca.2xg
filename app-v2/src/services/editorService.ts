@@ -34,7 +34,8 @@ const EDITED_FILE_TYPES = ['EDITED_VIDEO', 'FINAL_VIDEO', 'edited-video', 'final
 
 // Minimal columns for card/list display — excludes heavy text fields like script_body, audio URLs, etc.
 const CARD_COLS = `id, title, content_id, platform, shoot_type, production_stage, priority, status,
-  created_at, deadline, profile_id, industry_id, cast_composition, content_type, is_dissolved`;
+  created_at, deadline, profile_id, industry_id, cast_composition, content_type, is_dissolved,
+  hook, script_body, script_cta, production_notes, creator_name, reference_url`;
 
 export const editorService = {
   /**
@@ -42,38 +43,49 @@ export const editorService = {
    * Only includes projects that have raw footage and no editor assigned
    */
   async getAvailableProjects(): Promise<ViralAnalysis[]> {
-    const { data, error } = await supabase
-      .from('viral_analyses')
-      .select(`
-        ${CARD_COLS},
-        industry:industries(id, name, short_code),
-        profile:profile_list(id, name, platform),
-        profiles:user_id(email, full_name, avatar_url),
-        assignments:project_assignments(
-          id, role,
-          user:profiles!project_assignments_user_id_fkey(id, email, full_name, avatar_url)
-        )
-      `)
-      .eq('status', 'APPROVED')
-      .eq('production_stage', 'READY_FOR_EDIT')
-      .or('is_dissolved.eq.false,is_dissolved.is.null')
-      .order('priority', { ascending: false })
-      .order('created_at', { ascending: true });
+    // Round 1: Fetch projects and auth user in parallel
+    const [projectsResult, userResult] = await Promise.all([
+      supabase
+        .from('viral_analyses')
+        .select(`
+          ${CARD_COLS},
+          industry:industries(id, name, short_code),
+          profile:profile_list(id, name, platform),
+          profiles:user_id(email, full_name, avatar_url),
+          assignments:project_assignments(
+            id, role,
+            user:profiles!project_assignments_user_id_fkey(id, email, full_name, avatar_url)
+          )
+        `)
+        .eq('status', 'APPROVED')
+        .eq('production_stage', 'READY_FOR_EDIT')
+        .or('is_dissolved.eq.false,is_dissolved.is.null')
+        .order('priority', { ascending: false })
+        .order('created_at', { ascending: true }),
+      auth.getUser(),
+    ]);
 
-    if (error) throw error;
+    if (projectsResult.error) throw projectsResult.error;
 
-    const projects = (data || []) as any[];
+    const projects = (projectsResult.data || []) as any[];
     if (projects.length === 0) return [];
 
-    // Fetch production files (minimal: only need file_type + is_deleted for raw footage check)
     const projectIds = projects.map((p: any) => p.id);
-    const { data: allFiles } = await supabase
-      .from('production_files')
-      .select('id, analysis_id, file_type, is_deleted')
-      .in('analysis_id', projectIds);
+    const user = userResult.data?.user;
+
+    // Round 2: Fetch production files + skips in parallel
+    const [filesResult, skipsResult] = await Promise.all([
+      supabase
+        .from('production_files')
+        .select('id, analysis_id, file_type, is_deleted')
+        .in('analysis_id', projectIds),
+      user
+        ? supabase.from('project_skips').select('analysis_id').eq('user_id', user.id).eq('role', 'EDITOR')
+        : Promise.resolve({ data: [] }),
+    ]);
 
     const filesByAnalysis = new Map<string, any[]>();
-    for (const file of (allFiles || []) as any[]) {
+    for (const file of (filesResult.data || []) as any[]) {
       const existing = filesByAnalysis.get(file.analysis_id) || [];
       existing.push(file);
       filesByAnalysis.set(file.analysis_id, existing);
@@ -97,17 +109,9 @@ export const editorService = {
       return hasRawFiles;
     });
 
-    // Get skipped projects from database
-    const { data: { user } } = await auth.getUser();
-    let skippedIds = new Set<string>();
-    if (user) {
-      const { data: skips } = await supabase
-        .from('project_skips')
-        .select('analysis_id')
-        .eq('user_id', user.id)
-        .eq('role', 'EDITOR');
-      skippedIds = new Set(Array.isArray(skips) ? skips.map((s: any) => s.analysis_id) : []);
-    }
+    const skippedIds = new Set(
+      Array.isArray(skipsResult.data) ? skipsResult.data.map((s: any) => s.analysis_id) : []
+    );
 
     return availableProjects
       .filter((p: any) => !skippedIds.has(p.id))
