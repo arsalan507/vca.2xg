@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, createContext, useContext } from 'react';
 import { auth, AuthUser, AuthSession } from '@/lib/api';
+import { queryClient } from '@/lib/queryClient';
 import type { UserRole } from '@/types';
 
 interface AuthContextValue {
@@ -51,6 +52,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = useCallback(async () => {
     auth.signOut(); // clears session instantly, backend cleanup is fire-and-forget
+    queryClient.clear(); // wipe all cached queries so next login starts fresh
+    localStorage.removeItem('google_drive_token'); // clear Google Drive OAuth
+    localStorage.removeItem('google_drive_token_expiry');
     setUser(null);
   }, []);
 
