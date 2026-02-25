@@ -46,7 +46,7 @@ export const videographerService = {
           industry:industries(id, name, short_code),
           profile:profile_list(id, name, platform),
           profiles:user_id(email, full_name, avatar_url),
-          character_tags:analysis_character_tags(character_tag:character_tags(id, name, color, is_active))
+          character_tags:analysis_character_tags(character_tag:character_tags(id, name, is_active))
         `)
         .eq('status', 'APPROVED')
         .or(`production_stage.in.(${planningStages.join(',')}),production_stage.is.null`)
@@ -111,7 +111,7 @@ export const videographerService = {
             id, role,
             user:profiles!project_assignments_user_id_fkey(id, email, full_name, avatar_url)
           ),
-          character_tags:analysis_character_tags(character_tag:character_tags(id, name, color, is_active))
+          character_tags:analysis_character_tags(character_tag:character_tags(id, name, is_active))
         `)
         .in('id', analysisIds)
         .or('is_dissolved.eq.false,is_dissolved.is.null')
@@ -347,7 +347,7 @@ export const videographerService = {
             id, role,
             user:profiles!project_assignments_user_id_fkey(id, email, full_name, avatar_url)
           ),
-          character_tags:analysis_character_tags(character_tag:character_tags(id, name, color, is_active))
+          character_tags:analysis_character_tags(character_tag:character_tags(id, name, is_active))
         `)
         .eq('id', analysisId)
         .single(),

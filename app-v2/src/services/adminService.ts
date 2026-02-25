@@ -170,7 +170,7 @@ export const adminService = {
         .order('created_at', { ascending: false }),
       supabase
         .from('analysis_character_tags')
-        .select('character_tag:character_tags(id, name, color)')
+        .select('character_tag:character_tags(id, name)')
         .eq('analysis_id', id),
     ]);
 
