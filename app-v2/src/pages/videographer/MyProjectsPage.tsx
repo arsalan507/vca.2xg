@@ -135,7 +135,7 @@ export default function MyProjectsPage() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
           <input
             type="text"
-            placeholder="Search shoots — title, crew, notes, shoot type…"
+            placeholder="Search shoots — title, characters, shoot type…"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-10 pr-9 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
@@ -219,6 +219,11 @@ export default function MyProjectsPage() {
                       <div className="flex-1 min-w-0">
                         <h3 className="font-semibold text-gray-900 truncate">{project.title || 'Untitled'}</h3>
                         <p className="text-sm text-gray-400 font-mono">{project.content_id || 'No ID'}</p>
+                        {project.character_tags && project.character_tags.length > 0 && (
+                          <p className="text-xs text-gray-500 mt-1 truncate">
+                            👤 {project.character_tags.map((t: any) => t.name).join(' · ')}
+                          </p>
+                        )}
                         <div className="flex items-center gap-2 mt-2 flex-wrap">
                           <span className="text-xs px-2 py-1 bg-gray-100 rounded text-gray-600">
                             {platform.emoji} {platform.label}
@@ -327,6 +332,11 @@ export default function MyProjectsPage() {
                       <div className="flex-1 min-w-0">
                         <h3 className="font-semibold text-gray-900 truncate">{project.title || 'Untitled'}</h3>
                         <p className="text-sm text-gray-400 font-mono">{project.content_id || 'No ID'}</p>
+                        {project.character_tags && project.character_tags.length > 0 && (
+                          <p className="text-xs text-gray-500 mt-1 truncate">
+                            👤 {project.character_tags.map((t: any) => t.name).join(' · ')}
+                          </p>
+                        )}
                         <div className="flex items-center gap-2 mt-2 flex-wrap">
                           <span className="text-xs px-2 py-1 bg-gray-100 rounded text-gray-600">
                             {platform.emoji} {platform.label}
