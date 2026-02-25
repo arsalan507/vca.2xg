@@ -364,52 +364,80 @@ export default function UploadPage() {
           </div>
         </div>
 
-        {/* Script Section */}
-        {(project.hook || project.script_body || project.script_cta || project.production_notes || (project as any).character_tags?.length > 0) && (
+        {/* Script & Shooting Info */}
+        {(project.hook || project.script_body || project.script_cta || project.production_notes || (project as any).character_tags?.length > 0 || (project.cast_composition && (project.cast_composition as any).total > 0)) && (
           <div className="mb-6">
             <button
               onClick={() => setShowScript(v => !v)}
-              className="w-full flex items-center justify-between bg-yellow-50 border-2 border-dashed border-yellow-300 rounded-xl px-4 py-3"
+              className={`w-full flex items-center justify-between bg-yellow-50 border-2 border-yellow-200 px-4 py-3 ${showScript ? 'rounded-t-xl' : 'rounded-xl'}`}
             >
-              <span className="text-sm font-bold text-yellow-800">✨ Script & Notes</span>
+              <span className="text-sm font-bold text-yellow-800">✨ Script & Shooting Info</span>
               {showScript ? <ChevronUp className="w-4 h-4 text-yellow-700" /> : <ChevronDown className="w-4 h-4 text-yellow-700" />}
             </button>
             {showScript && (
-              <div className="bg-yellow-50 border-2 border-dashed border-yellow-300 border-t-0 rounded-b-xl px-4 pb-4 space-y-4">
-                {(project as any).character_tags?.length > 0 && (
-                  <div>
-                    <p className="text-xs font-semibold text-yellow-800 mb-2">🎭 Characters</p>
-                    <div className="flex flex-wrap gap-2">
-                      {(project as any).character_tags.map((tag: any) => (
-                        <span key={tag.id} className="px-3 py-1 rounded-full text-xs font-medium text-white" style={{ backgroundColor: tag.color || '#6B7280' }}>
-                          {tag.name}
+              <div className="border-2 border-yellow-200 border-t-0 rounded-b-xl overflow-hidden">
+                {/* Characters & Cast */}
+                {((project as any).character_tags?.length > 0 || (project.cast_composition && (project.cast_composition as any).total > 0)) && (
+                  <div className="bg-indigo-50 px-4 py-3 border-b border-yellow-200">
+                    <p className="text-xs font-bold text-indigo-700 uppercase tracking-wide mb-2">🎭 Characters & Cast</p>
+                    {(project as any).character_tags?.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mb-2">
+                        {(project as any).character_tags.map((tag: any) => (
+                          <span key={tag.id} className="px-3 py-1.5 rounded-full text-xs font-semibold text-white shadow-sm" style={{ backgroundColor: tag.color || '#6366f1' }}>
+                            {tag.name}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    {project.cast_composition && (project.cast_composition as any).total > 0 && (
+                      <div className="flex flex-wrap gap-1.5">
+                        {Object.entries(project.cast_composition as unknown as Record<string, unknown>)
+                          .filter(([key, val]) => key !== 'total' && key !== 'include_owner' && typeof val === 'number' && val > 0)
+                          .map(([key, val]) => (
+                            <span key={key} className="px-2 py-1 rounded text-[11px] font-medium bg-white text-indigo-700 border border-indigo-200">
+                              {key.replace(/_/g, ' ')} × {val as number}
+                            </span>
+                          ))}
+                        {(project.cast_composition as any).include_owner && (
+                          <span className="px-2 py-1 rounded text-[11px] font-medium bg-orange-100 text-orange-700 border border-orange-200">+ Owner</span>
+                        )}
+                        <span className="px-2 py-1 rounded text-[11px] font-medium bg-gray-100 text-gray-600">
+                          Total: {(project.cast_composition as any).total}
                         </span>
-                      ))}
-                    </div>
+                      </div>
+                    )}
                   </div>
                 )}
+
+                {/* Hook - highlighted */}
                 {project.hook && (
-                  <div>
-                    <p className="text-xs font-semibold text-gray-700 mb-1">🎣 Hook</p>
-                    <p className="text-sm text-gray-700 whitespace-pre-wrap">{project.hook}</p>
+                  <div className="bg-orange-50 px-4 py-3 border-b border-yellow-200">
+                    <p className="text-[11px] font-bold text-orange-600 uppercase tracking-wide mb-1">🎣 HOOK</p>
+                    <p className="text-sm text-gray-800 leading-relaxed">{project.hook}</p>
                   </div>
                 )}
+
+                {/* Script Body */}
                 {project.script_body && (
-                  <div>
-                    <p className="text-xs font-semibold text-gray-700 mb-1">📝 Script</p>
-                    <p className="text-sm text-gray-700 whitespace-pre-wrap">{project.script_body}</p>
+                  <div className="bg-white px-4 py-3 border-b border-yellow-200">
+                    <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wide mb-1">📝 SCRIPT</p>
+                    <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{project.script_body}</p>
                   </div>
                 )}
+
+                {/* CTA */}
                 {project.script_cta && (
-                  <div>
-                    <p className="text-xs font-semibold text-gray-700 mb-1">📣 CTA</p>
-                    <p className="text-sm text-gray-700 whitespace-pre-wrap">{project.script_cta}</p>
+                  <div className="bg-green-50 px-4 py-3 border-b border-yellow-200">
+                    <p className="text-[11px] font-bold text-green-600 uppercase tracking-wide mb-1">📣 CTA</p>
+                    <p className="text-sm text-gray-800 leading-relaxed">{project.script_cta}</p>
                   </div>
                 )}
+
+                {/* Team Notes */}
                 {project.production_notes && (
-                  <div>
-                    <p className="text-xs font-semibold text-gray-700 mb-1">📋 Team Notes</p>
-                    <p className="text-sm text-gray-600 whitespace-pre-wrap">{project.production_notes}</p>
+                  <div className="bg-gray-50 px-4 py-3">
+                    <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wide mb-1">📋 TEAM NOTES</p>
+                    <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-wrap">{project.production_notes}</p>
                   </div>
                 )}
               </div>
