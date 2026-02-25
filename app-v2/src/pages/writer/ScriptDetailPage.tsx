@@ -8,7 +8,6 @@ import {
   Play,
   ExternalLink,
   MessageSquare,
-  Star,
   User,
 } from 'lucide-react';
 import { analysesService } from '@/services/analysesService';
@@ -288,60 +287,6 @@ export default function ScriptDetailPage() {
           animate={{ opacity: 1 }}
           className="space-y-4"
         >
-          {/* Scores */}
-          {(script.hook_strength ||
-            script.content_quality ||
-            script.viral_potential ||
-            script.replication_clarity) && (
-            <div className="bg-white border border-gray-200 rounded-xl p-4">
-              <h3 className="text-sm font-medium text-gray-700 mb-3">Review Scores</h3>
-              <div className="grid grid-cols-2 gap-3">
-                {script.hook_strength !== undefined && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">Hook Strength</span>
-                    <div className="flex items-center gap-1">
-                      <Star className="w-4 h-4 text-yellow-500" fill="currentColor" />
-                      <span className="font-medium">{script.hook_strength}/10</span>
-                    </div>
-                  </div>
-                )}
-                {script.content_quality !== undefined && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">Content Quality</span>
-                    <div className="flex items-center gap-1">
-                      <Star className="w-4 h-4 text-yellow-500" fill="currentColor" />
-                      <span className="font-medium">{script.content_quality}/10</span>
-                    </div>
-                  </div>
-                )}
-                {script.viral_potential !== undefined && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">Viral Potential</span>
-                    <div className="flex items-center gap-1">
-                      <Star className="w-4 h-4 text-yellow-500" fill="currentColor" />
-                      <span className="font-medium">{script.viral_potential}/10</span>
-                    </div>
-                  </div>
-                )}
-                {script.replication_clarity !== undefined && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">Replication Clarity</span>
-                    <div className="flex items-center gap-1">
-                      <Star className="w-4 h-4 text-yellow-500" fill="currentColor" />
-                      <span className="font-medium">{script.replication_clarity}/10</span>
-                    </div>
-                  </div>
-                )}
-              </div>
-              {script.overall_score !== undefined && (
-                <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between">
-                  <span className="font-medium text-gray-700">Overall Score</span>
-                  <span className="text-lg font-bold text-blue-600">{script.overall_score}/10</span>
-                </div>
-              )}
-            </div>
-          )}
-
           {/* Written Feedback */}
           {script.feedback && (
             <div className="bg-white border border-gray-200 rounded-xl p-4">
@@ -377,7 +322,6 @@ export default function ScriptDetailPage() {
 
           {/* No Feedback */}
           {!hasFeedback &&
-            !script.hook_strength &&
             !script.admin_remarks && (
               <div className="text-center py-8">
                 <MessageSquare className="w-12 h-12 text-gray-300 mx-auto mb-3" />

@@ -438,80 +438,44 @@ export default function ProjectDetailPage() {
             </div>
           )}
 
-          {/* Character Tags */}
-          {(project as any).character_tags?.length > 0 && (
+          {/* Characters & Cast (merged) */}
+          {((project as any).character_tags?.length > 0 || (project.cast_composition && (project.cast_composition as any).total > 0)) && (
             <div className="bg-white border border-gray-200 rounded-xl p-4">
-              <h3 className="text-sm font-medium text-gray-700 mb-3">🎭 Characters</h3>
-              <div className="flex flex-wrap gap-2">
-                {(project as any).character_tags.map((tag: any) => (
-                  <span
-                    key={tag.id}
-                    className="px-3 py-1 rounded-full text-xs font-medium text-white"
-                    style={{ backgroundColor: tag.color || '#6B7280' }}
-                  >
-                    {tag.name}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
+              <h3 className="text-sm font-medium text-gray-700 mb-3">🎭 Characters & Cast</h3>
 
-          {/* Cast Composition */}
-          {project.cast_composition && (project.cast_composition as any).total > 0 && (
-            <div className="bg-white border border-gray-200 rounded-xl p-4">
-              <h3 className="text-sm font-medium text-gray-700 mb-3">🎬 Cast ({(project.cast_composition as any).total} people)</h3>
-              <div className="flex flex-wrap gap-2">
-                {Object.entries(project.cast_composition as unknown as Record<string, unknown>)
-                  .filter(([key, val]) => key !== 'total' && key !== 'include_owner' && typeof val === 'number' && val > 0)
-                  .map(([key, val]) => (
-                    <span key={key} className="px-3 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-700">
-                      {key.replace(/_/g, ' ')} × {val as number}
+              {/* Named characters */}
+              {(project as any).character_tags?.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {(project as any).character_tags.map((tag: any) => (
+                    <span
+                      key={tag.id}
+                      className="px-3 py-1.5 rounded-full text-xs font-medium text-white"
+                      style={{ backgroundColor: tag.color || '#6B7280' }}
+                    >
+                      {tag.name}
                     </span>
                   ))}
-                {(project.cast_composition as any).include_owner && (
-                  <span className="px-3 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-700">+ Owner</span>
-                )}
-              </div>
-            </div>
-          )}
+                </div>
+              )}
 
-          {/* Scores */}
-          {project.overall_score && (
-            <div className="bg-white border border-gray-200 rounded-xl p-4">
-              <h3 className="text-sm font-medium text-gray-700 mb-3">Review Scores</h3>
-              <div className="grid grid-cols-2 gap-3">
-                {[
-                  { label: 'Hook Strength', value: project.hook_strength },
-                  { label: 'Content Quality', value: project.content_quality },
-                  { label: 'Viral Potential', value: project.viral_potential },
-                  { label: 'Replication Clarity', value: project.replication_clarity },
-                ].map((score) => (
-                  <div key={score.label} className="bg-gray-50 rounded-lg p-3">
-                    <p className="text-xs text-gray-500 mb-1">{score.label}</p>
-                    <div className="flex items-center gap-2">
-                      <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
-                        <div
-                          className={`h-full rounded-full ${
-                            (score.value || 0) >= 8 ? 'bg-green-500' :
-                            (score.value || 0) >= 6 ? 'bg-yellow-500' : 'bg-red-500'
-                          }`}
-                          style={{ width: `${(score.value || 0) * 10}%` }}
-                        />
-                      </div>
-                      <span className="text-sm font-medium text-gray-700">{score.value || 0}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between">
-                <span className="text-sm text-gray-600">Overall Score</span>
-                <span className={`text-lg font-bold ${
-                  project.overall_score >= 8 ? 'text-green-600' :
-                  project.overall_score >= 6 ? 'text-yellow-600' : 'text-red-600'
-                }`}>
-                  {project.overall_score.toFixed(1)}
-                </span>
-              </div>
+              {/* Cast composition counts */}
+              {project.cast_composition && (project.cast_composition as any).total > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {Object.entries(project.cast_composition as unknown as Record<string, unknown>)
+                    .filter(([key, val]) => key !== 'total' && key !== 'include_owner' && typeof val === 'number' && val > 0)
+                    .map(([key, val]) => (
+                      <span key={key} className="px-3 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-700">
+                        {key.replace(/_/g, ' ')} × {val as number}
+                      </span>
+                    ))}
+                  {(project.cast_composition as any).include_owner && (
+                    <span className="px-3 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-700">+ Owner</span>
+                  )}
+                  <span className="px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                    Total: {(project.cast_composition as any).total}
+                  </span>
+                </div>
+              )}
             </div>
           )}
 
@@ -523,7 +487,7 @@ export default function ProjectDetailPage() {
                 <span className="text-gray-500">Shoot Type</span>
                 <span className="text-gray-900">{project.shoot_type === 'outdoor' ? '🌳 Outdoor' : '🏠 Indoor'}</span>
               </div>
-              {project.target_emotion && project.target_emotion !== 'Not Specified' && (
+              {project.target_emotion && !['not specified', 'not_specified', ''].includes(project.target_emotion.toLowerCase().trim()) && (
                 <div className="flex justify-between">
                   <span className="text-gray-500">Target Emotion</span>
                   <span className="text-gray-900 capitalize">{project.target_emotion}</span>
@@ -531,7 +495,7 @@ export default function ProjectDetailPage() {
               )}
               <div className="flex justify-between">
                 <span className="text-gray-500">Submitted By</span>
-                <span className="text-gray-900">{(project as any).creator_name || project.full_name || project.email}</span>
+                <span className="text-gray-900">{project.full_name || project.email}</span>
               </div>
             </div>
           </div>
