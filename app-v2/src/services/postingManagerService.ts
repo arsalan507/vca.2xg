@@ -202,23 +202,27 @@ export const postingManagerService = {
         .from('viral_analyses')
         .select('id', { count: 'exact', head: true })
         .eq('status', 'APPROVED')
-        .eq('production_stage', 'READY_TO_POST'),
+        .eq('production_stage', 'READY_TO_POST')
+        .or('is_dissolved.eq.false,is_dissolved.is.null'),
       supabase
         .from('viral_analyses')
         .select('id', { count: 'exact', head: true })
         .eq('status', 'APPROVED')
         .eq('production_stage', 'READY_TO_POST')
+        .or('is_dissolved.eq.false,is_dissolved.is.null')
         .gte('scheduled_post_time', startOfDay)
         .lt('scheduled_post_time', endOfDay),
       supabase
         .from('viral_analyses')
         .select('id', { count: 'exact', head: true })
         .eq('production_stage', 'POSTED')
+        .or('is_dissolved.eq.false,is_dissolved.is.null')
         .gte('posted_at', startOfWeek),
       supabase
         .from('viral_analyses')
         .select('id', { count: 'exact', head: true })
         .eq('production_stage', 'POSTED')
+        .or('is_dissolved.eq.false,is_dissolved.is.null')
         .gte('posted_at', startOfMonth),
     ]);
 
