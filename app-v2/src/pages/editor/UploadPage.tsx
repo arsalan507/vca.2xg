@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Upload, Video, CheckCircle, X, AlertCircle, Loader2 } from 'lucide-react';
+import { Upload, Video, CheckCircle, X, AlertCircle, Loader2, ExternalLink } from 'lucide-react';
 import Header from '@/components/Header';
 import { Button } from '@/components/ui';
 import toast from 'react-hot-toast';
@@ -29,6 +29,8 @@ export default function EditorUploadPage() {
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [_uploadResult, setUploadResult] = useState<{ fileId: string; webViewLink: string } | null>(null);
   const [editNotes, setEditNotes] = useState('');
+  const [driveLink, setDriveLink] = useState('');
+  const [savingDriveLink, setSavingDriveLink] = useState(false);
   const [checklist, setChecklist] = useState<Checklist>({
     videoLength: false,
     audioLevels: false,
@@ -145,6 +147,42 @@ export default function EditorUploadPage() {
     setUploadProgress(0);
     setFile(null);
     toast('Upload cancelled');
+  };
+
+  const saveDriveLink = async () => {
+    if (!project || !driveLink.trim()) return;
+
+    const link = driveLink.trim();
+    if (!link.includes('drive.google.com') && !link.includes('docs.google.com')) {
+      toast.error('Please paste a valid Google Drive link');
+      return;
+    }
+
+    try {
+      setSavingDriveLink(true);
+
+      const idMatch = link.match(/\/d\/([a-zA-Z0-9_-]+)/) ||
+                       link.match(/\/folders\/([a-zA-Z0-9_-]+)/) ||
+                       link.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+      const driveId = idMatch?.[1] || `drive-${Date.now()}`;
+
+      await productionFilesService.createFileRecord({
+        analysisId: project.id,
+        fileType: 'edited-video',
+        fileName: `Edited Video (Drive Link)`,
+        fileUrl: link,
+        fileId: driveId,
+      });
+
+      toast.success('Drive link saved!');
+      setDriveLink('');
+      setIsUploaded(true);
+    } catch (error) {
+      console.error('Failed to save drive link:', error);
+      toast.error('Failed to save drive link');
+    } finally {
+      setSavingDriveLink(false);
+    }
   };
 
   const handleSubmit = async () => {
@@ -297,6 +335,43 @@ export default function EditorUploadPage() {
             </div>
           )}
         </div>
+
+        {/* Drive Link Option */}
+        {!file && !isUploaded && (
+          <>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex-1 h-px bg-gray-200" />
+              <span className="text-xs font-medium text-gray-400 uppercase">or paste drive link</span>
+              <div className="flex-1 h-px bg-gray-200" />
+            </div>
+            <div className="mb-6">
+              <div className="flex gap-2">
+                <input
+                  type="url"
+                  placeholder="https://drive.google.com/..."
+                  value={driveLink}
+                  onChange={(e) => setDriveLink(e.target.value)}
+                  className="flex-1 px-3 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                />
+                <button
+                  onClick={saveDriveLink}
+                  disabled={!driveLink.trim() || savingDriveLink}
+                  className="px-4 py-2.5 bg-editor text-white rounded-xl text-sm font-semibold disabled:opacity-50 flex items-center gap-1.5 shrink-0"
+                >
+                  {savingDriveLink ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <ExternalLink className="w-4 h-4" />
+                  )}
+                  Save
+                </button>
+              </div>
+              <p className="text-[11px] text-gray-400 mt-1.5 px-1">
+                Already uploaded to Drive? Paste the link instead of re-uploading
+              </p>
+            </div>
+          </>
+        )}
 
         {/* Pre-submit Checklist */}
         <div className="mb-6">

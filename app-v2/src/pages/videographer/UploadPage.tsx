@@ -51,6 +51,8 @@ export default function UploadPage() {
   const [deletingFileId, setDeletingFileId] = useState<string | null>(null);
   const [productionNotes, setProductionNotes] = useState('');
   const [showScript, setShowScript] = useState(true);
+  const [driveLink, setDriveLink] = useState('');
+  const [savingDriveLink, setSavingDriveLink] = useState(false);
 
   useEffect(() => {
     if (id) loadProject();
@@ -89,6 +91,7 @@ export default function UploadPage() {
   // Get shoot type info
   const getShootTypeInfo = (shootType?: string) => {
     const type = (shootType || 'indoor').toLowerCase();
+    if (type.includes('both')) return { emoji: '🏠🌳', label: 'Both', bg: 'rgba(99, 102, 241, 0.1)' };
     if (type.includes('outdoor')) return { emoji: '🌳', label: 'Outdoor', bg: 'rgba(34, 197, 94, 0.1)' };
     if (type.includes('studio')) return { emoji: '🎬', label: 'Studio', bg: 'rgba(147, 51, 234, 0.1)' };
     if (type.includes('store') || type.includes('shop')) return { emoji: '🏪', label: 'In Store', bg: 'rgba(99, 102, 241, 0.1)' };
@@ -293,6 +296,43 @@ export default function UploadPage() {
     toast('Upload cancelled');
   };
 
+  const saveDriveLink = async () => {
+    if (!project || !driveLink.trim()) return;
+
+    const link = driveLink.trim();
+    if (!link.includes('drive.google.com') && !link.includes('docs.google.com')) {
+      toast.error('Please paste a valid Google Drive link');
+      return;
+    }
+
+    try {
+      setSavingDriveLink(true);
+
+      // Extract Drive file/folder ID from URL
+      const idMatch = link.match(/\/d\/([a-zA-Z0-9_-]+)/) ||
+                       link.match(/\/folders\/([a-zA-Z0-9_-]+)/) ||
+                       link.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+      const driveId = idMatch?.[1] || `drive-${Date.now()}`;
+
+      await productionFilesService.createFileRecord({
+        analysisId: project.id,
+        fileType: selectedFileType,
+        fileName: `Drive Link (${FILE_TYPES.find(t => t.id === selectedFileType)?.label || selectedFileType})`,
+        fileUrl: link,
+        fileId: driveId,
+      });
+
+      toast.success('Drive link saved!');
+      setDriveLink('');
+      await loadProject();
+    } catch (error) {
+      console.error('Failed to save drive link:', error);
+      toast.error('Failed to save drive link');
+    } finally {
+      setSavingDriveLink(false);
+    }
+  };
+
   const completedCount = files.filter((f) => f.status === 'complete').length;
   const errorCount = files.filter((f) => f.status === 'error').length;
   const existingFiles = project?.production_files?.filter((f: any) => !f.is_deleted) || [];
@@ -469,6 +509,42 @@ export default function UploadPage() {
               </button>
             ))}
           </div>
+        </div>
+
+        {/* Drive Link Input */}
+        <div className="mb-6">
+          <h2 className="text-base font-semibold text-gray-800 mb-3">Paste Drive Link</h2>
+          <div className="flex gap-2">
+            <input
+              type="url"
+              placeholder="https://drive.google.com/..."
+              value={driveLink}
+              onChange={(e) => setDriveLink(e.target.value)}
+              className="flex-1 px-3 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+            />
+            <button
+              onClick={saveDriveLink}
+              disabled={!driveLink.trim() || savingDriveLink}
+              className="px-4 py-2.5 bg-orange-500 text-white rounded-xl text-sm font-semibold disabled:opacity-50 flex items-center gap-1.5 shrink-0"
+            >
+              {savingDriveLink ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <ExternalLink className="w-4 h-4" />
+              )}
+              Save
+            </button>
+          </div>
+          <p className="text-[11px] text-gray-400 mt-1.5 px-1">
+            Already uploaded to Drive? Paste the link here instead of re-uploading
+          </p>
+        </div>
+
+        {/* Divider */}
+        <div className="flex items-center gap-3 mb-6">
+          <div className="flex-1 h-px bg-gray-200" />
+          <span className="text-xs font-medium text-gray-400 uppercase">or upload files</span>
+          <div className="flex-1 h-px bg-gray-200" />
         </div>
 
         {/* Upload Area */}
