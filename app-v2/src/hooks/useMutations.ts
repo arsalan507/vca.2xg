@@ -16,18 +16,20 @@ export function usePickProject() {
   const qc = useQueryClient();
   const navigate = useNavigate();
 
+  type AvailableData = { projects: ViralAnalysis[]; characterTags: unknown[] };
+
   return useMutation({
     mutationFn: (args: { analysisId: string; profileId?: string }) =>
       videographerService.pickProject(args),
 
     onMutate: async ({ analysisId }) => {
       await qc.cancelQueries({ queryKey: queryKeys.videographer.availableProjects() });
-      const prev = qc.getQueryData<ViralAnalysis[]>(queryKeys.videographer.availableProjects());
-      if (prev) {
-        qc.setQueryData(
-          queryKeys.videographer.availableProjects(),
-          prev.filter((p) => p.id !== analysisId),
-        );
+      const prev = qc.getQueryData<AvailableData>(queryKeys.videographer.availableProjects());
+      if (prev?.projects) {
+        qc.setQueryData(queryKeys.videographer.availableProjects(), {
+          ...prev,
+          projects: prev.projects.filter((p) => p.id !== analysisId),
+        });
       }
       return { prev };
     },
@@ -45,12 +47,12 @@ export function usePickProject() {
       toast.error(msg);
       // If project was already picked by someone else, keep it removed
       if (msg.includes('already been picked') || msg.includes('no longer available')) {
-        const current = qc.getQueryData<ViralAnalysis[]>(queryKeys.videographer.availableProjects());
-        if (current) {
-          qc.setQueryData(
-            queryKeys.videographer.availableProjects(),
-            current.filter((p) => p.id !== analysisId),
-          );
+        const current = qc.getQueryData<AvailableData>(queryKeys.videographer.availableProjects());
+        if (current?.projects) {
+          qc.setQueryData(queryKeys.videographer.availableProjects(), {
+            ...current,
+            projects: current.projects.filter((p) => p.id !== analysisId),
+          });
         }
       }
     },
@@ -65,17 +67,19 @@ export function usePickProject() {
 export function useRejectProject() {
   const qc = useQueryClient();
 
+  type AvailableData = { projects: ViralAnalysis[]; characterTags: unknown[] };
+
   return useMutation({
     mutationFn: (projectId: string) => videographerService.rejectProject(projectId),
 
     onMutate: async (projectId) => {
       await qc.cancelQueries({ queryKey: queryKeys.videographer.availableProjects() });
-      const prev = qc.getQueryData<ViralAnalysis[]>(queryKeys.videographer.availableProjects());
-      if (prev) {
-        qc.setQueryData(
-          queryKeys.videographer.availableProjects(),
-          prev.filter((p) => p.id !== projectId),
-        );
+      const prev = qc.getQueryData<AvailableData>(queryKeys.videographer.availableProjects());
+      if (prev?.projects) {
+        qc.setQueryData(queryKeys.videographer.availableProjects(), {
+          ...prev,
+          projects: prev.projects.filter((p) => p.id !== projectId),
+        });
       }
       return { prev };
     },
