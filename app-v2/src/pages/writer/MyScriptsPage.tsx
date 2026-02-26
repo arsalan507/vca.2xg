@@ -1,57 +1,37 @@
-import { useEffect, useState } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { ChevronLeft, FileText } from 'lucide-react';
 import { analysesService } from '@/services/analysesService';
-import type { ViralAnalysis } from '@/types';
-import toast from 'react-hot-toast';
+import { queryKeys } from '@/lib/queryKeys';
+import QueryStateWrapper from '@/components/QueryStateWrapper';
 
 type FilterType = 'all' | 'pending' | 'approved' | 'rejected';
 
 export default function MyScriptsPage() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [scripts, setScripts] = useState<ViralAnalysis[]>([]);
-  const [loading, setLoading] = useState(true);
+
+  const { data: scripts = [], isLoading, isFetching, isError, error, refetch } = useQuery({
+    queryKey: queryKeys.writer.myScripts(),
+    queryFn: () => analysesService.getMyAnalyses(),
+  });
+
   const [filter, setFilter] = useState<FilterType>(
     (searchParams.get('filter') as FilterType) || 'all'
   );
-
-  const [counts, setCounts] = useState({
-    all: 0,
-    pending: 0,
-    approved: 0,
-    rejected: 0,
-  });
-
-  useEffect(() => {
-    loadScripts();
-  }, []);
 
   useEffect(() => {
     setSearchParams(filter === 'all' ? {} : { filter });
   }, [filter, setSearchParams]);
 
-  const loadScripts = async () => {
-    try {
-      setLoading(true);
-      const data = await analysesService.getMyAnalyses();
-      setScripts(data);
-
-      // Calculate counts
-      setCounts({
-        all: data.length,
-        pending: data.filter((s) => s.status === 'PENDING').length,
-        approved: data.filter((s) => s.status === 'APPROVED').length,
-        rejected: data.filter((s) => s.status === 'REJECTED' && !s.is_dissolved).length,
-      });
-    } catch (error) {
-      console.error('Failed to load scripts:', error);
-      toast.error('Failed to load scripts');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const counts = useMemo(() => ({
+    all: scripts.length,
+    pending: scripts.filter((s) => s.status === 'PENDING').length,
+    approved: scripts.filter((s) => s.status === 'APPROVED').length,
+    rejected: scripts.filter((s) => s.status === 'REJECTED' && !s.is_dissolved).length,
+  }), [scripts]);
 
   const filteredScripts = scripts.filter((script) => {
     switch (filter) {
@@ -147,15 +127,16 @@ export default function MyScriptsPage() {
     { id: 'rejected', label: 'Rejected' },
   ];
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-      </div>
-    );
-  }
-
   return (
+    <QueryStateWrapper
+      isLoading={isLoading}
+      isFetching={isFetching}
+      isError={isError}
+      error={error}
+      data={scripts}
+      onRetry={refetch}
+      accentColor="blue"
+    >
     <div className="pb-4">
       {/* Header */}
       <div className="flex items-center gap-3 px-4 py-4">
@@ -413,5 +394,6 @@ export default function MyScriptsPage() {
         </motion.section>
       )}
     </div>
+    </QueryStateWrapper>
   );
 }

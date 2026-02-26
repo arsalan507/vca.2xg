@@ -1,38 +1,27 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { Loader2, Check, Search, X } from 'lucide-react';
 import Header from '@/components/Header';
 import { videographerService } from '@/services/videographerService';
 import { smartSearch } from '@/lib/smartSearch';
+import { queryKeys } from '@/lib/queryKeys';
+import { useMarkShootingComplete } from '@/hooks/useMutations';
+import QueryStateWrapper from '@/components/QueryStateWrapper';
 import type { ViralAnalysis } from '@/types';
-import toast from 'react-hot-toast';
 
 type TabType = 'active' | 'completed';
 
 export default function MyProjectsPage() {
   const navigate = useNavigate();
-  const [projects, setProjects] = useState<ViralAnalysis[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: projects = [], isLoading, isFetching, isError, error, refetch } = useQuery({
+    queryKey: queryKeys.videographer.myProjects(),
+    queryFn: () => videographerService.getMyProjects(),
+  });
+
+  const markComplete = useMarkShootingComplete();
   const [activeTab, setActiveTab] = useState<TabType>('active');
   const [searchQuery, setSearchQuery] = useState('');
-  const [markingComplete, setMarkingComplete] = useState<string | null>(null);
-
-  useEffect(() => {
-    loadProjects();
-  }, []);
-
-  const loadProjects = async () => {
-    try {
-      setLoading(true);
-      const data = await videographerService.getMyProjects();
-      setProjects(data);
-    } catch (error) {
-      console.error('Failed to load projects:', error);
-      toast.error('Failed to load projects');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // Apply smart search, then split by tab
   const searched = searchQuery.trim()
@@ -97,37 +86,24 @@ export default function MyProjectsPage() {
     }
   };
 
-  const handleMarkComplete = async (projectId: string, e: React.MouseEvent) => {
+  const handleMarkComplete = (projectId: string, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-
-    try {
-      setMarkingComplete(projectId);
-      await videographerService.markShootingComplete(projectId);
-      toast.success('Shooting marked as complete!');
-      loadProjects();
-    } catch (error: any) {
-      console.error('Failed to mark complete:', error);
-      toast.error(error.message || 'Failed to mark complete');
-    } finally {
-      setMarkingComplete(null);
-    }
+    markComplete.mutate(projectId);
   };
-
-  if (loading) {
-    return (
-      <>
-        <Header title="My Shoots" showBack />
-        <div className="flex items-center justify-center min-h-[60vh]">
-          <Loader2 className="w-8 h-8 text-orange-500 animate-spin" />
-        </div>
-      </>
-    );
-  }
 
   return (
     <>
       <Header title="My Shoots" subtitle={`${activeCount} active, ${completedCount} completed`} showBack />
+      <QueryStateWrapper
+        isLoading={isLoading}
+        isFetching={isFetching}
+        isError={isError}
+        error={error}
+        data={projects}
+        onRetry={refetch}
+        accentColor="orange"
+      >
 
       <div className="px-4 py-4">
         {/* Smart Search Bar */}
@@ -253,10 +229,10 @@ export default function MyProjectsPage() {
                           </button>
                           <button
                             onClick={(e) => handleMarkComplete(project.id, e)}
-                            disabled={markingComplete === project.id}
+                            disabled={markComplete.isPending && markComplete.variables === project.id}
                             className="flex-[2] h-11 flex items-center justify-center gap-2 bg-green-500 rounded-lg text-sm font-semibold text-white active:bg-green-600 disabled:opacity-50"
                           >
-                            {markingComplete === project.id ? (
+                            {markComplete.isPending && markComplete.variables === project.id ? (
                               <Loader2 className="w-4 h-4 animate-spin" />
                             ) : (
                               <>
@@ -368,6 +344,7 @@ export default function MyProjectsPage() {
           </div>
         )}
       </div>
+      </QueryStateWrapper>
     </>
   );
 }

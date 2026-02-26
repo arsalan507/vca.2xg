@@ -1,21 +1,48 @@
 import { useEffect, useState, useRef } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { PenLine, Settings, LogOut } from 'lucide-react';
 import { analysesService, type AnalysisStats } from '@/services/analysesService';
 import { useAuth } from '@/hooks/useAuth';
+import { queryKeys } from '@/lib/queryKeys';
+import QueryStateWrapper from '@/components/QueryStateWrapper';
 import type { ViralAnalysis } from '@/types';
-import toast from 'react-hot-toast';
+
+interface WriterHomeData {
+  stats: AnalysisStats;
+  pendingScripts: ViralAnalysis[];
+  recentApproved: ViralAnalysis[];
+  needsRevision: ViralAnalysis[];
+}
 
 export default function WriterHomePage() {
   const navigate = useNavigate();
-  const location = useLocation();
   const { user, signOut } = useAuth();
-  const [stats, setStats] = useState<AnalysisStats | null>(null);
-  const [pendingScripts, setPendingScripts] = useState<ViralAnalysis[]>([]);
-  const [recentApproved, setRecentApproved] = useState<ViralAnalysis[]>([]);
-  const [needsRevision, setNeedsRevision] = useState<ViralAnalysis[]>([]);
-  const [loading, setLoading] = useState(true);
+
+  const { data, isLoading, isFetching, isError, error, refetch } = useQuery({
+    queryKey: queryKeys.writer.homepageData(),
+    queryFn: async (): Promise<WriterHomeData> => {
+      const [statsData, pending, approved, rejected] = await Promise.all([
+        analysesService.getMyStats(),
+        analysesService.getPendingAnalyses(),
+        analysesService.getApprovedAnalyses(),
+        analysesService.getRejectedAnalyses(),
+      ]);
+      return {
+        stats: statsData,
+        pendingScripts: pending.slice(0, 3),
+        recentApproved: approved.slice(0, 3),
+        needsRevision: rejected.slice(0, 2),
+      };
+    },
+  });
+
+  const stats = data?.stats ?? null;
+  const pendingScripts = data?.pendingScripts ?? [];
+  const recentApproved = data?.recentApproved ?? [];
+  const needsRevision = data?.needsRevision ?? [];
+
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -38,32 +65,6 @@ export default function WriterHomePage() {
 
   const handleLogout = () => {
     signOut(); // clears session instantly — ProtectedRoute redirects to /login automatically
-  };
-
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = async () => {
-    try {
-      setLoading(true);
-      const [statsData, pending, approved, rejected] = await Promise.all([
-        analysesService.getMyStats(),
-        analysesService.getPendingAnalyses(),
-        analysesService.getApprovedAnalyses(),
-        analysesService.getRejectedAnalyses(),
-      ]);
-
-      setStats(statsData);
-      setPendingScripts(pending.slice(0, 3)); // Show max 3
-      setRecentApproved(approved.slice(0, 3)); // Show max 3
-      setNeedsRevision(rejected.slice(0, 2)); // Show max 2
-    } catch (error) {
-      console.error('Failed to load data:', error);
-      toast.error('Failed to load data');
-    } finally {
-      setLoading(false);
-    }
   };
 
   const formatTimeAgo = (dateString: string) => {
@@ -113,15 +114,16 @@ export default function WriterHomePage() {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-      </div>
-    );
-  }
-
   return (
+    <QueryStateWrapper
+      isLoading={isLoading}
+      isFetching={isFetching}
+      isError={isError}
+      error={error}
+      data={data}
+      onRetry={refetch}
+      accentColor="blue"
+    >
     <div className="pb-4">
       {/* Greeting Header */}
       <div className="flex items-center justify-between py-4 relative">
@@ -409,5 +411,6 @@ export default function WriterHomePage() {
         </motion.div>
       )}
     </div>
+    </QueryStateWrapper>
   );
 }

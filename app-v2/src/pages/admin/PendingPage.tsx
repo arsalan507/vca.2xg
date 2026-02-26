@@ -1,39 +1,27 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { Clock, FileText, CheckSquare, Square, CheckCircle, Eye, Loader2, Search, X } from 'lucide-react';
+import { Clock, FileText, CheckSquare, Square, CheckCircle, Loader2, Search, X } from 'lucide-react';
 import { adminService } from '@/services/adminService';
 import { smartSearch } from '@/lib/smartSearch';
-import type { ViralAnalysis } from '@/types';
+import { queryKeys } from '@/lib/queryKeys';
+import QueryStateWrapper from '@/components/QueryStateWrapper';
 import toast from 'react-hot-toast';
 
 type FilterType = 'all' | 'instagram' | 'youtube_shorts' | 'youtube_long';
 
 export default function PendingPage() {
-  const [scripts, setScripts] = useState<ViralAnalysis[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: scripts = [], isLoading, isFetching, isError, error, refetch } = useQuery({
+    queryKey: queryKeys.admin.pendingAnalyses(),
+    queryFn: () => adminService.getPendingAnalyses(),
+  });
+
   const [filter, setFilter] = useState<FilterType>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [bulkMode, setBulkMode] = useState(false);
   const [selectedScripts, setSelectedScripts] = useState<Set<string>>(new Set());
   const [bulkApproving, setBulkApproving] = useState(false);
-
-  useEffect(() => {
-    loadScripts();
-  }, []);
-
-  const loadScripts = async () => {
-    try {
-      setLoading(true);
-      const data = await adminService.getPendingAnalyses();
-      setScripts(data);
-    } catch (error) {
-      console.error('Failed to load pending scripts:', error);
-      toast.error('Failed to load pending scripts');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // Toggle bulk mode
   const toggleBulkMode = () => {
@@ -160,15 +148,16 @@ export default function PendingPage() {
     { id: 'youtube_long', label: 'YouTube' },
   ];
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500"></div>
-      </div>
-    );
-  }
-
   return (
+    <QueryStateWrapper
+      isLoading={isLoading}
+      isFetching={isFetching}
+      isError={isError}
+      error={error}
+      data={scripts}
+      onRetry={refetch}
+      accentColor="purple"
+    >
     <div className="pb-4">
       {/* Header with Bulk Mode Toggle */}
       <div className="flex items-center justify-between mb-4">
@@ -390,5 +379,6 @@ export default function PendingPage() {
         })}
       </div>
     </div>
+    </QueryStateWrapper>
   );
 }

@@ -7,6 +7,7 @@ import Header from '@/components/Header';
 import { useAuth } from '@/hooks/useAuth';
 import { postingManagerService, type PostingStats } from '@/services/postingManagerService';
 import { queryKeys } from '@/lib/queryKeys';
+import QueryStateWrapper from '@/components/QueryStateWrapper';
 import type { ViralAnalysis } from '@/types';
 
 export default function PostingHomePage() {
@@ -44,24 +45,28 @@ export default function PostingHomePage() {
   }, []);
 
   // React Query: posting stats
-  const { data: statsData, isLoading: statsLoading } = useQuery({
+  const { data: statsData, isLoading: statsLoading, isFetching: sf, isError: se, error: serr, refetch: rs } = useQuery({
     queryKey: queryKeys.posting.stats(),
     queryFn: () => postingManagerService.getPostingStats(),
   });
 
   // React Query: ready-to-post projects
-  const { data: readyData, isLoading: readyLoading } = useQuery({
+  const { data: readyData, isLoading: readyLoading, isFetching: rf, isError: re, error: rerr, refetch: rr } = useQuery({
     queryKey: queryKeys.posting.readyProjects(),
     queryFn: () => postingManagerService.getReadyToPostProjects(),
   });
 
   // React Query: today's scheduled posts
-  const { data: scheduledData, isLoading: scheduledLoading } = useQuery({
+  const { data: scheduledData, isLoading: scheduledLoading, isFetching: schf, isError: sche, error: scherr, refetch: rsch } = useQuery({
     queryKey: queryKeys.posting.scheduledPosts(startOfDay, endOfDay),
     queryFn: () => postingManagerService.getScheduledPosts(startOfDay, endOfDay),
   });
 
   const loading = statsLoading || readyLoading || scheduledLoading;
+  const isFetching = sf || rf || schf;
+  const isError = se || re || sche;
+  const queryError = serr || rerr || scherr;
+  const refetchAll = () => { rs(); rr(); rsch(); };
   const stats: PostingStats = statsData ?? { readyToPost: 0, scheduledToday: 0, postedThisWeek: 0, postedThisMonth: 0 };
   const readyProjects: ViralAnalysis[] = readyData ?? [];
   const todaysSchedule: ViralAnalysis[] = scheduledData ?? [];
@@ -93,18 +98,16 @@ export default function PostingHomePage() {
     return post.production_stage === 'POSTED' || !!post.posted_at;
   };
 
-  if (loading) {
-    return (
-      <>
-        <Header title="Posting Manager" subtitle="Schedule & post content" showLogout />
-        <div className="flex items-center justify-center min-h-[60vh]">
-          <Loader2 className="w-8 h-8 text-cyan-500 animate-spin" />
-        </div>
-      </>
-    );
-  }
-
   return (
+    <QueryStateWrapper
+      isLoading={loading}
+      isFetching={isFetching}
+      isError={isError}
+      error={queryError}
+      data={statsData}
+      onRetry={refetchAll}
+      accentColor="cyan"
+    >
     <>
       {/* Personalized Header with Profile Dropdown */}
       <header className="sticky top-0 z-50 bg-white border-b border-gray-100">
@@ -381,5 +384,6 @@ export default function PostingHomePage() {
         </section>
       </div>
     </>
+    </QueryStateWrapper>
   );
 }

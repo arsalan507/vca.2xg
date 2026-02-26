@@ -6,6 +6,7 @@ import { TrendingUp, Users, Settings, LogOut, UsersRound, ChevronRight } from 'l
 import { adminService, type DashboardStats, type QueueStats } from '@/services/adminService';
 import { queryKeys } from '@/lib/queryKeys';
 import { useAuth } from '@/hooks/useAuth';
+import QueryStateWrapper from '@/components/QueryStateWrapper';
 
 interface PendingScript {
   id: string;
@@ -23,18 +24,22 @@ export default function AdminHomePage() {
   const profileMenuRef = useRef<HTMLDivElement>(null);
 
   // React Query: dashboard + queue stats
-  const { data: combined, isLoading: statsLoading } = useQuery({
+  const { data: combined, isLoading: statsLoading, isFetching: statsFetching, isError: statsError, error: statsErr, refetch: refetchStats } = useQuery({
     queryKey: queryKeys.admin.dashboardStats(),
     queryFn: () => adminService.getDashboardAndQueueStats(),
   });
 
   // React Query: pending analyses
-  const { data: pendingAnalyses, isLoading: pendingLoading } = useQuery({
+  const { data: pendingAnalyses, isLoading: pendingLoading, isFetching: pendingFetching, isError: pendingError, error: pendingErr, refetch: refetchPending } = useQuery({
     queryKey: queryKeys.admin.pendingAnalyses(),
     queryFn: () => adminService.getPendingAnalyses().catch(() => []),
   });
 
   const loading = statsLoading || pendingLoading;
+  const isFetching = statsFetching || pendingFetching;
+  const isError = statsError || pendingError;
+  const error = statsErr || pendingErr;
+  const refetch = () => { refetchStats(); refetchPending(); };
   const stats: DashboardStats | null = combined?.dashboard ?? null;
   const queueStats: QueueStats | null = combined?.queue ?? null;
 
@@ -110,14 +115,6 @@ export default function AdminHomePage() {
     return '🏠';
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500"></div>
-      </div>
-    );
-  }
-
   // Calculate in production (all active stages)
   const inProduction = (queueStats?.planning || 0) + (queueStats?.shooting || 0) +
     (queueStats?.readyForEdit || 0) + (queueStats?.editing || 0) + (queueStats?.editReview || 0) + (queueStats?.readyToPost || 0);
@@ -169,6 +166,15 @@ export default function AdminHomePage() {
   ];
 
   return (
+    <QueryStateWrapper
+      isLoading={loading}
+      isFetching={isFetching}
+      isError={isError}
+      error={error}
+      data={combined}
+      onRetry={refetch}
+      accentColor="purple"
+    >
     <div className="pb-4">
       {/* Header with greeting */}
       <motion.div
@@ -462,6 +468,7 @@ export default function AdminHomePage() {
         </div>
       </motion.section>
     </div>
+    </QueryStateWrapper>
   );
 }
 

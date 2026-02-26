@@ -6,6 +6,8 @@ export const queryKeys = {
     all: ['admin'] as const,
     dashboardStats: () => [...queryKeys.admin.all, 'dashboardStats'] as const,
     pendingAnalyses: () => [...queryKeys.admin.all, 'pendingAnalyses'] as const,
+    production: () => [...queryKeys.admin.all, 'production'] as const,
+    editReview: () => [...queryKeys.admin.all, 'editReview'] as const,
     project: (id: string) => [...queryKeys.admin.all, 'project', id] as const,
     team: () => [...queryKeys.admin.all, 'team'] as const,
   },
@@ -23,12 +25,16 @@ export const queryKeys = {
     homepageData: () => [...queryKeys.editor.all, 'homepageData'] as const,
     availableProjects: () => [...queryKeys.editor.all, 'availableProjects'] as const,
     myProjects: () => [...queryKeys.editor.all, 'myProjects'] as const,
+    completedProjects: () => [...queryKeys.editor.all, 'completedProjects'] as const,
     project: (id: string) => [...queryKeys.editor.all, 'project', id] as const,
   },
   posting: {
     all: ['posting'] as const,
     stats: () => [...queryKeys.posting.all, 'stats'] as const,
     readyProjects: () => [...queryKeys.posting.all, 'readyProjects'] as const,
+    toPost: () => [...queryKeys.posting.all, 'toPost'] as const,
+    calendar: (start: string, end: string) =>
+      [...queryKeys.posting.all, 'calendar', start, end] as const,
     scheduledPosts: (start: string, end: string) =>
       [...queryKeys.posting.all, 'scheduledPosts', start, end] as const,
     post: (id: string) => [...queryKeys.posting.all, 'post', id] as const,
@@ -36,6 +42,7 @@ export const queryKeys = {
   },
   writer: {
     all: ['writer'] as const,
+    homepageData: () => [...queryKeys.writer.all, 'homepageData'] as const,
     myScripts: () => [...queryKeys.writer.all, 'myScripts'] as const,
   },
 };

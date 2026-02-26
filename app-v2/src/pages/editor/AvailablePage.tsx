@@ -1,37 +1,25 @@
-import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Video, Clock, ExternalLink, Loader2, MapPin, Search, X } from 'lucide-react';
 import Header from '@/components/Header';
 import { editorService } from '@/services/editorService';
+import { queryKeys } from '@/lib/queryKeys';
+import { useEditorPickProject, useEditorRejectProject } from '@/hooks/useMutations';
+import QueryStateWrapper from '@/components/QueryStateWrapper';
 import type { ViralAnalysis } from '@/types';
-import toast from 'react-hot-toast';
 
 type FilterType = 'all' | 'shorts' | 'reels' | 'long';
 
 export default function EditorAvailablePage() {
-  const navigate = useNavigate();
-  const [projects, setProjects] = useState<ViralAnalysis[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: projects = [], isLoading, isFetching, isError, error, refetch } = useQuery({
+    queryKey: queryKeys.editor.availableProjects(),
+    queryFn: () => editorService.getAvailableProjects(),
+  });
+
+  const pickMutation = useEditorPickProject();
+  const skipMutation = useEditorRejectProject();
   const [filter, setFilter] = useState<FilterType>('all');
-  const [pickingId, setPickingId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-
-  useEffect(() => {
-    loadProjects();
-  }, []);
-
-  const loadProjects = async () => {
-    try {
-      setLoading(true);
-      const data = await editorService.getAvailableProjects();
-      setProjects(data);
-    } catch (error) {
-      console.error('Failed to load projects:', error);
-      toast.error('Failed to load projects');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const filteredProjects = projects.filter((p) => {
     // Filter by platform
@@ -63,27 +51,12 @@ export default function EditorAvailablePage() {
     long: projects.filter((p) => p.platform === 'youtube_long').length,
   };
 
-  const handlePick = async (projectId: string) => {
-    try {
-      setPickingId(projectId);
-      await editorService.pickProject({ analysisId: projectId });
-      toast.success('Project picked successfully!');
-      navigate(`/editor/project/${projectId}`);
-    } catch (error: any) {
-      console.error('Failed to pick project:', error);
-      toast.error(error.message || 'Failed to pick project');
-      setPickingId(null);
-    }
+  const handlePick = (projectId: string) => {
+    pickMutation.mutate({ analysisId: projectId });
   };
 
-  const handleSkip = async (projectId: string) => {
-    try {
-      await editorService.rejectProject(projectId);
-      setProjects((prev) => prev.filter((p) => p.id !== projectId));
-      toast.success('Project hidden from list');
-    } catch {
-      toast.error('Failed to skip project');
-    }
+  const handleSkip = (projectId: string) => {
+    skipMutation.mutate(projectId);
   };
 
   const getFileCount = (project: ViralAnalysis) => {
@@ -123,20 +96,18 @@ export default function EditorAvailablePage() {
     return types[fileType] || fileType;
   };
 
-  if (loading) {
-    return (
-      <>
-        <Header title="Available Projects" showBack />
-        <div className="flex items-center justify-center min-h-[60vh]">
-          <Loader2 className="w-8 h-8 text-green-500 animate-spin" />
-        </div>
-      </>
-    );
-  }
-
   return (
     <>
       <Header title="Available Projects" subtitle={`${filteredProjects.length} ready for edit`} showBack />
+      <QueryStateWrapper
+        isLoading={isLoading}
+        isFetching={isFetching}
+        isError={isError}
+        error={error}
+        data={projects}
+        onRetry={refetch}
+        accentColor="green"
+      >
 
       <div className="px-4 py-4">
         {/* Search Bar */}
@@ -315,10 +286,10 @@ export default function EditorAvailablePage() {
                     </button>
                     <button
                       onClick={() => handlePick(project.id)}
-                      disabled={pickingId === project.id}
+                      disabled={pickMutation.isPending && pickMutation.variables?.analysisId === project.id}
                       className="flex-[2] h-10 flex items-center justify-center gap-2 bg-editor rounded-lg text-sm font-semibold text-white active:opacity-90 disabled:opacity-50"
                     >
-                      {pickingId === project.id ? (
+                      {pickMutation.isPending && pickMutation.variables?.analysisId === project.id ? (
                         <Loader2 className="w-4 h-4 animate-spin" />
                       ) : (
                         'Pick to Edit'
@@ -339,6 +310,7 @@ export default function EditorAvailablePage() {
           </div>
         )}
       </div>
+      </QueryStateWrapper>
     </>
   );
 }

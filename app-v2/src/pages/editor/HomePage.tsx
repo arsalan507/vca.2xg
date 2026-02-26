@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { editorService, type EditorStats } from '@/services/editorService';
 import { queryKeys } from '@/lib/queryKeys';
 import { useAuth } from '@/hooks/useAuth';
+import QueryStateWrapper from '@/components/QueryStateWrapper';
 import type { ViralAnalysis } from '@/types';
 
 // Helper to check if project is "new" (assigned within last 24 hours)
@@ -53,7 +54,7 @@ export default function EditorHomePage() {
   };
 
   // React Query: all homepage data in one query
-  const { data: homepageData, isLoading: loading } = useQuery({
+  const { data: homepageData, isLoading: loading, isFetching, isError, error, refetch } = useQuery({
     queryKey: queryKeys.editor.homepageData(),
     queryFn: () => editorService.getHomepageData(),
   });
@@ -95,15 +96,16 @@ export default function EditorHomePage() {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="w-8 h-8 text-green-500 animate-spin" />
-      </div>
-    );
-  }
-
   return (
+    <QueryStateWrapper
+      isLoading={loading}
+      isFetching={isFetching}
+      isError={isError}
+      error={error}
+      data={homepageData}
+      onRetry={refetch}
+      accentColor="green"
+    >
     <div className="pb-4 space-y-6">
       {/* Header with greeting */}
       <div className="flex items-center justify-between relative">
@@ -368,5 +370,6 @@ export default function EditorHomePage() {
           )}
         </section>
       </div>
+    </QueryStateWrapper>
   );
 }

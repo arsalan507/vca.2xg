@@ -1,10 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Upload, CheckCircle, Loader2, Clock, AlertTriangle, Sparkles } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { Upload, CheckCircle, Clock, AlertTriangle, Sparkles } from 'lucide-react';
 import Header from '@/components/Header';
 import { editorService } from '@/services/editorService';
+import { queryKeys } from '@/lib/queryKeys';
+import QueryStateWrapper from '@/components/QueryStateWrapper';
 import type { ViralAnalysis } from '@/types';
-import toast from 'react-hot-toast';
 
 type TabType = 'active' | 'completed';
 
@@ -42,26 +44,12 @@ const formatDueDate = (deadline: string) => {
 };
 
 export default function EditorMyProjectsPage() {
-  const [projects, setProjects] = useState<ViralAnalysis[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: projects = [], isLoading, isFetching, isError, error, refetch } = useQuery({
+    queryKey: queryKeys.editor.myProjects(),
+    queryFn: () => editorService.getMyProjects(),
+  });
+
   const [activeTab, setActiveTab] = useState<TabType>('active');
-
-  useEffect(() => {
-    loadProjects();
-  }, []);
-
-  const loadProjects = async () => {
-    try {
-      setLoading(true);
-      const data = await editorService.getMyProjects();
-      setProjects(data);
-    } catch (error) {
-      console.error('Failed to load projects:', error);
-      toast.error('Failed to load projects');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // Group projects by status
   const editingProjects = projects.filter((p) => p.production_stage === 'EDITING');
@@ -98,20 +86,18 @@ export default function EditorMyProjectsPage() {
     ).length || 0;
   };
 
-  if (loading) {
-    return (
-      <>
-        <Header title="My Queue" showBack />
-        <div className="flex items-center justify-center min-h-[60vh]">
-          <Loader2 className="w-8 h-8 text-green-500 animate-spin" />
-        </div>
-      </>
-    );
-  }
-
   return (
     <>
       <Header title="My Queue" subtitle={`${activeCount} active, ${completedCount} completed`} showBack />
+      <QueryStateWrapper
+        isLoading={isLoading}
+        isFetching={isFetching}
+        isError={isError}
+        error={error}
+        data={projects}
+        onRetry={refetch}
+        accentColor="green"
+      >
 
       <div className="px-4 py-4">
         {/* Tab Switcher */}
@@ -457,6 +443,7 @@ export default function EditorMyProjectsPage() {
           </div>
         )}
       </div>
+      </QueryStateWrapper>
     </>
   );
 }

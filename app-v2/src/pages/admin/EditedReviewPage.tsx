@@ -1,35 +1,27 @@
-import { useState, useEffect } from 'react';
-import { Video, Play, Download, CheckCircle, XCircle, Eye, ChevronDown, ChevronUp, Loader2, CheckSquare, Square } from 'lucide-react';
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { Video, Download, CheckCircle, XCircle, Eye, ChevronDown, ChevronUp, Loader2, CheckSquare, Square } from 'lucide-react';
 import { adminService } from '@/services/adminService';
 import { getDriveDownloadUrl } from '@/lib/driveUtils';
+import { queryKeys } from '@/lib/queryKeys';
+import { useAdminApproveEdit, useAdminRejectEdit } from '@/hooks/useMutations';
+import QueryStateWrapper from '@/components/QueryStateWrapper';
 import toast from 'react-hot-toast';
 import type { ViralAnalysis } from '@/types';
 import { motion } from 'framer-motion';
 
 export default function EditedReviewPage() {
-  const [projects, setProjects] = useState<ViralAnalysis[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: projects = [], isLoading, isFetching, isError, error, refetch } = useQuery({
+    queryKey: queryKeys.admin.editReview(),
+    queryFn: () => adminService.getEditReviewProjects(),
+  });
+
+  const approveMutation = useAdminApproveEdit();
+  const rejectMutation = useAdminRejectEdit();
   const [bulkMode, setBulkMode] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [expandedProject, setExpandedProject] = useState<string | null>(null);
   const [bulkApproving, setBulkApproving] = useState(false);
-
-  useEffect(() => {
-    loadProjects();
-  }, []);
-
-  const loadProjects = async () => {
-    try {
-      setLoading(true);
-      const editReviewProjects = await adminService.getEditReviewProjects();
-      setProjects(editReviewProjects);
-    } catch (error) {
-      console.error('Failed to load projects:', error);
-      toast.error('Failed to load edited videos');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleBulkApprove = async () => {
     if (selected.size === 0) {
@@ -48,7 +40,7 @@ export default function EditedReviewPage() {
       toast.success(`Approved ${selected.size} video${selected.size !== 1 ? 's' : ''}!`);
       setSelected(new Set());
       setBulkMode(false);
-      loadProjects();
+      refetch();
     } catch (error) {
       console.error('Bulk approve failed:', error);
       toast.error('Some approvals failed. Check console for details.');
@@ -57,28 +49,14 @@ export default function EditedReviewPage() {
     }
   };
 
-  const handleApproveVideo = async (id: string) => {
-    try {
-      await adminService.approveEditedVideo(id);
-      toast.success('Video approved!');
-      loadProjects();
-    } catch (error) {
-      console.error('Failed to approve video:', error);
-      toast.error('Failed to approve video');
-    }
+  const handleApproveVideo = (id: string) => {
+    approveMutation.mutate(id);
   };
 
-  const handleRejectVideo = async (id: string) => {
+  const handleRejectVideo = (id: string) => {
     const reason = window.prompt('Rejection reason (required):');
     if (!reason?.trim()) return;
-    try {
-      await adminService.rejectEditedVideo(id, reason.trim());
-      toast.success('Video rejected');
-      loadProjects();
-    } catch (error) {
-      console.error('Failed to reject video:', error);
-      toast.error('Failed to reject video');
-    }
+    rejectMutation.mutate({ projectId: id, reason: reason.trim() });
   };
 
   const toggleProject = (id: string) => {
@@ -123,15 +101,16 @@ export default function EditedReviewPage() {
     return `${diffDays}d ago`;
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="w-8 h-8 text-purple-500 animate-spin" />
-      </div>
-    );
-  }
-
   return (
+    <QueryStateWrapper
+      isLoading={isLoading}
+      isFetching={isFetching}
+      isError={isError}
+      error={error}
+      data={projects}
+      onRetry={refetch}
+      accentColor="purple"
+    >
     <div className="pb-4">
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
@@ -361,5 +340,6 @@ export default function EditedReviewPage() {
         })}
       </div>
     </div>
+    </QueryStateWrapper>
   );
 }

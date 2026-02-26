@@ -8,6 +8,7 @@ import { videographerService, type VideographerStats } from '@/services/videogra
 import { queryKeys } from '@/lib/queryKeys';
 import type { ViralAnalysis } from '@/types';
 import { useAuth } from '@/hooks/useAuth';
+import QueryStateWrapper from '@/components/QueryStateWrapper';
 import toast from 'react-hot-toast';
 
 export default function VideographerHomePage() {
@@ -43,7 +44,7 @@ export default function VideographerHomePage() {
   }, []);
 
   // React Query: all homepage data in one query
-  const { data: homepageData, isLoading: loading } = useQuery({
+  const { data: homepageData, isLoading: loading, isFetching, isError, error, refetch } = useQuery({
     queryKey: queryKeys.videographer.homepageData(),
     queryFn: () => videographerService.getHomepageData(),
   });
@@ -209,16 +210,17 @@ export default function VideographerHomePage() {
   const userEmail = user?.email || '';
   const initials = fullName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || 'V';
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="w-8 h-8 text-orange-500 animate-spin" />
-      </div>
-    );
-  }
-
   return (
     <>
+    <QueryStateWrapper
+      isLoading={loading}
+      isFetching={isFetching}
+      isError={isError}
+      error={error}
+      data={homepageData}
+      onRetry={refetch}
+      accentColor="orange"
+    >
     <div className="pb-4">
       {/* Header with greeting */}
       <div className="flex items-center justify-between mb-6 relative">
@@ -535,6 +537,8 @@ export default function VideographerHomePage() {
         </section>
       )}
     </div>
+
+    </QueryStateWrapper>
 
     {/* Profile Selection Modal */}
     {showProfileModal && createPortal(

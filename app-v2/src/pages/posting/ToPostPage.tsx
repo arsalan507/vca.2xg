@@ -1,48 +1,35 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Clock, Loader2, Play, Eye } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { Clock, Play, Eye } from 'lucide-react';
 import Header from '@/components/Header';
 import { postingManagerService } from '@/services/postingManagerService';
 import { videographerService } from '@/services/videographerService';
+import { queryKeys } from '@/lib/queryKeys';
+import QueryStateWrapper from '@/components/QueryStateWrapper';
 import type { ViralAnalysis } from '@/types';
 import { ProfilePlatformIcons } from '@/types';
-import toast from 'react-hot-toast';
 
 type PlatformFilter = 'all' | 'instagram' | 'youtube_shorts' | 'youtube_long';
 
-interface Profile {
-  id: string;
-  name: string;
-  platform?: string;
-}
-
 export default function ToPostPage() {
-  const [projects, setProjects] = useState<ViralAnalysis[]>([]);
-  const [profiles, setProfiles] = useState<Profile[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: projects = [], isLoading: pl, isFetching: pf, isError: pe, error: perr, refetch: rp } = useQuery({
+    queryKey: queryKeys.posting.toPost(),
+    queryFn: () => postingManagerService.getReadyToPostProjects(),
+  });
+  const { data: profiles = [], isLoading: prl, isFetching: prf, isError: pre, error: prerr, refetch: rpr } = useQuery({
+    queryKey: queryKeys.videographer.profiles(),
+    queryFn: () => videographerService.getProfiles(),
+  });
+
+  const isLoading = pl || prl;
+  const isFetching = pf || prf;
+  const isError = pe || pre;
+  const queryError = perr || prerr;
+  const refetchAll = () => { rp(); rpr(); };
+
   const [selectedProfile, setSelectedProfile] = useState<string>('all');
   const [platformFilter, setPlatformFilter] = useState<PlatformFilter>('all');
-
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = async () => {
-    try {
-      setLoading(true);
-      const [projectsData, profilesData] = await Promise.all([
-        postingManagerService.getReadyToPostProjects(),
-        videographerService.getProfiles(),
-      ]);
-      setProjects(projectsData);
-      setProfiles(profilesData);
-    } catch (error) {
-      console.error('Failed to load data:', error);
-      toast.error('Failed to load projects');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // Filter by profile
   const profileFilteredProjects = projects.filter((p) => {
@@ -108,20 +95,18 @@ export default function ToPostPage() {
     return editedFile?.thumbnail_url || null;
   };
 
-  if (loading) {
-    return (
-      <>
-        <Header title="Ready to Post" showBack />
-        <div className="flex items-center justify-center min-h-[60vh]">
-          <Loader2 className="w-8 h-8 text-cyan-500 animate-spin" />
-        </div>
-      </>
-    );
-  }
-
   return (
     <>
       <Header title="Ready to Post" subtitle={`${filteredProjects.length} videos`} showBack />
+      <QueryStateWrapper
+        isLoading={isLoading}
+        isFetching={isFetching}
+        isError={isError}
+        error={queryError}
+        data={projects}
+        onRetry={refetchAll}
+        accentColor="cyan"
+      >
 
       <div className="px-4 py-4">
         {/* Profile Filter Chips */}
@@ -285,6 +270,7 @@ export default function ToPostPage() {
           </div>
         )}
       </div>
+      </QueryStateWrapper>
     </>
   );
 }

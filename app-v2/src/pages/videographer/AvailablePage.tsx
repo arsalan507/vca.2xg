@@ -1,11 +1,14 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { Loader2, X, ChevronUp, ChevronDown, Play, ExternalLink, Eye, Search, Check, PlusCircle } from 'lucide-react';
 import Header from '@/components/Header';
 import { videographerService } from '@/services/videographerService';
 import { smartSearch } from '@/lib/smartSearch';
 import { adminService } from '@/services/adminService';
+import { queryKeys } from '@/lib/queryKeys';
+import { usePickProject, useRejectProject } from '@/hooks/useMutations';
+import QueryStateWrapper from '@/components/QueryStateWrapper';
 import type { ViralAnalysis, CharacterTag } from '@/types';
 import toast from 'react-hot-toast';
 
@@ -60,11 +63,24 @@ const getVideoEmbed = (url?: string) => {
 };
 
 export default function AvailablePage() {
-  const navigate = useNavigate();
-  const [projects, setProjects] = useState<ViralAnalysis[]>([]);
-  const [loading, setLoading] = useState(true);
+  // React Query: available projects + character tags
+  const { data: queryData, isLoading, isFetching, isError, error, refetch } = useQuery({
+    queryKey: queryKeys.videographer.availableProjects(),
+    queryFn: async () => {
+      const [data, tags] = await Promise.all([
+        videographerService.getAvailableProjects(),
+        adminService.getAllCharacterTags().catch(() => [] as CharacterTag[]),
+      ]);
+      return { projects: data, characterTags: tags };
+    },
+  });
+
+  const projects = queryData?.projects ?? [];
+  const allCharacterTags = queryData?.characterTags ?? [];
+
+  const pickMutation = usePickProject();
+  const rejectMutation = useRejectProject();
   const [filter, setFilter] = useState<FilterType>('all');
-  const [picking, setPicking] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
   // Profile selection modal state
@@ -87,29 +103,7 @@ export default function AvailablePage() {
   const [currentReelIndex, setCurrentReelIndex] = useState(0);
 
   // Character filter state
-  const [allCharacterTags, setAllCharacterTags] = useState<CharacterTag[]>([]);
   const [selectedCharacterIds, setSelectedCharacterIds] = useState<Set<string>>(new Set());
-
-  useEffect(() => {
-    loadProjects();
-  }, []);
-
-  const loadProjects = async () => {
-    try {
-      setLoading(true);
-      const [data, tags] = await Promise.all([
-        videographerService.getAvailableProjects(),
-        adminService.getAllCharacterTags().catch(() => []),
-      ]);
-      setProjects(data);
-      setAllCharacterTags(tags);
-    } catch (error) {
-      console.error('Failed to load projects:', error);
-      toast.error('Failed to load projects');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // Step 1: filter by tab (priority / shoot type)
   const tabFiltered = projects.filter((p) => {
@@ -199,34 +193,20 @@ export default function AvailablePage() {
     }
   };
 
-  const handlePickWithProfile = async (profileId?: string) => {
+  const handlePickWithProfile = (profileId?: string) => {
     if (!profileModalProjectId) return;
     const projectId = profileModalProjectId;
     const closeViewer = profileModalCloseViewer;
     setShowProfileModal(false);
 
-    try {
-      setPicking(projectId);
-      await videographerService.pickProject({
-        analysisId: projectId,
-        profileId: profileId || undefined,
-      });
-      toast.success('Project picked successfully!');
-      if (closeViewer) setShowReelsViewer(false);
-      navigate(`/videographer/project/${projectId}`);
-    } catch (error: any) {
-      console.error('Failed to pick project:', error);
-      const errorMsg = error.message || 'Failed to pick project';
-      toast.error(errorMsg);
-
-      if (errorMsg.includes('already been picked') || errorMsg.includes('no longer available')) {
-        setProjects((prev) => prev.filter((p) => p.id !== projectId));
-        if (showReelsViewer && currentReelIndex >= filteredProjects.length - 1) {
-          setCurrentReelIndex(Math.max(0, currentReelIndex - 1));
-        }
+    pickMutation.mutate(
+      { analysisId: projectId, profileId: profileId || undefined },
+      {
+        onSuccess: () => {
+          if (closeViewer) setShowReelsViewer(false);
+        },
       }
-      setPicking(null);
-    }
+    );
   };
 
   const handleCreateProfile = async () => {
@@ -269,21 +249,20 @@ export default function AvailablePage() {
     }
   };
 
-  const handleReject = async (projectId: string, inViewer = false) => {
-    await videographerService.rejectProject(projectId);
-    setProjects((prev) => prev.filter((p) => p.id !== projectId));
-    toast.success('Project skipped');
-
-    // Handle navigation in reels viewer
-    if (inViewer) {
-      const newFilteredLength = filteredProjects.length - 1;
-      if (currentReelIndex >= newFilteredLength) {
-        setCurrentReelIndex(Math.max(0, newFilteredLength - 1));
-      }
-      if (newFilteredLength === 0) {
-        setShowReelsViewer(false);
-      }
-    }
+  const handleReject = (projectId: string, inViewer = false) => {
+    rejectMutation.mutate(projectId, {
+      onSuccess: () => {
+        if (inViewer) {
+          const newFilteredLength = filteredProjects.length - 1;
+          if (currentReelIndex >= newFilteredLength) {
+            setCurrentReelIndex(Math.max(0, newFilteredLength - 1));
+          }
+          if (newFilteredLength === 0) {
+            setShowReelsViewer(false);
+          }
+        }
+      },
+    });
   };
 
   // Open reels viewer at specific index
@@ -338,20 +317,18 @@ export default function AvailablePage() {
   // Current project in reels viewer
   const currentProject = filteredProjects[currentReelIndex];
 
-  if (loading) {
-    return (
-      <>
-        <Header title="Available Projects" showBack />
-        <div className="flex items-center justify-center min-h-[60vh]">
-          <Loader2 className="w-8 h-8 text-orange-500 animate-spin" />
-        </div>
-      </>
-    );
-  }
-
   return (
     <>
       <Header title="Available Projects" subtitle={`${filteredProjects.length} projects ready for shooting`} showBack />
+      <QueryStateWrapper
+        isLoading={isLoading}
+        isFetching={isFetching}
+        isError={isError}
+        error={error}
+        data={queryData}
+        onRetry={refetch}
+        accentColor="orange"
+      >
 
       <div className="px-4 py-4">
         {/* Smart Search Bar */}
@@ -534,12 +511,12 @@ export default function AvailablePage() {
                     </button>
                     <button
                       onClick={() => openProfileModal(project.id)}
-                      disabled={picking === project.id}
+                      disabled={pickMutation.isPending && pickMutation.variables?.analysisId === project.id}
                       className="flex-1 h-10 flex items-center justify-center gap-2 bg-green-500 rounded-lg text-sm font-medium text-white active:bg-green-600 disabled:opacity-50"
                       aria-label={`Pick ${project.title || 'project'} for shooting`}
-                      aria-busy={picking === project.id}
+                      aria-busy={pickMutation.isPending && pickMutation.variables?.analysisId === project.id}
                     >
-                      {picking === project.id ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Pick Project'}
+                      {pickMutation.isPending && pickMutation.variables?.analysisId === project.id ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Pick Project'}
                     </button>
                   </div>
                 </div>
@@ -556,6 +533,7 @@ export default function AvailablePage() {
           </div>
         )}
       </div>
+      </QueryStateWrapper>
 
       {/* Reels Viewer Modal - rendered via portal to be above everything */}
       {showReelsViewer && currentProject && createPortal(
@@ -732,10 +710,10 @@ export default function AvailablePage() {
                 </button>
                 <button
                   onClick={() => openProfileModal(currentProject.id, true)}
-                  disabled={picking === currentProject.id}
+                  disabled={pickMutation.isPending && pickMutation.variables?.analysisId === currentProject.id}
                   className="flex-[2] h-12 flex items-center justify-center gap-2 bg-green-500 rounded-xl text-white font-medium active:bg-green-600 disabled:opacity-50"
                 >
-                  {picking === currentProject.id ? (
+                  {pickMutation.isPending && pickMutation.variables?.analysisId === currentProject.id ? (
                     <Loader2 className="w-5 h-5 animate-spin" />
                   ) : (
                     'Pick This Project'

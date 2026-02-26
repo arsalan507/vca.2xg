@@ -1,19 +1,17 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { ChevronLeft, ChevronRight, Loader2, Upload } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Upload } from 'lucide-react';
 import { postingManagerService } from '@/services/postingManagerService';
 import { videographerService } from '@/services/videographerService';
+import { queryKeys } from '@/lib/queryKeys';
+import QueryStateWrapper from '@/components/QueryStateWrapper';
 import type { ViralAnalysis } from '@/types';
 
 type ViewMode = 'scheduled' | 'ready';
 
 type PlatformFilter = 'all' | 'instagram' | 'youtube_shorts' | 'youtube_long' | 'tiktok';
-
-interface Profile {
-  id: string;
-  name: string;
-}
 
 interface ScheduledCounts {
   today: number;
@@ -27,44 +25,40 @@ interface GroupedPosts {
 
 export default function CalendarPage() {
   const navigate = useNavigate();
-  const [scheduledPosts, setScheduledPosts] = useState<ViralAnalysis[]>([]);
-  const [readyToPostProjects, setReadyToPostProjects] = useState<ViralAnalysis[]>([]);
-  const [profiles, setProfiles] = useState<Profile[]>([]);
-  const [loading, setLoading] = useState(true);
   const [selectedProfile, setSelectedProfile] = useState<string>('all');
   const [selectedPlatform, setSelectedPlatform] = useState<PlatformFilter>('all');
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('scheduled');
 
-  useEffect(() => {
-    loadData();
+  // Stable date range for scheduled posts query
+  const { calendarStart, calendarEnd } = useMemo(() => {
+    const startDate = new Date();
+    startDate.setDate(1);
+    startDate.setMonth(startDate.getMonth() - 1);
+    const endDate = new Date();
+    endDate.setMonth(endDate.getMonth() + 3);
+    return { calendarStart: startDate.toISOString(), calendarEnd: endDate.toISOString() };
   }, []);
 
-  const loadData = async () => {
-    try {
-      setLoading(true);
-      const startDate = new Date();
-      startDate.setDate(1);
-      startDate.setMonth(startDate.getMonth() - 1);
-      const endDate = new Date();
-      endDate.setMonth(endDate.getMonth() + 3);
+  const { data: scheduledPosts = [], isLoading: sl, isFetching: sf, isError: se, error: serr, refetch: rs } = useQuery({
+    queryKey: queryKeys.posting.calendar(calendarStart, calendarEnd),
+    queryFn: () => postingManagerService.getScheduledPosts(calendarStart, calendarEnd),
+  });
+  const { data: readyToPostProjects = [], isLoading: rl, isFetching: rf, isError: re, error: rerr, refetch: rr } = useQuery({
+    queryKey: queryKeys.posting.readyProjects(),
+    queryFn: () => postingManagerService.getReadyToPostProjects(),
+  });
+  const { data: profiles = [], isLoading: prl, isFetching: prf, isError: pre, error: prerr, refetch: rpr } = useQuery({
+    queryKey: queryKeys.videographer.profiles(),
+    queryFn: () => videographerService.getProfiles(),
+  });
 
-      const [posts, readyProjects, profileList] = await Promise.all([
-        postingManagerService.getScheduledPosts(startDate.toISOString(), endDate.toISOString()),
-        postingManagerService.getReadyToPostProjects(),
-        videographerService.getProfiles(),
-      ]);
-
-      setScheduledPosts(posts);
-      setReadyToPostProjects(readyProjects);
-      setProfiles(profileList);
-    } catch (error) {
-      console.error('Failed to load data:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const isLoading = sl || rl || prl;
+  const isFetching = sf || rf || prf;
+  const isError = se || re || pre;
+  const queryError = serr || rerr || prerr;
+  const refetchAll = () => { rs(); rr(); rpr(); };
 
   // Calendar grid generation
   const calendarDays = useMemo(() => {
@@ -305,15 +299,16 @@ export default function CalendarPage() {
 
   const WEEKDAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="w-8 h-8 text-cyan-500 animate-spin" />
-      </div>
-    );
-  }
-
   return (
+    <QueryStateWrapper
+      isLoading={isLoading}
+      isFetching={isFetching}
+      isError={isError}
+      error={queryError}
+      data={scheduledPosts}
+      onRetry={refetchAll}
+      accentColor="cyan"
+    >
     <div className="pb-4">
       {/* Header */}
       <motion.div
@@ -821,5 +816,6 @@ export default function CalendarPage() {
         </>
       )}
     </div>
+    </QueryStateWrapper>
   );
 }

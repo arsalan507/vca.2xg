@@ -1,11 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { ChevronLeft, Loader2, Folder, Search, X, CheckSquare, Square } from 'lucide-react';
+import { ChevronLeft, Folder, Search, X, CheckSquare, Square } from 'lucide-react';
 import { adminService, type QueueStats } from '@/services/adminService';
 import { smartSearch } from '@/lib/smartSearch';
-import type { ViralAnalysis } from '@/types';
-import toast from 'react-hot-toast';
+import { queryKeys } from '@/lib/queryKeys';
+import QueryStateWrapper from '@/components/QueryStateWrapper';
 
 type FilterType = 'all' | 'planning' | 'shooting' | 'editing' | 'edit_review' | 'ready';
 
@@ -68,35 +69,26 @@ const STAGE_SECTIONS: StageSection[] = [
 ];
 
 export default function ProductionPage() {
+  const { data: statsData, isLoading: sl, isFetching: sf, isError: se, error: serr, refetch: rs } = useQuery({
+    queryKey: queryKeys.admin.dashboardStats(),
+    queryFn: () => adminService.getDashboardAndQueueStats(),
+  });
+  const { data: allProjects = [], isLoading: pl, isFetching: pf, isError: pe, error: perr, refetch: rp } = useQuery({
+    queryKey: queryKeys.admin.production(),
+    queryFn: () => adminService.getAllApprovedAnalyses(),
+  });
+
+  const isLoading = sl || pl;
+  const isFetching = sf || pf;
+  const isError = se || pe;
+  const queryError = serr || perr;
+  const refetchAll = () => { rs(); rp(); };
+  const stats: QueueStats | null = statsData?.queue ?? null;
+
   const [filter, setFilter] = useState<FilterType>('all');
-  const [stats, setStats] = useState<QueueStats | null>(null);
-  const [allProjects, setAllProjects] = useState<ViralAnalysis[]>([]);
-  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [bulkMode, setBulkMode] = useState(false);
   const [selectedProjects, setSelectedProjects] = useState<Set<string>>(new Set());
-
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = async () => {
-    try {
-      setLoading(true);
-      // 2 requests instead of 7-8: one for counts, one for all approved projects
-      const [combinedStats, projects] = await Promise.all([
-        adminService.getDashboardAndQueueStats(),
-        adminService.getAllApprovedAnalyses(),
-      ]);
-      setStats(combinedStats.queue);
-      setAllProjects(projects);
-    } catch (error) {
-      console.error('Failed to load data:', error);
-      toast.error('Failed to load production data');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // Bulk select helpers
   const toggleBulkMode = () => {
@@ -179,15 +171,16 @@ export default function ProductionPage() {
 
   const totalPipeline = (stats?.planning || 0) + (stats?.shooting || 0) + (stats?.readyForEdit || 0) + (stats?.editing || 0) + (stats?.editReview || 0) + (stats?.readyToPost || 0);
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="w-8 h-8 text-purple-500 animate-spin" />
-      </div>
-    );
-  }
-
   return (
+    <QueryStateWrapper
+      isLoading={isLoading}
+      isFetching={isFetching}
+      isError={isError}
+      error={queryError}
+      data={statsData}
+      onRetry={refetchAll}
+      accentColor="purple"
+    >
     <div className="pb-4">
       {/* Header */}
       <motion.div
@@ -526,5 +519,6 @@ export default function ProductionPage() {
         </motion.div>
       )}
     </div>
+    </QueryStateWrapper>
   );
 }
