@@ -151,6 +151,7 @@ export default function AvailablePage() {
   // Get shoot type info
   const getShootTypeInfo = (shootType?: string) => {
     const type = (shootType || 'indoor').toLowerCase();
+    if (type.includes('both')) return { emoji: '🏠🌳', label: 'Both', bg: 'rgba(99, 102, 241, 0.1)' };
     if (type.includes('outdoor')) return { emoji: '🌳', label: 'Outdoor', bg: 'rgba(34, 197, 94, 0.1)' };
     if (type.includes('store') || type.includes('shop')) return { emoji: '🏪', label: 'In Store', bg: 'rgba(99, 102, 241, 0.1)' };
     return { emoji: '🏠', label: 'Indoor', bg: 'rgba(249, 115, 22, 0.1)' };
