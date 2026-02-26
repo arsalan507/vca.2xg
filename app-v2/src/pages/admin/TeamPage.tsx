@@ -122,13 +122,21 @@ export default function TeamPage() {
         setLoading(true);
       }
 
-      const [members, stats] = await Promise.all([
-        adminService.getTeamMembers(),
-        adminService.getTeamStats(),
-      ]);
-
+      const members = await adminService.getTeamMembers();
       setTeamMembers(members);
-      setTeamStats(stats);
+
+      // Compute stats client-side from the already-fetched members list
+      // (avoids 6 extra HEAD count queries that can exhaust the PostgREST pool)
+      const roleCounts = { admins: 0, writers: 0, videographers: 0, editors: 0, postingManagers: 0, total: members.length };
+      for (const m of members) {
+        const r = (m.role || '').toLowerCase();
+        if (r === 'super_admin' || r === 'admin') roleCounts.admins++;
+        else if (r === 'script_writer') roleCounts.writers++;
+        else if (r === 'videographer') roleCounts.videographers++;
+        else if (r === 'editor') roleCounts.editors++;
+        else if (r === 'posting_manager') roleCounts.postingManagers++;
+      }
+      setTeamStats(roleCounts);
     } catch (error) {
       console.error('Failed to load team data:', error);
       toast.error('Failed to load team data');
