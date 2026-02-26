@@ -9,8 +9,9 @@ const voiceNoteService = require('./services/voiceNoteService');
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Middleware - Allow multiple origins for development
+// Middleware - Allow multiple origins
 const allowedOrigins = [
+  'https://vca.2xg.in',
   process.env.FRONTEND_URL,
   'http://localhost:5173',
   'http://localhost:5174',
