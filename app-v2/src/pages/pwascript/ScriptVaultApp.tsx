@@ -141,6 +141,49 @@ export default function ScriptVaultApp() {
     setTimeout(() => setToast(''), 2000);
   }, []);
 
+  // Swap PWA manifest + theme for Script Vault standalone mode
+  useEffect(() => {
+    // Replace manifest link
+    const existingManifest = document.querySelector('link[rel="manifest"]');
+    const svManifest = document.createElement('link');
+    svManifest.rel = 'manifest';
+    svManifest.href = '/sv-manifest.json';
+    if (existingManifest) {
+      existingManifest.replaceWith(svManifest);
+    } else {
+      document.head.appendChild(svManifest);
+    }
+
+    // Set theme color to Script Vault dark
+    let themeTag = document.querySelector('meta[name="theme-color"]') as HTMLMetaElement | null;
+    const prevThemeColor = themeTag?.content || '#3b82f6';
+    if (themeTag) {
+      themeTag.content = '#0A0A0B';
+    } else {
+      themeTag = document.createElement('meta');
+      themeTag.name = 'theme-color';
+      themeTag.content = '#0A0A0B';
+      document.head.appendChild(themeTag);
+    }
+
+    // Set page title
+    const prevTitle = document.title;
+    document.title = 'Script Vault';
+
+    return () => {
+      // Restore VCA manifest on unmount
+      const current = document.querySelector('link[rel="manifest"]');
+      const vcaManifest = document.createElement('link');
+      vcaManifest.rel = 'manifest';
+      vcaManifest.href = '/manifest.webmanifest';
+      if (current) current.replaceWith(vcaManifest);
+
+      const meta = document.querySelector('meta[name="theme-color"]') as HTMLMetaElement | null;
+      if (meta) meta.content = prevThemeColor;
+      document.title = prevTitle;
+    };
+  }, []);
+
   useEffect(() => {
     (async () => {
       try {
