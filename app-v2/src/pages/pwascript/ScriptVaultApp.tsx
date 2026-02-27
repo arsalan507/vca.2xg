@@ -156,6 +156,7 @@ export default function ScriptVaultApp() {
   const [searching, setSearching] = useState(false);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState('');
+  const [editing, setEditing] = useState(false);
   const synonymMapRef = useRef<SynonymMap>(new Map());
 
   // Form state
@@ -288,6 +289,40 @@ export default function ScriptVaultApp() {
     }
   };
 
+  const startEditing = (script: SvScript) => {
+    setFormTitle(script.title);
+    setFormHook(script.hook);
+    setFormStory(script.story);
+    setFormCta(script.cta);
+    setFormTags(script.tags.join(' '));
+    setFormRating(script.rating);
+    setEditing(true);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!selectedScript || !formTitle.trim() || !formHook.trim()) return;
+
+    try {
+      const updated = await scriptVaultService.updateScript(selectedScript.id, {
+        title: formTitle.trim(),
+        hook: formHook.trim(),
+        story: formStory.trim(),
+        cta: formCta.trim(),
+        tags: formTags.trim().split(/\s+/).filter(Boolean),
+        rating: formRating,
+      });
+      const updater = (list: SvScript[]) => list.map((s) => (s.id === updated.id ? updated : s));
+      setScripts(updater);
+      setSearchResults(updater);
+      setSelectedScript(updated);
+      setEditing(false);
+      showToast('Script updated');
+    } catch (err) {
+      console.error('Update failed:', err);
+      showToast('Failed to update');
+    }
+  };
+
   const resetForm = () => {
     setFormTitle('');
     setFormHook('');
@@ -299,10 +334,15 @@ export default function ScriptVaultApp() {
 
   const goDetail = (script: SvScript) => {
     setSelectedScript(script);
+    setEditing(false);
     setView('detail');
   };
 
   const goBack = () => {
+    if (view === 'detail' && editing) {
+      setEditing(false);
+      return;
+    }
     if (view === 'detail' && searchResults.length > 0) {
       setView('results');
     } else {
@@ -321,7 +361,9 @@ export default function ScriptVaultApp() {
       ? 'new script'
       : view === 'results'
         ? `${searchResults.length} results`
-        : 'detail';
+        : editing
+          ? 'editing'
+          : 'detail';
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: T.bg, color: T.text }}>
@@ -593,8 +635,8 @@ export default function ScriptVaultApp() {
           </div>
         )}
 
-        {/* ─── DETAIL ─── */}
-        {!loading && view === 'detail' && selectedScript && (
+        {/* ─── DETAIL (read mode) ─── */}
+        {!loading && view === 'detail' && selectedScript && !editing && (
           <div className="px-4 space-y-5">
             {/* Title + rating + date */}
             <div>
@@ -613,18 +655,27 @@ export default function ScriptVaultApp() {
               </p>
             </div>
 
-            {/* Shot done toggle */}
-            <button
-              onClick={() => handleToggleShot(selectedScript)}
-              className="w-full py-3 rounded-xl text-sm font-medium flex items-center justify-center gap-2 transition-colors"
-              style={{
-                backgroundColor: selectedScript.shot_done ? T.success : T.surface,
-                color: selectedScript.shot_done ? '#fff' : T.textDim,
-                border: `1px solid ${selectedScript.shot_done ? T.success : T.border}`,
-              }}
-            >
-              {selectedScript.shot_done ? '✓ Shot Done' : '○ Mark as Shot'}
-            </button>
+            {/* Action buttons row */}
+            <div className="flex gap-2">
+              <button
+                onClick={() => handleToggleShot(selectedScript)}
+                className="flex-1 py-3 rounded-xl text-sm font-medium flex items-center justify-center gap-2 transition-colors"
+                style={{
+                  backgroundColor: selectedScript.shot_done ? T.success : T.surface,
+                  color: selectedScript.shot_done ? '#fff' : T.textDim,
+                  border: `1px solid ${selectedScript.shot_done ? T.success : T.border}`,
+                }}
+              >
+                {selectedScript.shot_done ? '✓ Shot Done' : '○ Mark as Shot'}
+              </button>
+              <button
+                onClick={() => startEditing(selectedScript)}
+                className="px-5 py-3 rounded-xl text-sm font-medium transition-colors"
+                style={{ backgroundColor: T.accent, color: T.bg }}
+              >
+                Edit
+              </button>
+            </div>
 
             {/* Hook */}
             <div>
@@ -711,6 +762,92 @@ export default function ScriptVaultApp() {
             >
               Delete Script
             </button>
+          </div>
+        )}
+
+        {/* ─── DETAIL (edit mode) ─── */}
+        {!loading && view === 'detail' && selectedScript && editing && (
+          <div className="px-4 space-y-4">
+            <div>
+              <label className="text-xs font-medium mb-1 block" style={{ color: T.textDim }}>Title</label>
+              <input
+                type="text"
+                value={formTitle}
+                onChange={(e) => setFormTitle(e.target.value)}
+                className="w-full px-4 py-2.5 rounded-xl text-sm outline-none"
+                style={{ backgroundColor: T.surface, color: T.text, border: `1px solid ${T.border}` }}
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium mb-1 flex items-center gap-1.5" style={{ color: T.hook }}>
+                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: T.hook }} />
+                Hook *
+              </label>
+              <textarea
+                value={formHook}
+                onChange={(e) => setFormHook(e.target.value)}
+                rows={3}
+                className="w-full px-4 py-2.5 rounded-xl text-sm outline-none resize-y"
+                style={{ backgroundColor: T.surface, color: T.text, border: `1px solid ${T.border}` }}
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium mb-1 flex items-center gap-1.5" style={{ color: T.story }}>
+                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: T.story }} />
+                Story / Body
+              </label>
+              <textarea
+                value={formStory}
+                onChange={(e) => setFormStory(e.target.value)}
+                rows={5}
+                className="w-full px-4 py-2.5 rounded-xl text-sm outline-none resize-y"
+                style={{ backgroundColor: T.surface, color: T.text, border: `1px solid ${T.border}` }}
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium mb-1 flex items-center gap-1.5" style={{ color: T.cta }}>
+                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: T.cta }} />
+                CTA
+              </label>
+              <textarea
+                value={formCta}
+                onChange={(e) => setFormCta(e.target.value)}
+                rows={2}
+                className="w-full px-4 py-2.5 rounded-xl text-sm outline-none resize-y"
+                style={{ backgroundColor: T.surface, color: T.text, border: `1px solid ${T.border}` }}
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium mb-1 block" style={{ color: T.textDim }}>Tags (space-separated)</label>
+              <input
+                type="text"
+                value={formTags}
+                onChange={(e) => setFormTags(e.target.value)}
+                className="w-full px-4 py-2.5 rounded-xl text-sm outline-none"
+                style={{ backgroundColor: T.surface, color: T.text, border: `1px solid ${T.border}` }}
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium mb-1 block" style={{ color: T.textDim }}>Rating</label>
+              <StarRating value={formRating} onChange={setFormRating} size={24} />
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setEditing(false)}
+                className="flex-1 py-3 rounded-xl text-sm font-medium"
+                style={{ backgroundColor: T.surface, color: T.textDim, border: `1px solid ${T.border}` }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveEdit}
+                disabled={!formTitle.trim() || !formHook.trim()}
+                className="flex-1 py-3 rounded-xl text-sm font-semibold disabled:opacity-40"
+                style={{ backgroundColor: T.accent, color: T.bg }}
+              >
+                Save Changes
+              </button>
+            </div>
           </div>
         )}
 
