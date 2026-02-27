@@ -18,6 +18,21 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
 
     <title>VCA - Viral Content Analyzer</title>
+
+    <!-- Script Vault PWA override: swap manifest before Safari reads it -->
+    <script>
+      if (location.pathname.startsWith('/pwascript')) {
+        // Swap manifest for Script Vault
+        document.addEventListener('DOMContentLoaded', function() {
+          var m = document.querySelector('link[rel="manifest"]');
+          if (m) m.setAttribute('href', '/sv-manifest.json');
+        });
+        // Override iOS PWA meta tags
+        document.querySelector('meta[name="theme-color"]').content = '#0A0A0B';
+        document.querySelector('meta[name="apple-mobile-web-app-title"]').content = 'Script Vault';
+        document.title = 'Script Vault';
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>
