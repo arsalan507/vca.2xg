@@ -49,6 +49,9 @@ const WriterNewScript = lazy(() => import('@/pages/writer/NewScriptPage'));
 const WriterMyScripts = lazy(() => import('@/pages/writer/MyScriptsPage'));
 const WriterScriptDetail = lazy(() => import('@/pages/writer/ScriptDetailPage'));
 
+// Script Vault (standalone PWA, no auth)
+const ScriptVaultApp = lazy(() => import('@/pages/pwascript/ScriptVaultApp'));
+
 // Shared pages
 const SettingsPage = lazy(() => import('@/pages/SettingsPage'));
 
@@ -96,6 +99,7 @@ export default function App() {
         <Routes>
           {/* Public routes */}
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/pwascript" element={<ScriptVaultApp />} />
 
           {/* Protected routes */}
           <Route
