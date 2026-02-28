@@ -12,7 +12,8 @@ const T = {
   accent: '#F59E0B',
   accentDim: '#92610A',
   text: '#EEEEF0',
-  textDim: '#7A7A80',
+  textDim: '#9A9AA2',
+  textMuted: '#75757E',
   danger: '#EF4444',
   success: '#22C55E',
   hook: '#F59E0B',
@@ -152,6 +153,7 @@ function ScriptCard({ script, onClick, onToggleShot, onDelete, onLongPress, show
         className="relative z-10 w-full text-left rounded-2xl px-4 py-3.5"
         style={{
           backgroundColor: T.surface,
+          borderLeft: !done && script.rating >= 4 ? `3px solid ${script.rating === 5 ? T.accent : T.accentDim}` : '3px solid transparent',
           opacity: done ? 0.5 : 1,
           transform: `translateX(${offsetX}px)`,
           transition: moving ? 'none' : 'transform 0.25s ease-out',
@@ -173,7 +175,7 @@ function ScriptCard({ script, onClick, onToggleShot, onDelete, onLongPress, show
               {Math.round(script.relevance_score)}
             </span>
           )}
-          <span className="shrink-0"><StarRating value={script.rating} size={12} /></span>
+          <span className="shrink-0"><StarRating value={script.rating} size={14} /></span>
         </div>
 
         {/* Row 2: hook preview */}
@@ -182,7 +184,7 @@ function ScriptCard({ script, onClick, onToggleShot, onDelete, onLongPress, show
         </p>
 
         {/* Row 3: tags */}
-        <p className="text-[12px] truncate" style={{ color: '#6B6B73' }}>
+        <p className="text-[12px] truncate" style={{ color: T.textMuted }}>
           {script.tags.slice(0, 5).join(' · ')}
           {script.tags.length > 5 ? ` +${script.tags.length - 5}` : ''}
         </p>
@@ -197,8 +199,8 @@ function Toast({ message, visible }: { message: string; visible: boolean }) {
   if (!visible) return null;
   return (
     <div
-      className="fixed bottom-20 left-1/2 -translate-x-1/2 px-5 py-2.5 rounded-full text-sm font-medium z-50 sv-fade-in"
-      style={{ backgroundColor: T.surface, color: T.accent, border: `1px solid ${T.border}` }}
+      className="fixed left-1/2 -translate-x-1/2 px-5 py-2.5 rounded-full text-sm font-semibold z-50 sv-fade-in shadow-lg"
+      style={{ backgroundColor: T.accent, color: T.bg, bottom: 96 }}
     >
       {message}
     </div>
@@ -211,8 +213,8 @@ function UndoToast({ message, visible, onUndo }: { message: string; visible: boo
   if (!visible) return null;
   return (
     <div
-      className="fixed bottom-20 left-1/2 -translate-x-1/2 px-4 py-2.5 rounded-full text-sm font-medium z-50 sv-fade-in flex items-center gap-3"
-      style={{ backgroundColor: T.surface, color: T.text, border: `1px solid ${T.border}`, minWidth: 220 }}
+      className="fixed left-1/2 -translate-x-1/2 px-4 py-2.5 rounded-full text-sm font-medium z-50 sv-fade-in flex items-center gap-3 shadow-lg"
+      style={{ backgroundColor: T.surface, color: T.text, border: `1px solid ${T.border}`, minWidth: 220, bottom: 96 }}
     >
       <span className="flex-1">{message}</span>
       <button
@@ -356,7 +358,7 @@ function BinScriptCard({ script, selected, selectionMode, onTap, onLongPress }: 
         </p>
 
         {/* Row 3: tags */}
-        <p className="text-[12px] truncate" style={{ color: '#6B6B73' }}>
+        <p className="text-[12px] truncate" style={{ color: T.textMuted }}>
           {script.tags.slice(0, 5).join(' . ')}
           {script.tags.length > 5 ? ` +${script.tags.length - 5}` : ''}
         </p>
@@ -378,6 +380,7 @@ export default function ScriptVaultApp() {
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState('');
   const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
   const synonymMapRef = useRef<SynonymMap>(new Map());
 
   // Form state
@@ -566,7 +569,8 @@ export default function ScriptVaultApp() {
   // ─── CRUD ────────────────────────────────────────────────────
 
   const handleAddScript = async () => {
-    if (!formTitle.trim() || !formHook.trim()) return;
+    if (!formTitle.trim() || !formHook.trim() || saving) return;
+    setSaving(true);
     const input: SvScriptInput = {
       title: formTitle.trim(),
       hook: formHook.trim(),
@@ -584,6 +588,8 @@ export default function ScriptVaultApp() {
     } catch (err) {
       console.error('Add failed:', err);
       showToast('Failed to add script');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -627,7 +633,8 @@ export default function ScriptVaultApp() {
   };
 
   const handleSaveEdit = async () => {
-    if (!selectedScript || !formTitle.trim() || !formHook.trim()) return;
+    if (!selectedScript || !formTitle.trim() || !formHook.trim() || saving) return;
+    setSaving(true);
     try {
       const updated = await scriptVaultService.updateScript(selectedScript.id, {
         title: formTitle.trim(),
@@ -646,6 +653,8 @@ export default function ScriptVaultApp() {
     } catch (err) {
       console.error('Update failed:', err);
       showToast('Failed to update');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -939,9 +948,13 @@ export default function ScriptVaultApp() {
         .sv-spin { animation: sv-spin 1s linear infinite; }
         @keyframes sv-fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
         .sv-fade-in { animation: sv-fade 0.2s ease-out; }
-        .sv-root ::placeholder { color: #4A4A50; }
+        @keyframes sv-view-enter { from { opacity: 0; } to { opacity: 1; } }
+        .sv-view-enter { animation: sv-view-enter 0.15s ease-out; }
+        .sv-search:focus { background-color: #1C1C1F !important; border-color: #F59E0B !important; box-shadow: 0 0 0 3px rgba(245,158,11,0.12); }
+        .sv-root ::placeholder { color: #5A5A62; }
         .sv-root ::-webkit-scrollbar { display: none; }
         .sv-no-scroll { -ms-overflow-style: none; scrollbar-width: none; }
+        .pb-safe { padding-bottom: max(12px, env(safe-area-inset-bottom, 12px)); }
       `}</style>
 
       <div className="sv-root max-w-[480px] mx-auto relative min-h-screen flex flex-col">
@@ -995,9 +1008,15 @@ export default function ScriptVaultApp() {
 
           {view === 'home' && (
             <div className="flex items-center justify-between w-full">
-              <span className="sv-mono text-sm font-medium tracking-widest" style={{ color: T.accent }}>
-                SV
-              </span>
+              <div className="flex items-center gap-2">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke={T.accent} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M14 2L18 6L8 16H4V12L14 2Z" />
+                  <path d="M12 4L16 8" />
+                </svg>
+                <span className="sv-mono text-sm font-medium tracking-widest" style={{ color: T.accent }}>
+                  VAULT
+                </span>
+              </div>
               <div className="flex items-center gap-2">
                 <span className="text-xs px-2 py-0.5 rounded-md" style={{ backgroundColor: T.surfaceHover, color: T.textDim }}>
                   {scripts.length}
@@ -1188,7 +1207,7 @@ export default function ScriptVaultApp() {
               HOME VIEW
               ═══════════════════════════════════════════════════════ */}
           {!loading && view === 'home' && (
-            <div className="px-4 pb-24">
+            <div className="px-4 pb-24 sv-view-enter">
               {/* Search bar */}
               <form onSubmit={handleSearchSubmit} className="relative mb-3">
                 <svg
@@ -1204,38 +1223,42 @@ export default function ScriptVaultApp() {
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   placeholder="Search scripts..."
-                  className="w-full pl-10 pr-4 rounded-2xl text-sm outline-none transition-colors"
+                  className="w-full pl-10 pr-4 rounded-2xl text-sm outline-none transition-all sv-search"
                   style={{
                     backgroundColor: T.surface,
                     color: T.text,
                     border: `1.5px solid ${T.border}`,
                     height: 46,
                   }}
-                  onFocus={(e) => (e.target.style.borderColor = T.accent)}
-                  onBlur={(e) => (e.target.style.borderColor = T.border)}
                 />
               </form>
 
               {/* Quick tags */}
               <div className="mb-4 -mx-4 px-4">
                 <div className="flex gap-2 overflow-x-auto sv-no-scroll pb-1">
-                  {QUICK_TAGS.map((tag) => (
-                    <button
-                      key={tag}
-                      onClick={() => { setQuery(tag); doSearch(tag); }}
-                      className="shrink-0 text-[13px] font-medium rounded-full transition-colors active:scale-95"
-                      style={{
-                        backgroundColor: T.surfaceHover,
-                        color: T.textDim,
-                        border: `1px solid ${T.border}`,
-                        height: 36,
-                        paddingLeft: 16,
-                        paddingRight: 16,
-                      }}
-                    >
-                      {tag}
-                    </button>
-                  ))}
+                  {QUICK_TAGS.map((tag) => {
+                    const isActive = query.toLowerCase().trim() === tag;
+                    return (
+                      <button
+                        key={tag}
+                        onClick={() => {
+                          if (isActive) { setQuery(''); }
+                          else { setQuery(tag); doSearch(tag); }
+                        }}
+                        className="shrink-0 text-[13px] font-medium rounded-full transition-all active:scale-95"
+                        style={{
+                          backgroundColor: isActive ? `${T.accent}20` : T.surfaceHover,
+                          color: isActive ? T.accent : T.textDim,
+                          border: `1px solid ${isActive ? T.accent + '40' : T.border}`,
+                          height: 36,
+                          paddingLeft: 16,
+                          paddingRight: 16,
+                        }}
+                      >
+                        {tag}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
@@ -1252,9 +1275,15 @@ export default function ScriptVaultApp() {
                   />
                 ))}
                 {scripts.length === 0 && (
-                  <p className="text-center py-16 text-sm" style={{ color: T.textDim }}>
-                    No scripts yet. Tap + to create one.
-                  </p>
+                  <div className="flex flex-col items-center justify-center py-20 gap-3">
+                    <svg width="48" height="48" viewBox="0 0 48 48" fill="none" stroke={T.textDim} strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" opacity={0.35}>
+                      <path d="M30 6L38 14L16 36H8V28L30 6Z" />
+                      <path d="M26 10L34 18" />
+                      <path d="M8 42H40" />
+                    </svg>
+                    <p className="text-sm font-medium" style={{ color: T.textDim }}>No scripts yet</p>
+                    <p className="text-xs" style={{ color: T.textMuted }}>Tap + to write your first one</p>
+                  </div>
                 )}
               </div>
             </div>
@@ -1264,9 +1293,12 @@ export default function ScriptVaultApp() {
               ADD VIEW
               ═══════════════════════════════════════════════════════ */}
           {!loading && view === 'add' && (
-            <div className="px-4 pb-24 space-y-4">
+            <div className="px-4 pb-24 space-y-4 sv-view-enter">
               <div>
-                <label className="text-xs font-medium mb-1.5 block" style={{ color: T.textDim }}>Title</label>
+                <label className="text-xs font-medium mb-1.5 flex items-center gap-1.5" style={{ color: T.text }}>
+                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: T.text }} />
+                  Title *
+                </label>
                 <input
                   type="text"
                   value={formTitle}
@@ -1344,7 +1376,7 @@ export default function ScriptVaultApp() {
               RESULTS VIEW
               ═══════════════════════════════════════════════════════ */}
           {!loading && view === 'results' && (
-            <div className="px-4 pb-8">
+            <div className="px-4 pb-8 sv-view-enter">
               <form onSubmit={handleSearchSubmit} className="relative mb-3">
                 <svg
                   className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"
@@ -1359,7 +1391,7 @@ export default function ScriptVaultApp() {
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   placeholder="Search scripts..."
-                  className="w-full pl-10 pr-4 rounded-2xl text-sm outline-none"
+                  className="w-full pl-10 pr-4 rounded-2xl text-sm outline-none transition-all sv-search"
                   style={{ backgroundColor: T.surface, color: T.text, border: `1.5px solid ${T.border}`, height: 46 }}
                 />
               </form>
@@ -1406,7 +1438,7 @@ export default function ScriptVaultApp() {
               DETAIL VIEW — read mode
               ═══════════════════════════════════════════════════════ */}
           {!loading && view === 'detail' && selectedScript && !editing && (
-            <div className="px-4 pb-24 space-y-5">
+            <div className="px-4 pb-24 space-y-5 sv-view-enter">
               <div>
                 <label className="text-[11px] font-semibold uppercase tracking-wider mb-2 flex items-center gap-1.5" style={{ color: T.hook }}>
                   <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: T.hook }} />
@@ -1451,7 +1483,7 @@ export default function ScriptVaultApp() {
               )}
 
               {selectedScript.tags.length > 0 && (
-                <p className="text-[13px]" style={{ color: '#6B6B73' }}>
+                <p className="text-[13px]" style={{ color: T.textMuted }}>
                   {selectedScript.tags.join(' · ')}
                 </p>
               )}
@@ -1462,9 +1494,12 @@ export default function ScriptVaultApp() {
               DETAIL VIEW — edit mode
               ═══════════════════════════════════════════════════════ */}
           {!loading && view === 'detail' && selectedScript && editing && (
-            <div className="px-4 pb-24 space-y-4">
+            <div className="px-4 pb-24 space-y-4 sv-view-enter">
               <div>
-                <label className="text-xs font-medium mb-1.5 block" style={{ color: T.textDim }}>Title</label>
+                <label className="text-xs font-medium mb-1.5 flex items-center gap-1.5" style={{ color: T.text }}>
+                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: T.text }} />
+                  Title *
+                </label>
                 <input
                   type="text"
                   value={formTitle}
@@ -1537,11 +1572,11 @@ export default function ScriptVaultApp() {
               BIN VIEW
               ═══════════════════════════════════════════════════════ */}
           {!loading && view === 'bin' && (
-            <div className="px-4 pb-24">
+            <div className="px-4 pb-24 sv-view-enter">
               {/* Info banner */}
               <div
                 className="rounded-xl px-3.5 py-2.5 mb-3 text-[12px] flex items-center gap-2"
-                style={{ backgroundColor: `${T.accent}10`, color: T.textDim, border: `1px solid ${T.accent}20` }}
+                style={{ backgroundColor: 'rgba(245,158,11,0.08)', color: T.textDim, border: '1px solid rgba(245,158,11,0.15)' }}
               >
                 <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke={T.accent} strokeWidth="1.5" strokeLinecap="round">
                   <circle cx="7" cy="7" r="6" />
@@ -1616,16 +1651,17 @@ export default function ScriptVaultApp() {
         {/* Bottom bar — Add form */}
         {!loading && view === 'add' && (
           <div
-            className="sticky bottom-0 z-40 px-4 py-3 shrink-0"
+            className="sticky bottom-0 z-40 px-4 py-3 pb-safe shrink-0"
             style={{ backgroundColor: `${T.bg}F2`, backdropFilter: 'blur(12px)', borderTop: `1px solid ${T.border}` }}
           >
             <button
               onClick={handleAddScript}
-              disabled={!formTitle.trim() || !formHook.trim()}
-              className="w-full rounded-xl text-sm font-semibold transition-opacity disabled:opacity-30 active:scale-[0.98]"
+              disabled={!formTitle.trim() || !formHook.trim() || saving}
+              className="w-full rounded-xl text-sm font-semibold transition-opacity disabled:opacity-30 active:scale-[0.98] flex items-center justify-center gap-2"
               style={{ backgroundColor: T.accent, color: T.bg, height: 48 }}
             >
-              Save Script
+              {saving && <span className="sv-spin text-base">↻</span>}
+              {saving ? 'Saving...' : 'Save Script'}
             </button>
           </div>
         )}
@@ -1633,7 +1669,7 @@ export default function ScriptVaultApp() {
         {/* Bottom bar — Detail read mode */}
         {!loading && view === 'detail' && selectedScript && !editing && (
           <div
-            className="sticky bottom-0 z-40 px-4 py-3 flex items-center gap-2 shrink-0"
+            className="sticky bottom-0 z-40 px-4 py-3 pb-safe flex items-center gap-2 shrink-0"
             style={{ backgroundColor: `${T.bg}F2`, backdropFilter: 'blur(12px)', borderTop: `1px solid ${T.border}` }}
           >
             <button
@@ -1677,7 +1713,7 @@ export default function ScriptVaultApp() {
         {/* Bottom bar — Detail edit mode */}
         {!loading && view === 'detail' && selectedScript && editing && (
           <div
-            className="sticky bottom-0 z-40 px-4 py-3 flex gap-2 shrink-0"
+            className="sticky bottom-0 z-40 px-4 py-3 pb-safe flex gap-2 shrink-0"
             style={{ backgroundColor: `${T.bg}F2`, backdropFilter: 'blur(12px)', borderTop: `1px solid ${T.border}` }}
           >
             <button
@@ -1689,11 +1725,12 @@ export default function ScriptVaultApp() {
             </button>
             <button
               onClick={handleSaveEdit}
-              disabled={!formTitle.trim() || !formHook.trim()}
-              className="flex-1 rounded-xl text-sm font-semibold disabled:opacity-30 active:scale-[0.98]"
+              disabled={!formTitle.trim() || !formHook.trim() || saving}
+              className="flex-1 rounded-xl text-sm font-semibold disabled:opacity-30 active:scale-[0.98] flex items-center justify-center gap-2"
               style={{ height: 48, backgroundColor: T.accent, color: T.bg }}
             >
-              Save Changes
+              {saving && <span className="sv-spin text-base">↻</span>}
+              {saving ? 'Saving...' : 'Save Changes'}
             </button>
           </div>
         )}
@@ -1701,7 +1738,7 @@ export default function ScriptVaultApp() {
         {/* Bin selection bottom bar */}
         {view === 'bin' && binSelectionMode && selectedBinIds.size > 0 && (
           <div
-            className="sticky bottom-0 z-40 px-4 py-3 flex gap-2 shrink-0"
+            className="sticky bottom-0 z-40 px-4 py-3 pb-safe flex gap-2 shrink-0"
             style={{ backgroundColor: `${T.bg}F2`, backdropFilter: 'blur(12px)', borderTop: `1px solid ${T.border}` }}
           >
             <button
@@ -1756,7 +1793,7 @@ export default function ScriptVaultApp() {
               )}
 
               {previewScript.tags.length > 0 && (
-                <p className="text-[12px]" style={{ color: '#6B6B73' }}>
+                <p className="text-[12px]" style={{ color: T.textMuted }}>
                   {previewScript.tags.join(' · ')}
                 </p>
               )}
