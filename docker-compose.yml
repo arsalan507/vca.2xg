@@ -70,6 +70,7 @@ services:
       - "traefik.http.middlewares.vca-postgrest-cors.headers.addvaryheader=true"
       - "traefik.http.routers.vca-postgrest.middlewares=vca-postgrest-strip,vca-postgrest-cors"
       - "traefik.http.services.vca-postgrest.loadbalancer.server.port=3000"
+      - "traefik.http.services.vca-postgrest.loadbalancer.responseforwarding.flushinterval=100ms"
     deploy:
       resources:
         limits:

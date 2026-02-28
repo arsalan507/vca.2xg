@@ -490,6 +490,12 @@ export default function ScriptVaultApp() {
     const prevTitle = document.title;
     document.title = 'Script Vault';
 
+    // Load DM Sans + JetBrains Mono via <link> (non-blocking, unlike CSS @import)
+    const fontLink = document.createElement('link');
+    fontLink.rel = 'stylesheet';
+    fontLink.href = 'https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap';
+    document.head.appendChild(fontLink);
+
     return () => {
       const current = document.querySelector('link[rel="manifest"]');
       const vcaManifest = document.createElement('link');
@@ -499,6 +505,7 @@ export default function ScriptVaultApp() {
       const meta = document.querySelector('meta[name="theme-color"]') as HTMLMetaElement | null;
       if (meta) meta.content = prevThemeColor;
       document.title = prevTitle;
+      fontLink.remove();
     };
   }, []);
 
@@ -940,7 +947,6 @@ export default function ScriptVaultApp() {
   return (
     <div className="min-h-screen" style={{ backgroundColor: T.bg, color: T.text }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap');
         .sv-root { font-family: 'DM Sans', sans-serif; -webkit-tap-highlight-color: transparent; }
         .sv-root textarea, .sv-root input { font-family: 'DM Sans', sans-serif; }
         .sv-mono { font-family: 'JetBrains Mono', monospace; }
