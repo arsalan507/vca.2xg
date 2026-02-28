@@ -9,6 +9,7 @@ export interface SvScript {
   tags: string[];
   rating: number;
   shot_done: boolean;
+  deleted_at: string | null;
   created_at: string;
   updated_at: string;
   relevance_score?: number;
@@ -60,6 +61,7 @@ export const scriptVaultService = {
     const { data, error } = await supabase
       .from('sv_scripts')
       .select('*')
+      .is('deleted_at', null)
       .order('shot_done', { ascending: true })
       .order('rating', { ascending: false })
       .order('created_at', { ascending: false });
@@ -101,8 +103,64 @@ export const scriptVaultService = {
   async deleteScript(id: string): Promise<void> {
     const { error } = await supabase
       .from('sv_scripts')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id', id);
+
+    if (error) throw error;
+  },
+
+  async restoreScript(id: string): Promise<void> {
+    const { error } = await supabase
+      .from('sv_scripts')
+      .update({ deleted_at: null })
+      .eq('id', id);
+
+    if (error) throw error;
+  },
+
+  async getDeletedScripts(): Promise<SvScript[]> {
+    const { data, error } = await supabase
+      .from('sv_scripts')
+      .select('*')
+      .not('deleted_at', 'is', null)
+      .order('deleted_at', { ascending: false });
+
+    if (error) throw error;
+    return (data || []) as SvScript[];
+  },
+
+  async permanentlyDeleteScript(id: string): Promise<void> {
+    const { error } = await supabase
+      .from('sv_scripts')
       .delete()
       .eq('id', id);
+
+    if (error) throw error;
+  },
+
+  async permanentlyDeleteMultiple(ids: string[]): Promise<void> {
+    const { error } = await supabase
+      .from('sv_scripts')
+      .delete()
+      .in('id', ids);
+
+    if (error) throw error;
+  },
+
+  async restoreMultiple(ids: string[]): Promise<void> {
+    const { error } = await supabase
+      .from('sv_scripts')
+      .update({ deleted_at: null })
+      .in('id', ids);
+
+    if (error) throw error;
+  },
+
+  async emptyBin(): Promise<void> {
+    const { error } = await supabase
+      .from('sv_scripts')
+      .delete()
+      .not('deleted_at', 'is', null);
 
     if (error) throw error;
   },
