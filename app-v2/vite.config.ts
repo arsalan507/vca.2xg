@@ -41,6 +41,7 @@ export default defineConfig({
       workbox: {
         // Only precache static build assets
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        globIgnores: ['pwascript/**'],
 
         // Activate new SW immediately — no waiting for tabs to close
         skipWaiting: true,

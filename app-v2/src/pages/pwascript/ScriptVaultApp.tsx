@@ -285,27 +285,38 @@ function BinScriptCard({ script, selected, selectionMode, onTap, onLongPress }: 
   const daysAgo = Math.floor((Date.now() - new Date(script.deleted_at!).getTime()) / 86400000);
   const timeLabel = daysAgo === 0 ? 'Today' : daysAgo === 1 ? '1d ago' : `${daysAgo}d ago`;
 
+  const startLongPress = () => {
+    touchMoved.current = false;
+    longPressTimer.current = setTimeout(() => {
+      if (!touchMoved.current) {
+        onLongPress();
+        if (navigator.vibrate) navigator.vibrate(25);
+      }
+    }, 450);
+  };
+
+  const cancelLongPress = () => {
+    touchMoved.current = true;
+    if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null; }
+  };
+
+  const endLongPress = () => {
+    if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null; }
+  };
+
   return (
     <div
-      className="relative rounded-2xl px-4 py-3.5 flex items-center gap-3 active:scale-[0.99] transition-transform"
+      className="relative rounded-2xl px-4 py-3.5 flex items-center gap-3 active:scale-[0.99] transition-transform select-none"
       style={{ backgroundColor: T.surface }}
       onClick={() => { if (!touchMoved.current) onTap(); }}
-      onTouchStart={() => {
-        touchMoved.current = false;
-        longPressTimer.current = setTimeout(() => {
-          if (!touchMoved.current) {
-            onLongPress();
-            if (navigator.vibrate) navigator.vibrate(25);
-          }
-        }, 450);
-      }}
-      onTouchMove={() => {
-        touchMoved.current = true;
-        if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null; }
-      }}
-      onTouchEnd={() => {
-        if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null; }
-      }}
+      onTouchStart={startLongPress}
+      onTouchMove={cancelLongPress}
+      onTouchEnd={endLongPress}
+      onMouseDown={startLongPress}
+      onMouseMove={(e) => { if (e.buttons > 0) cancelLongPress(); }}
+      onMouseUp={endLongPress}
+      onMouseLeave={endLongPress}
+      onContextMenu={(e) => e.preventDefault()}
     >
       {/* Checkbox — always in DOM for layout, visible in selection mode */}
       <div
