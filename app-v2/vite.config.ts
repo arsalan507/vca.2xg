@@ -51,7 +51,7 @@ export default defineConfig({
 
         // SPA navigation fallback
         navigateFallback: '/index.html',
-        navigateFallbackDenylist: [/^\/api/, /^\/postgrest/],
+        navigateFallbackDenylist: [/^\/api/, /^\/postgrest/, /^\/pwascript/],
 
         // Only cache Google Fonts at runtime. All API calls go straight
         // to the network because generateSW does NOT intercept cross-origin
