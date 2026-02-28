@@ -41,11 +41,14 @@
             sessionStorage.setItem('sv_ok', '1');
           }
         }
-        // 2. Swap manifest for Script Vault PWA
-        document.addEventListener('DOMContentLoaded', function() {
+        // 2. Intercept manifest link IMMEDIATELY as VitePWA injects it
+        new MutationObserver(function(_, obs) {
           var m = document.querySelector('link[rel="manifest"]');
-          if (m) m.setAttribute('href', '/sv-manifest.json');
-        });
+          if (m && m.getAttribute('href') !== '/sv-manifest.json') {
+            m.setAttribute('href', '/sv-manifest.json');
+            obs.disconnect();
+          }
+        }).observe(document.documentElement, { childList: true, subtree: true });
         // 3. Override iOS PWA meta tags
         document.querySelector('meta[name="theme-color"]').content = '#0A0A0B';
         document.querySelector('meta[name="apple-mobile-web-app-title"]').content = 'Script Vault';
