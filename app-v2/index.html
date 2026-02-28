@@ -19,29 +19,10 @@
 
     <title>VCA - Viral Content Analyzer</title>
 
-    <!-- Script Vault: PWA override + one-time cache buster -->
+    <!-- Script Vault: PWA manifest override (runs only on /pwascript) -->
     <script>
       if (location.pathname.startsWith('/pwascript')) {
-        // 1. One-time: clear old SW caches so new code loads (keeps localStorage/login intact)
-        if (!sessionStorage.getItem('sv_ok')) {
-          if ('caches' in window) {
-            caches.keys().then(function(names) {
-              Promise.all(names.map(function(n) { return caches.delete(n); })).then(function() {
-                sessionStorage.setItem('sv_ok', '1');
-                // Also force SW update
-                if ('serviceWorker' in navigator) {
-                  navigator.serviceWorker.getRegistration().then(function(r) {
-                    if (r) r.update();
-                  });
-                }
-                location.reload();
-              });
-            });
-          } else {
-            sessionStorage.setItem('sv_ok', '1');
-          }
-        }
-        // 2. Intercept manifest link IMMEDIATELY as VitePWA injects it
+        // Intercept manifest link as VitePWA injects it
         new MutationObserver(function(_, obs) {
           var m = document.querySelector('link[rel="manifest"]');
           if (m && m.getAttribute('href') !== '/sv-manifest.json') {
@@ -49,7 +30,7 @@
             obs.disconnect();
           }
         }).observe(document.documentElement, { childList: true, subtree: true });
-        // 3. Override iOS PWA meta tags
+        // Override iOS PWA meta tags
         document.querySelector('meta[name="theme-color"]').content = '#0A0A0B';
         document.querySelector('meta[name="apple-mobile-web-app-title"]').content = 'Script Vault';
         document.title = 'Script Vault';

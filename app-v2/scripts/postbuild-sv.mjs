@@ -27,6 +27,12 @@ html = html.replace(
   '<title>Script Vault</title>'
 );
 
+// Add DM Sans font preload (non-blocking, starts loading immediately)
+html = html.replace(
+  '</head>',
+  '    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet" />\n  </head>'
+);
+
 const outDir = resolve(distDir, 'pwascript');
 mkdirSync(outDir, { recursive: true });
 writeFileSync(resolve(outDir, 'index.html'), html);
