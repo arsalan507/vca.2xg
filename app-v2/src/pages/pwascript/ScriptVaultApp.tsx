@@ -68,7 +68,7 @@ function ScriptCard({ script, onClick, showScore }: {
         {done && (
           <span className="text-xs shrink-0" style={{ color: T.success }}>✓</span>
         )}
-        <span className="font-semibold text-[15px] truncate flex-1" style={{ color: T.text }}>
+        <span className="font-semibold text-[16px] truncate flex-1" style={{ color: T.text }}>
           {script.title}
         </span>
         {showScore && script.relevance_score !== undefined && (
@@ -84,14 +84,14 @@ function ScriptCard({ script, onClick, showScore }: {
 
       {/* Row 2: hook preview (1 line) */}
       <p
-        className="text-[13px] leading-snug mb-1.5 truncate"
+        className="text-[14px] leading-snug mb-1.5 truncate"
         style={{ color: T.textDim }}
       >
         {script.hook}
       </p>
 
       {/* Row 3: tags (dot separated) */}
-      <p className="text-[11px] truncate" style={{ color: T.border === '#262629' ? '#444' : T.textDim }}>
+      <p className="text-[12px] truncate" style={{ color: '#6B6B73' }}>
         {script.tags.slice(0, 5).join(' · ')}
         {script.tags.length > 5 ? ` +${script.tags.length - 5}` : ''}
       </p>
@@ -228,6 +228,21 @@ export default function ScriptVaultApp() {
       setSearching(false);
     }
   };
+
+  // Live search — debounced as-you-type
+  useEffect(() => {
+    if (!query.trim()) {
+      if (view === 'results') {
+        setView('home');
+        setSearchResults([]);
+        setExpandedTerms([]);
+      }
+      return;
+    }
+    const timer = setTimeout(() => doSearch(query), 300);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -387,7 +402,8 @@ export default function ScriptVaultApp() {
           style={{
             backgroundColor: `${T.bg}E6`,
             backdropFilter: 'blur(12px)',
-            height: 52,
+            minHeight: 52,
+            paddingTop: 'env(safe-area-inset-top, 0px)',
           }}
         >
           {view !== 'home' && (
@@ -689,7 +705,7 @@ export default function ScriptVaultApp() {
                   Hook
                 </label>
                 <div
-                  className="rounded-xl p-3.5 text-[14px] leading-relaxed"
+                  className="rounded-xl p-3.5 text-[15px] leading-relaxed"
                   style={{ backgroundColor: T.surface, borderLeft: `3px solid ${T.hook}`, color: T.text }}
                 >
                   {selectedScript.hook}
@@ -704,7 +720,7 @@ export default function ScriptVaultApp() {
                     Story
                   </label>
                   <div
-                    className="rounded-xl p-3.5 text-[14px] leading-relaxed whitespace-pre-wrap"
+                    className="rounded-xl p-3.5 text-[15px] leading-relaxed whitespace-pre-wrap"
                     style={{ backgroundColor: T.surface, borderLeft: `3px solid ${T.story}`, color: T.text }}
                   >
                     {selectedScript.story}
@@ -720,7 +736,7 @@ export default function ScriptVaultApp() {
                     CTA
                   </label>
                   <div
-                    className="rounded-xl p-3.5 text-[14px] leading-relaxed font-semibold"
+                    className="rounded-xl p-3.5 text-[15px] leading-relaxed font-semibold"
                     style={{ backgroundColor: T.surface, borderLeft: `3px solid ${T.cta}`, color: T.text }}
                   >
                     {selectedScript.cta}
@@ -730,7 +746,7 @@ export default function ScriptVaultApp() {
 
               {/* Tags */}
               {selectedScript.tags.length > 0 && (
-                <p className="text-[12px]" style={{ color: T.textDim }}>
+                <p className="text-[13px]" style={{ color: '#6B6B73' }}>
                   {selectedScript.tags.join(' · ')}
                 </p>
               )}
