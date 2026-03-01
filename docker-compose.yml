@@ -50,34 +50,18 @@ services:
       PGRST_DB_POOL: 10
       PGRST_DB_POOL_ACQUISITION_TIMEOUT: 5
       PGRST_MAX_ROWS: 1000
-    ports:
-      - "3001:3000"
     depends_on:
       vca-postgres:
         condition: service_healthy
     restart: unless-stopped
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.vca-postgrest.rule=Host(`vca-api.2xg.in`) && PathPrefix(`/postgrest`)"
-      - "traefik.http.routers.vca-postgrest.entrypoints=http,https"
-      - "traefik.http.routers.vca-postgrest.tls=true"
-      - "traefik.http.routers.vca-postgrest.tls.certresolver=letsencrypt"
-      - "traefik.http.middlewares.vca-postgrest-strip.stripprefix.prefixes=/postgrest"
-      - "traefik.http.middlewares.vca-postgrest-cors.headers.accesscontrolallowmethods=GET,HEAD,POST,PATCH,DELETE,OPTIONS"
-      - "traefik.http.middlewares.vca-postgrest-cors.headers.accesscontrolallowheaders=Content-Type,Authorization,apikey,Prefer,Accept"
-      - "traefik.http.middlewares.vca-postgrest-cors.headers.accesscontrolalloworiginlist=https://vca.2xg.in,http://localhost:5173,http://localhost:5174,http://localhost:5175,http://localhost:5176,http://192.168.68.125:5173,http://192.168.68.125:5174,http://192.168.68.125:5175"
-      - "traefik.http.middlewares.vca-postgrest-cors.headers.accesscontrolmaxage=86400"
-      - "traefik.http.middlewares.vca-postgrest-cors.headers.addvaryheader=true"
-      - "traefik.http.routers.vca-postgrest.middlewares=vca-postgrest-strip,vca-postgrest-cors"
-      - "traefik.http.services.vca-postgrest.loadbalancer.server.port=3000"
-      - "traefik.http.services.vca-postgrest.loadbalancer.responseforwarding.flushinterval=100ms"
+    # No Traefik labels — PostgREST is accessed via Express proxy only
+    # (avoids Traefik v3 HTTP/2 incompatibility with PostgREST)
     deploy:
       resources:
         limits:
           memory: 192m
     networks:
       - vca-internal
-      - coolify
 
   # ─── Backend (Express.js) ────────────────────────────────────────────────
   vca-backend:
@@ -106,7 +90,7 @@ services:
     restart: unless-stopped
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.vca-backend.rule=Host(`vca-api.2xg.in`) && !PathPrefix(`/postgrest`)"
+      - "traefik.http.routers.vca-backend.rule=Host(`vca-api.2xg.in`)"
       - "traefik.http.routers.vca-backend.entrypoints=http,https"
       - "traefik.http.routers.vca-backend.tls=true"
       - "traefik.http.routers.vca-backend.tls.certresolver=letsencrypt"

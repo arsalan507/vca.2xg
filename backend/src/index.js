@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const http = require('http');
 const pool = require('./db');
 const { verifyAuth, verifyAdmin } = require('./middleware/jwtAuth');
 const voiceNoteService = require('./services/voiceNoteService');
@@ -61,6 +62,32 @@ app.get('/files/voice-notes/*', verifyAuth, (req, res) => {
       res.status(404).json({ error: 'File not found' });
     }
   });
+});
+
+// ─── PostgREST Proxy ────────────────────────────────────────────────────────
+// Proxies /postgrest/* to the PostgREST container over HTTP/1.1, avoiding
+// the Traefik v3 + PostgREST HTTP/2 incompatibility that causes timeouts.
+
+const POSTGREST_HOST = process.env.POSTGREST_HOST || 'vca-postgrest';
+const POSTGREST_PORT = parseInt(process.env.POSTGREST_PORT || '3000', 10);
+
+app.all('/postgrest/*', (req, res) => {
+  const targetPath = req.url.replace(/^\/postgrest/, '') || '/';
+  const headers = { ...req.headers, host: `${POSTGREST_HOST}:${POSTGREST_PORT}` };
+  delete headers['transfer-encoding'];
+
+  const proxyReq = http.request(
+    { hostname: POSTGREST_HOST, port: POSTGREST_PORT, path: targetPath, method: req.method, headers },
+    (proxyRes) => {
+      res.writeHead(proxyRes.statusCode, proxyRes.headers);
+      proxyRes.pipe(res);
+    }
+  );
+  proxyReq.on('error', (err) => {
+    console.error('PostgREST proxy error:', err.message);
+    if (!res.headersSent) res.status(502).json({ error: 'PostgREST unavailable' });
+  });
+  req.pipe(proxyReq);
 });
 
 // ─── Health Check ───────────────────────────────────────────────────────────
