@@ -76,6 +76,14 @@ app.all('/postgrest/*', (req, res) => {
   const headers = { ...req.headers, host: `${POSTGREST_HOST}:${POSTGREST_PORT}` };
   delete headers['transfer-encoding'];
 
+  // express.json() already consumed the body stream, so re-serialize it
+  const body = req.body && Object.keys(req.body).length > 0 ? JSON.stringify(req.body) : null;
+  if (body) {
+    headers['content-length'] = Buffer.byteLength(body);
+  } else {
+    delete headers['content-length'];
+  }
+
   const proxyReq = http.request(
     { hostname: POSTGREST_HOST, port: POSTGREST_PORT, path: targetPath, method: req.method, headers },
     (proxyRes) => {
@@ -87,7 +95,11 @@ app.all('/postgrest/*', (req, res) => {
     console.error('PostgREST proxy error:', err.message);
     if (!res.headersSent) res.status(502).json({ error: 'PostgREST unavailable' });
   });
-  req.pipe(proxyReq);
+  if (body) {
+    proxyReq.end(body);
+  } else {
+    proxyReq.end();
+  }
 });
 
 // ─── Health Check ───────────────────────────────────────────────────────────
