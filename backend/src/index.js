@@ -300,6 +300,13 @@ const server = app.listen(PORT, () => {
   console.log(`Storage endpoints: http://localhost:${PORT}/api/storage/*`);
 });
 
+// Prevent stale connections with Traefik reverse proxy.
+// Traefik's default idle timeout is ~60s. Node.js default keepAliveTimeout is
+// only 5s, which can cause Traefik to reuse a connection Node already closed,
+// leading to 504 Gateway Timeouts after extended uptime.
+server.keepAliveTimeout = 65000;   // 65s — outlast Traefik's idle timeout
+server.headersTimeout = 66000;     // must be > keepAliveTimeout
+
 // Graceful shutdown
 function shutdown(signal) {
   console.log(`${signal} received. Shutting down gracefully...`);
