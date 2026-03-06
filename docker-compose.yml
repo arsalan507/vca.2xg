@@ -49,11 +49,18 @@ services:
       PGRST_SERVER_PORT: 3000
       PGRST_DB_POOL: 10
       PGRST_DB_POOL_ACQUISITION_TIMEOUT: 5
+      PGRST_DB_POOL_MAX_IDLETIME: 300
       PGRST_MAX_ROWS: 1000
     depends_on:
       vca-postgres:
         condition: service_healthy
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/ > /dev/null 2>&1 || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     # No Traefik labels — PostgREST is accessed via Express proxy only
     # (avoids Traefik v3 HTTP/2 incompatibility with PostgREST)
     deploy:

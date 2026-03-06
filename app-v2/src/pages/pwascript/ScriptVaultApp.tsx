@@ -378,6 +378,7 @@ export default function ScriptVaultApp() {
   const [expandedTerms, setExpandedTerms] = useState<string[]>([]);
   const [searching, setSearching] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [toast, setToast] = useState('');
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -509,22 +510,26 @@ export default function ScriptVaultApp() {
     };
   }, []);
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const [allScripts, synonyms] = await Promise.all([
-          scriptVaultService.getAllScripts(),
-          scriptVaultService.getSynonyms(),
-        ]);
-        setScripts(allScripts);
-        synonymMapRef.current = buildSynonymMap(synonyms);
-      } catch (err) {
-        console.error('Failed to load:', err);
-      } finally {
-        setLoading(false);
-      }
-    })();
+  const loadAll = useCallback(async () => {
+    setLoading(true);
+    setLoadError(null);
+    try {
+      const [allScripts, synonyms] = await Promise.all([
+        scriptVaultService.getAllScripts(),
+        scriptVaultService.getSynonyms(),
+      ]);
+      setScripts(allScripts);
+      synonymMapRef.current = buildSynonymMap(synonyms);
+    } catch (err: unknown) {
+      const msg = err && typeof err === 'object' && 'message' in err ? (err as { message: string }).message : 'Connection failed';
+      console.error('Failed to load:', err);
+      setLoadError(msg);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => { loadAll(); }, [loadAll]);
 
   const refreshScripts = async () => {
     try {
@@ -1280,7 +1285,7 @@ export default function ScriptVaultApp() {
                     onLongPress={() => setPreviewScript(script)}
                   />
                 ))}
-                {scripts.length === 0 && (
+                {scripts.length === 0 && !loadError && (
                   <div className="flex flex-col items-center justify-center py-20 gap-3">
                     <svg width="48" height="48" viewBox="0 0 48 48" fill="none" stroke={T.textDim} strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" opacity={0.35}>
                       <path d="M30 6L38 14L16 36H8V28L30 6Z" />
@@ -1289,6 +1294,20 @@ export default function ScriptVaultApp() {
                     </svg>
                     <p className="text-sm font-medium" style={{ color: T.textDim }}>No scripts yet</p>
                     <p className="text-xs" style={{ color: T.textMuted }}>Tap + to write your first one</p>
+                  </div>
+                )}
+                {loadError && (
+                  <div className="flex flex-col items-center justify-center py-20 gap-4">
+                    <div className="text-3xl opacity-40">⚠</div>
+                    <p className="text-sm font-medium" style={{ color: T.danger }}>Failed to load scripts</p>
+                    <p className="text-xs text-center px-8" style={{ color: T.textMuted }}>{loadError}</p>
+                    <button
+                      onClick={loadAll}
+                      className="mt-2 px-5 py-2 rounded-lg text-sm font-medium transition-colors"
+                      style={{ background: T.accent, color: '#000' }}
+                    >
+                      Retry
+                    </button>
                   </div>
                 )}
               </div>

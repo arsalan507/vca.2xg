@@ -85,12 +85,17 @@ app.all('/postgrest/*', (req, res) => {
   }
 
   const proxyReq = http.request(
-    { hostname: POSTGREST_HOST, port: POSTGREST_PORT, path: targetPath, method: req.method, headers },
+    { hostname: POSTGREST_HOST, port: POSTGREST_PORT, path: targetPath, method: req.method, headers, timeout: 10000 },
     (proxyRes) => {
       res.writeHead(proxyRes.statusCode, proxyRes.headers);
       proxyRes.pipe(res);
     }
   );
+  proxyReq.on('timeout', () => {
+    proxyReq.destroy();
+    console.error('PostgREST proxy timeout:', req.method, targetPath);
+    if (!res.headersSent) res.status(504).json({ error: 'PostgREST timeout' });
+  });
   proxyReq.on('error', (err) => {
     console.error('PostgREST proxy error:', err.message);
     if (!res.headersSent) res.status(502).json({ error: 'PostgREST unavailable' });
